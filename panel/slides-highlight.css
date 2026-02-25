@@ -1,0 +1,138 @@
+.reveal code.hl.lean.block {
+    display: block;
+    text-align: left;
+    font-size: 0.55em;
+    line-height: 1.45;
+    border-radius: 6px;
+    padding: 0.6em 0.8em;
+    margin: 0.5em auto;
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.15);
+    width: fit-content;
+    max-width: 95%;
+    overflow-x: auto;
+}
+.reveal code.hl.lean.inline {
+    font-size: 0.9em;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 3px;
+    padding: 0.1em 0.3em;
+}
+/* Tooltip styling — use viewport-relative sizing so tooltips
+   scale with the presentation window like slide content does. */
+.tippy-box {
+    font-size: 1.8vw;
+    line-height: 1.4;
+    max-width: 50vw !important;
+}
+.tippy-box .tippy-content {
+    max-height: 50vh;
+    overflow-y: auto;
+}
+.tippy-box code,
+.hl.lean .hover-info code {
+    font-family: monospace;
+    font-size: inherit;
+}
+.tippy-box .hl.lean {
+    font-size: inherit;
+}
+.hl.lean div.docstring,
+.hl.lean div.docstring * {
+    max-width: none;
+    width: auto;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+/* Verso token colors — purple/blue/teal, colorblind-safe.
+   Literals and unknown tokens inherit the slide text color. */
+.hl.lean .literal,
+.hl.lean .unknown {
+    color: inherit;
+}
+/* Dark slides (default) */
+.reveal {
+    --verso-code-keyword-color: #c678dd;
+    --verso-code-const-color: #61afef;
+    --verso-code-var-color: #56d4c0;
+}
+/* Light slides — set per-section by code-block-bg.js */
+.reveal section.slide-light-bg {
+    --verso-code-keyword-color: #8839a0;
+    --verso-code-const-color: #1a5fb4;
+    --verso-code-var-color: #1a7a6a;
+}
+/* Adapt hover/binding highlight colors to the reveal.js theme */
+.reveal .hl.lean .token.binding-hl,
+.reveal .hl.lean .literal.string:hover,
+.reveal .hl.lean .token.typed:hover {
+    background-color: rgba(128, 128, 128, 0.2);
+}
+.reveal .hl.lean .has-info.error:hover {
+    background-color: rgba(255, 80, 80, 0.25);
+}
+.reveal .hl.lean .has-info.warning:hover {
+    background-color: rgba(255, 200, 50, 0.25);
+}
+.reveal .hl.lean .has-info.information:hover {
+    background-color: rgba(70, 120, 255, 0.25);
+}
+/* Scale wavy underlines with the code font size */
+.reveal .hl.lean .has-info .token:not(.tactic-state):not(.tactic-state *),
+.reveal .hl.lean .has-info .inter-text:not(.tactic-state):not(.tactic-state *) {
+    text-decoration-thickness: 0.1em;
+    text-underline-offset: 0.15em;
+}
+/* Suppress Verso's tactic toggle and hover popup inside slide code */
+.hl.lean .tactic-toggle {
+    display: none;
+}
+.hl.lean .tactic > label {
+    display: contents;
+}
+.hl.lean .hover-container {
+    display: none;
+}
+/* Fragment effects on code: transform requires inline-block for spans */
+.reveal .hl.lean span.fragment {
+    display: inline-block;
+}
+
+/* Fragment color effects: force descendant tokens to inherit the
+   fragment's color so highlight-red etc. override token colors. */
+.reveal .fragment.highlight-red.visible .token,
+.reveal .fragment.highlight-red.visible .keyword,
+.reveal .fragment.highlight-red.visible .literal,
+.reveal .fragment.highlight-red.visible .unknown,
+.reveal .fragment.highlight-green.visible .token,
+.reveal .fragment.highlight-green.visible .keyword,
+.reveal .fragment.highlight-green.visible .literal,
+.reveal .fragment.highlight-green.visible .unknown,
+.reveal .fragment.highlight-blue.visible .token,
+.reveal .fragment.highlight-blue.visible .keyword,
+.reveal .fragment.highlight-blue.visible .literal,
+.reveal .fragment.highlight-blue.visible .unknown,
+.reveal .fragment.highlight-current-red.current-fragment .token,
+.reveal .fragment.highlight-current-red.current-fragment .keyword,
+.reveal .fragment.highlight-current-red.current-fragment .literal,
+.reveal .fragment.highlight-current-red.current-fragment .unknown,
+.reveal .fragment.highlight-current-green.current-fragment .token,
+.reveal .fragment.highlight-current-green.current-fragment .keyword,
+.reveal .fragment.highlight-current-green.current-fragment .literal,
+.reveal .fragment.highlight-current-green.current-fragment .unknown,
+.reveal .fragment.highlight-current-blue.current-fragment .token,
+.reveal .fragment.highlight-current-blue.current-fragment .keyword,
+.reveal .fragment.highlight-current-blue.current-fragment .literal,
+.reveal .fragment.highlight-current-blue.current-fragment .unknown {
+    color: inherit;
+}
+
+/* slide-click-only: always visible, but participates in fragment ordering */
+.reveal .fragment.slide-click-only {
+    opacity: 1;
+    visibility: inherit;
+}
+.reveal .fragment.slide-click-only.visible {
+    opacity: 1;
+    visibility: inherit;
+}

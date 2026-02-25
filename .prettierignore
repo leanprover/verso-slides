@@ -1,0 +1,21 @@
+lake-manifest.json
+.lake
+
+# build output
+_out
+_slides
+_test
+lib
+-verso-docs.json
+
+# vendored files
+vendor
+subverso
+*.min.js
+*.min.css
+
+# browser tests virtualenv
+browser-tests
+
+# local config
+.claude

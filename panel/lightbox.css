@@ -1,0 +1,103 @@
+/* Lightbox overlay for inline Lean term hover info */
+
+/* Clickable inline code tokens get a pointer cursor */
+code.hl.lean.inline [data-verso-hover] {
+    cursor: pointer;
+}
+
+/* Full-screen transparent backdrop to catch clicks outside the lightbox */
+.lean-hover-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 98;
+}
+
+/* Override r-overlay's full-bleed positioning to be a centered, content-sized box */
+.r-overlay-lean-hover {
+    /* Reset the inset positioning from .r-overlay */
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    /* Fixed width gives the pretty-printer a stable target;
+       height sizes to content up to the max */
+    width: 75%;
+    height: fit-content;
+    max-height: 75%;
+    border-radius: 6px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Viewport: content-sized, no absolute positioning or padding gap */
+.r-overlay-lean-hover .r-overlay-viewport {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    padding: 0;
+}
+
+/* Hide the header row — close button floats inside content instead */
+.r-overlay-lean-hover .r-overlay-header {
+    display: none;
+}
+
+/* Content area: left-aligned, padded */
+.r-overlay-lean-hover .lean-hover-content {
+    display: block;
+    padding: 1em 1.5em;
+    text-align: left;
+    place-items: unset;
+}
+
+/* Inner wrapper — font-size set dynamically by JS via Reveal.getScale()
+   so it matches slide text and grows/shrinks with the viewport.
+   Override .r-overlay's sans-serif font for code content. */
+.lean-hover-inner {
+    font-family: monospace;
+    line-height: 1.5;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Signature code block */
+.lean-hover-inner code {
+    font-family: monospace;
+    font-size: inherit;
+}
+
+/* Reflowed format expressions */
+.lean-hover-inner .reflowed {
+    white-space: pre;
+    word-wrap: normal;
+    overflow-wrap: normal;
+}
+
+/* Docstrings rendered as markdown */
+.lean-hover-inner code.docstring {
+    display: block;
+    font-family: sans-serif;
+    max-width: none;
+    width: auto;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    margin-top: 0.8em;
+    padding-top: 0.6em;
+    border-top: 1px solid rgba(128, 128, 128, 0.3);
+}
+.lean-hover-inner code.docstring code {
+    font-family: monospace;
+}
+.lean-hover-inner .docstring p {
+    margin: 0.3em 0;
+}
+
+/* Binding highlighting */
+.lean-hover-inner .token.binding-hl {
+    background-color: rgba(255, 255, 255, 0.15);
+}

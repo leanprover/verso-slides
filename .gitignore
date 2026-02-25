@@ -1,0 +1,6 @@
+/.lake
+*/__pycache__/*
+/_slides/
+/_test/
+-verso-docs.json
+/_*
