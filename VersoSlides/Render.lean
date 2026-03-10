@@ -99,32 +99,38 @@ instance [Monad m] : GenreHtml Slides m where
     | .wrap attrs =>
       let inner ← contents.mapM blockHtml
       pure (.tag "div" attrs (.seq inner))
-    | .slideCode scExport =>
+    | .slideCode scExport panel =>
       let sc := scFromExport! scExport
       let codeHtml ← pure {{ <code class="hl lean block"> {{ ← sc.toHtml (g := Slides) }} </code> }}
-      pure {{
-        <div class="code-with-panel">
-          {{codeHtml}}
-          <div class="panel-divider"></div>
-          <div class="panel-cell">
-            <div class="info-panel"></div>
+      if panel then
+        pure {{
+          <div class="code-with-panel">
+            {{codeHtml}}
+            <div class="panel-divider"></div>
+            <div class="panel-cell">
+              <div class="info-panel"></div>
+            </div>
           </div>
-        </div>
-      }}
-    | .leanCode hlExport =>
+        }}
+      else
+        pure codeHtml
+    | .leanCode hlExport panel =>
       let hl := (hlFromExport! hlExport).trim
       let codeHtml ← match fragmentize hl with
         | .error _msg => hl.blockHtml (g := Slides) "lean"
         | .ok sc => pure {{ <code class="hl lean block"> {{ ← sc.toHtml (g := Slides) }} </code> }}
-      pure {{
-        <div class="code-with-panel">
-          {{codeHtml}}
-          <div class="panel-divider"></div>
-          <div class="panel-cell">
-            <div class="info-panel"></div>
+      if panel then
+        pure {{
+          <div class="code-with-panel">
+            {{codeHtml}}
+            <div class="panel-divider"></div>
+            <div class="panel-cell">
+              <div class="info-panel"></div>
+            </div>
           </div>
-        </div>
-      }}
+        }}
+      else
+        pure codeHtml
     | .externalCode language code =>
       pure {{ <pre><code class={{s!"language-{language}"}}>{{code}}</code></pre> }}
   inline inlineHtml container contents := do

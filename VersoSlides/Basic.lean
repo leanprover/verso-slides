@@ -109,9 +109,9 @@ public inductive BlockExt where
   /-- Wraps ALL children in a `<div>` with the given attributes. -/
   | wrap (attrs : Array (String × String))
   /-- Elaborated Lean code block with syntax highlighting (fallback when fragmentize fails). -/
-  | leanCode (hlExport : String)
+  | leanCode (hlExport : String) (panel : Bool)
   /-- Fragmentized Lean code block, serialized via {lit}`ExportSlideCode`. -/
-  | slideCode (scExport : String)
+  | slideCode (scExport : String) (panel : Bool)
   /-- External (non-Lean) code block with a language tag for highlight.js. -/
   | externalCode (language : String) (code : String)
 deriving BEq, Repr, Lean.ToJson, Lean.FromJson
