@@ -254,6 +254,45 @@ But not {lean +error}`β`.
 end
 ```
 
+# C++ Example
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+template <typename T>
+T max_element(const std::vector<T>& v) {
+    return *std::max_element(v.begin(), v.end());
+}
+
+int main() {
+    std::vector<int> nums = {3, 1, 4, 1, 5, 9};
+    std::cout << "Max: " << max_element(nums) << std::endl;
+    return 0;
+}
+```
+
+# Rust Example
+
+```rust
+use std::collections::HashMap;
+
+fn word_count(text: &str) -> HashMap<&str, usize> {
+    let mut counts = HashMap::new();
+    for word in text.split_whitespace() {
+        *counts.entry(word).or_insert(0) += 1;
+    }
+    counts
+}
+
+fn main() {
+    let text = "hello world hello";
+    let counts = word_count(text);
+    println!("{:?}", counts);
+}
+```
+
 # Thank You
 
 That concludes the *VersoSlides* demo.

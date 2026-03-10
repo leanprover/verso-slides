@@ -10,6 +10,7 @@ import VersoSlidesVendored
 import VersoSlides.Render
 import VersoSlides.Directives
 import VersoSlides.InlineLean
+import VersoSlides.ExternalCode
 import VersoSlides.SlideCode
 import VersoSlides.SlideCode.Export
 import VersoSlides.SlideCode.Render

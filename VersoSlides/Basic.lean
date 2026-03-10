@@ -112,6 +112,8 @@ public inductive BlockExt where
   | leanCode (hlExport : String)
   /-- Fragmentized Lean code block, serialized via {lit}`ExportSlideCode`. -/
   | slideCode (scExport : String)
+  /-- External (non-Lean) code block with a language tag for highlight.js. -/
+  | externalCode (language : String) (code : String)
 deriving BEq, Repr, Lean.ToJson, Lean.FromJson
 
 /-- Custom inline elements for the Slides genre -/

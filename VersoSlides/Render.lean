@@ -125,6 +125,8 @@ instance [Monad m] : GenreHtml Slides m where
           </div>
         </div>
       }}
+    | .externalCode language code =>
+      pure {{ <pre><code class={{s!"language-{language}"}}>{{code}}</code></pre> }}
   inline inlineHtml container contents := do
     match container with
     | .fragment style index =>
