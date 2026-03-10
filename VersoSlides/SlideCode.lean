@@ -467,6 +467,8 @@ private inductive InlineMarkerKind where
   | fragmentEnd
   | hideStart
   | hideEnd
+  | replaceStart
+  | replaceEnd
 
 /-- A segment from splitting around inline marker comments. -/
 private inductive TextSegment where
@@ -475,6 +477,8 @@ private inductive TextSegment where
   | inlineEnd
   | hideStart
   | hideEnd
+  | replaceStart (text : String)
+  | replaceEnd
 
 /-- Parses inline fragment wrapper arguments. -/
 private def parseInlineWrapper (s : String) : FragmentData :=
@@ -522,7 +526,10 @@ private def findInlineMarker (haystack : String) : Option (InlineMarkerKind × N
           let (probe, probeLen) := skipWs (probe.drop 5) (probeLen + 5)
           if probe.startsWith "-/" then
             return some (.hideStart, ch, ch + probeLen + 2)
-        -- Check for !end (fragment | hide) ... closing comment
+        -- Check for !replace (start marker — does not consume to comment close)
+        if probe.startsWith "!replace" then
+          return some (.replaceStart, ch, ch + probeLen + "!replace".length)
+        -- Check for !end (fragment | hide | replace) ... closing comment
         if probe.startsWith "!end" then
           let afterEnd := probeLen + 4
           let (probe, probeLen) := skipWs (probe.drop 4) afterEnd
@@ -535,6 +542,10 @@ private def findInlineMarker (haystack : String) : Option (InlineMarkerKind × N
               let (probe, probeLen) := skipWs (probe.drop 4) (probeLen + 4)
               if probe.startsWith "-/" then
                 return some (.hideEnd, ch, ch + probeLen + 2)
+            if probe.startsWith "replace" then
+              let (probe, probeLen) := skipWs (probe.drop 7) (probeLen + 7)
+              if probe.startsWith "-/" then
+                return some (.replaceEnd, ch, ch + probeLen + 2)
     slice := slice.drop 1
     ch := ch + 1
   return none
@@ -551,6 +562,16 @@ where
       let markerContent := charSlice remaining afterKw (afterKw + closeOff)
       let wrapper := parseInlineWrapper markerContent.trimAscii.toString
       (acc.push (.inlineStart wrapper), charSlice remaining (afterKw + closeOff + 2) remaining.length |>.copy)
+    | none =>
+      (acc.push (.plain remaining), "")
+
+  processReplaceMarker (remaining : String) (si afterKw : Nat) (acc : Array TextSegment) :
+      Array TextSegment × String :=
+    let acc := if si > 0 then acc.push (.plain (remaining.take si).copy) else acc
+    match findSubstr (charSlice remaining afterKw remaining.length).copy "-/" with
+    | some closeOff =>
+      let text := (charSlice remaining afterKw (afterKw + closeOff)).trimAscii.toString
+      (acc.push (.replaceStart text), charSlice remaining (afterKw + closeOff + 2) remaining.length |>.copy)
     | none =>
       (acc.push (.plain remaining), "")
 
@@ -575,6 +596,12 @@ where
         go remaining acc
       | some (.hideEnd, offset, afterEnd) =>
         let (acc, remaining) := emitAt remaining offset afterEnd .hideEnd acc
+        go remaining acc
+      | some (.replaceStart, offset, afterKw) =>
+        let (acc, remaining) := processReplaceMarker remaining offset afterKw acc
+        go remaining acc
+      | some (.replaceEnd, offset, afterEnd) =>
+        let (acc, remaining) := emitAt remaining offset afterEnd .replaceEnd acc
         go remaining acc
 
 /-- Processes plain text lines for line-level magic comments. -/
@@ -631,6 +658,14 @@ private def processSegment (st : FragState) (seg : TextSegment) (isText : Bool) 
   | .hideEnd =>
     if st.hideDepth == 0 then
       .error "/- !end hide -/ without matching /- !hide -/"
+    else
+      .ok { st with hideDepth := st.hideDepth - 1 }
+  | .replaceStart replacement =>
+    let st := st.pushSC (.hl (.unparsed replacement))
+    .ok { st with hideDepth := st.hideDepth + 1 }
+  | .replaceEnd =>
+    if st.hideDepth == 0 then
+      .error "/- !end replace -/ without matching /- !replace -/"
     else
       .ok { st with hideDepth := st.hideDepth - 1 }
 
@@ -707,7 +742,7 @@ public def fragmentize (hl : Highlighted) : Except String SlideCode := do
   if !finalSt.openInlineFragments.isEmpty then
     throw "Unclosed inline fragment (/- !fragment -/ without /- !end fragment -/)"
   if finalSt.hideDepth > 0 then
-    throw "Unclosed hide region (/- !hide -/ without /- !end hide -/)"
+    throw "Unclosed hide/replace region (/- !hide -/ or /- !replace -/ without matching end marker)"
   -- Emit any pending command output before closing
   let finalSt := match finalSt.pendingCommandOutput with
     | some info => { finalSt.pushSC (.commandOutput info) with pendingCommandOutput := none }
