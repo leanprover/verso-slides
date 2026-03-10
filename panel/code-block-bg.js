@@ -52,7 +52,8 @@ function updateSlides() {
                 if (panelCell) panelCell.style.background = codeBg;
             }
         });
-        section.querySelectorAll('pre > code[class*="language-"]').forEach(function (el) {
+        section.querySelectorAll("pre").forEach(function (el) {
+            if (el.closest(".code-with-panel")) return;
             el.style.background = codeBg;
         });
     });

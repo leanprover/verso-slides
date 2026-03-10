@@ -127,9 +127,9 @@
     color: inherit;
 }
 
-/* ── External (non-Lean) code blocks ── */
+/* ── Non-Lean code blocks (with or without language tag) ── */
 /* Match the same box styling as Lean code blocks */
-.reveal pre:has(> code[class*="language-"]) {
+.reveal pre:not(.code-with-panel pre) {
     margin: 0.5em auto;
     width: 95%;
     max-width: 95%;
@@ -137,14 +137,14 @@
     border-radius: 6px;
     font-size: 0.55em;
     line-height: 1.45;
+    text-align: left;
+    padding: 0.6em 0.8em;
+    overflow-x: auto;
 }
 .reveal pre > code[class*="language-"] {
     display: block;
-    text-align: left;
     font-size: inherit;
-    padding: 0.6em 0.8em;
-    border-radius: 6px;
-    overflow-x: auto;
+    padding: 0;
 }
 /* Override monokai: transparent background so slide bg shows through */
 .reveal pre > code.hljs {
