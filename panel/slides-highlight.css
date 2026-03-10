@@ -127,6 +127,100 @@
     color: inherit;
 }
 
+/* ── External (non-Lean) code blocks ── */
+/* Match the same box styling as Lean code blocks */
+.reveal pre:has(> code[class*="language-"]) {
+    margin: 0.5em auto;
+    width: fit-content;
+    max-width: 95%;
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+}
+.reveal pre > code[class*="language-"] {
+    display: block;
+    text-align: left;
+    font-size: 0.55em;
+    line-height: 1.45;
+    padding: 0.6em 0.8em;
+    border-radius: 6px;
+    overflow-x: auto;
+}
+/* Override monokai: transparent background so slide bg shows through */
+.reveal pre > code.hljs {
+    background: none;
+}
+/* ── highlight.js token colors — match Verso palette (dark slides) ── */
+.reveal .hljs-keyword,
+.reveal .hljs-selector-tag,
+.reveal .hljs-literal {
+    color: var(--verso-code-keyword-color);
+    font-weight: normal;
+}
+.reveal .hljs-built_in,
+.reveal .hljs-type,
+.reveal .hljs-title,
+.reveal .hljs-section,
+.reveal .hljs-selector-id {
+    color: var(--verso-code-const-color);
+    font-weight: normal;
+}
+.reveal .hljs-variable,
+.reveal .hljs-template-variable,
+.reveal .hljs-attr,
+.reveal .hljs-params,
+.reveal .hljs-name,
+.reveal .hljs-tag {
+    color: var(--verso-code-var-color);
+    font-weight: normal;
+}
+.reveal .hljs-string,
+.reveal .hljs-bullet,
+.reveal .hljs-subst,
+.reveal .hljs-addition {
+    color: #98c379;
+}
+.reveal .hljs-number {
+    color: #d19a66;
+}
+.reveal .hljs-comment,
+.reveal .hljs-quote,
+.reveal .hljs-deletion,
+.reveal .hljs-meta {
+    color: #7f848e;
+}
+.reveal .hljs-symbol,
+.reveal .hljs-regexp,
+.reveal .hljs-link {
+    color: #56b6c2;
+}
+.reveal .hljs-emphasis {
+    font-style: italic;
+}
+.reveal .hljs-strong {
+    font-weight: bold;
+}
+/* Light-slide overrides for highlight.js tokens */
+.reveal section.slide-light-bg .hljs-string,
+.reveal section.slide-light-bg .hljs-bullet,
+.reveal section.slide-light-bg .hljs-subst,
+.reveal section.slide-light-bg .hljs-addition {
+    color: #50a14f;
+}
+.reveal section.slide-light-bg .hljs-number {
+    color: #986801;
+}
+.reveal section.slide-light-bg .hljs-comment,
+.reveal section.slide-light-bg .hljs-quote,
+.reveal section.slide-light-bg .hljs-deletion,
+.reveal section.slide-light-bg .hljs-meta {
+    color: #a0a1a7;
+}
+.reveal section.slide-light-bg .hljs-symbol,
+.reveal section.slide-light-bg .hljs-regexp,
+.reveal section.slide-light-bg .hljs-link {
+    color: #0184bc;
+}
+
 /* slide-click-only: always visible, but participates in fragment ordering */
 .reveal .fragment.slide-click-only {
     opacity: 1;

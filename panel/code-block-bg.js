@@ -52,6 +52,9 @@ function updateSlides() {
                 if (panelCell) panelCell.style.background = codeBg;
             }
         });
+        section.querySelectorAll('pre > code[class*="language-"]').forEach(function (el) {
+            el.style.background = codeBg;
+        });
     });
 }
 Reveal.on("ready", updateSlides);
