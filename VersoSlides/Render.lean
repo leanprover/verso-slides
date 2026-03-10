@@ -258,6 +258,9 @@ private def lightboxJs : String := include_str "../panel/lightbox.js"
 /-- CSS overrides for Verso highlighted code within reveal.js slides. -/
 private def slidesHighlightCss : String := include_str "../panel/slides-highlight.css"
 
+/-- JS that wraps regular Lean comments in styled spans. -/
+private def leanCommentsJs : String := include_str "../panel/lean-comments.js"
+
 /--
 JS that adapts code block styling based on the computed background luminance of each slide. Sets
 {lit}`.slide-light-bg` on light sections (toggles CSS variable palette) and applies appropriate code
@@ -324,6 +327,7 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) : Html
       <script src={{s!"{libPrefix}/tippy.js"}}></script>
       <script src={{s!"{libPrefix}/tippy-panel-filter.js"}}></script>
       <script src={{s!"{libPrefix}/highlighting.js"}}></script>
+      <script src={{s!"{libPrefix}/lean-comments.js"}}></script>
       <script src={{s!"{libPrefix}/code-block-bg.js"}}></script>
       <script src={{s!"{libPrefix}/pretty.js"}}></script>
       <script src={{s!"{libPrefix}/panel.js"}}></script>
@@ -381,6 +385,7 @@ def writeVendoredAssets (outputDir : System.FilePath) (theme : String) : IO Unit
   writeFileWithDirs (libDir / "slides-highlight.css") slidesHighlightCss
   writeFileWithDirs (libDir / "panel.css") slideCodePanelCss
   writeFileWithDirs (libDir / "tippy-panel-filter.js") tippyPanelFilterJs
+  writeFileWithDirs (libDir / "lean-comments.js") leanCommentsJs
   writeFileWithDirs (libDir / "code-block-bg.js") codeBlockBgJs
   writeFileWithDirs (libDir / "pretty.js") prettyJs
   writeFileWithDirs (libDir / "panel.js") slideCodePanelJs
