@@ -144,8 +144,9 @@
 /* ── Non-Lean code blocks (with or without language tag) ── */
 /* Match the same box styling as Lean code blocks */
 .reveal pre:not(.code-with-panel pre) {
+    box-sizing: border-box;
     margin: 0.5em auto;
-    width: fit-content;
+    width: 95%;
     max-width: 95%;
     box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.15);
     border-radius: 6px;
