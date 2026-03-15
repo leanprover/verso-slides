@@ -51,17 +51,26 @@
 .hl.lean .unknown {
     color: inherit;
 }
+/* TODO: remove .lean-comment rules when verso#274 is fixed */
+/* Lean comment styling (regular and doc comments) */
+.hl.lean .lean-comment,
+.hl.lean .doc-comment {
+    color: var(--verso-code-comment-color);
+    font-style: italic;
+}
 /* Dark slides (default) */
 .reveal {
     --verso-code-keyword-color: #c678dd;
     --verso-code-const-color: #61afef;
     --verso-code-var-color: #56d4c0;
+    --verso-code-comment-color: #9da0a8;
 }
 /* Light slides — set per-section by code-block-bg.js */
 .reveal section.slide-light-bg {
     --verso-code-keyword-color: #8839a0;
     --verso-code-const-color: #1a5fb4;
     --verso-code-var-color: #1a7a6a;
+    --verso-code-comment-color: #7a7d85;
 }
 /* Adapt hover/binding highlight colors to the reveal.js theme */
 .reveal .hl.lean .token.binding-hl,
@@ -105,26 +114,32 @@
 .reveal .fragment.highlight-red.visible .keyword,
 .reveal .fragment.highlight-red.visible .literal,
 .reveal .fragment.highlight-red.visible .unknown,
+.reveal .fragment.highlight-red.visible .lean-comment,
 .reveal .fragment.highlight-green.visible .token,
 .reveal .fragment.highlight-green.visible .keyword,
 .reveal .fragment.highlight-green.visible .literal,
 .reveal .fragment.highlight-green.visible .unknown,
+.reveal .fragment.highlight-green.visible .lean-comment,
 .reveal .fragment.highlight-blue.visible .token,
 .reveal .fragment.highlight-blue.visible .keyword,
 .reveal .fragment.highlight-blue.visible .literal,
 .reveal .fragment.highlight-blue.visible .unknown,
+.reveal .fragment.highlight-blue.visible .lean-comment,
 .reveal .fragment.highlight-current-red.current-fragment .token,
 .reveal .fragment.highlight-current-red.current-fragment .keyword,
 .reveal .fragment.highlight-current-red.current-fragment .literal,
 .reveal .fragment.highlight-current-red.current-fragment .unknown,
+.reveal .fragment.highlight-current-red.current-fragment .lean-comment,
 .reveal .fragment.highlight-current-green.current-fragment .token,
 .reveal .fragment.highlight-current-green.current-fragment .keyword,
 .reveal .fragment.highlight-current-green.current-fragment .literal,
 .reveal .fragment.highlight-current-green.current-fragment .unknown,
+.reveal .fragment.highlight-current-green.current-fragment .lean-comment,
 .reveal .fragment.highlight-current-blue.current-fragment .token,
 .reveal .fragment.highlight-current-blue.current-fragment .keyword,
 .reveal .fragment.highlight-current-blue.current-fragment .literal,
-.reveal .fragment.highlight-current-blue.current-fragment .unknown {
+.reveal .fragment.highlight-current-blue.current-fragment .unknown,
+.reveal .fragment.highlight-current-blue.current-fragment .lean-comment {
     color: inherit;
 }
 
