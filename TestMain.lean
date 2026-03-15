@@ -21,20 +21,20 @@ def main : IO UInt32 := do
   if rc != 0 then return rc
 
   -- Step 2: install Python test dependencies
-  let rc ← runCmd "uv" #["sync", "--project", "browser-tests", "--extra", "test"]
+  let rc ← runCmd "uv" #["sync", "--project", "browser-tests"]
     "Installing Python dependencies"
   if rc != 0 then return rc
 
   -- Step 3: install Playwright browsers
   let rc ← runCmd "uv"
-    #["run", "--project", "browser-tests", "--extra", "test",
+    #["run", "--project", "browser-tests",
       "playwright", "install", "--with-deps", "chromium", "firefox"]
     "Installing Playwright browsers"
   if rc != 0 then return rc
 
   -- Step 4: run pytest
   let rc ← runCmd "uv"
-    #["run", "--project", "browser-tests", "--extra", "test",
+    #["run", "--project", "browser-tests",
       "pytest", "browser-tests", "-v"]
     "Running tests"
   return rc
