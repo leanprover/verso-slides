@@ -50,8 +50,6 @@
  * @typedef {{ html: string, formats: FormatData[] }} GoalsResult
  */
 
-// --- Format deserialization ---
-
 /**
  * Deserialize a compact JSON format node into a tree.
  *
@@ -94,8 +92,6 @@ function deserializeFormat(json) {
             return { type: "nil" };
     }
 }
-
-// --- DOM-based pixel measurement ---
 
 /**
  * Create a DOM-based measurer for pixel-accurate text width measurement.
@@ -145,9 +141,8 @@ function createDOMMeasurer(panel) {
     };
 }
 
-// --- SpaceResult helpers ---
-
 /**
+ * Constructs a SpaceResult with the given values, defaulting to false/0.
  * @param {boolean} [foundLine]
  * @param {boolean} [foundFlattenedHardLine]
  * @param {number} [space]
@@ -172,14 +167,13 @@ function merge(w, r1, r2fn) {
     var r2 = r2fn(w - r1.space);
     return {
         foundLine: r2.foundLine,
-        foundFlattenedHardLine: r1.foundFlattenedHardLine || r2.foundFlattenedHardLine,
+        foundFlattenedHardLine: r2.foundFlattenedHardLine,
         space: r1.space + r2.space,
     };
 }
 
-// --- spaceUptoLine: measures how much space a format takes (in pixels) ---
-
 /**
+ * Measures how much horizontal space a format takes (in pixels) before a line break.
  * @param {FormatNode} f
  * @param {boolean} flatten
  * @param {number} m
@@ -229,7 +223,9 @@ function shouldFlatten(fla) {
 }
 
 /**
- * @param {WorkGroup[]} groups
+ * Measures space for a list of work groups. Items within each group are stored
+ * in reverse order (last element = next to process), so we iterate backwards.
+ * @param {WorkGroup[]} groups - groups in reverse order (last = current)
  * @param {number} col
  * @param {number} w
  * @param {DOMMeasurer} measurer
@@ -239,10 +235,10 @@ function spaceUptoLineGroups(groups, col, w, measurer) {
     var result = spaceResult();
     var remainingW = w;
 
-    for (var gi = 0; gi < groups.length; gi++) {
+    for (var gi = groups.length - 1; gi >= 0; gi--) {
         var g = groups[gi];
         var flatten = shouldFlatten(g.fla);
-        for (var ii = 0; ii < g.items.length; ii++) {
+        for (var ii = g.items.length - 1; ii >= 0; ii--) {
             var item = g.items[ii];
             var r = spaceUptoLine(
                 item.f,
@@ -263,12 +259,12 @@ function spaceUptoLineGroups(groups, col, w, measurer) {
     return result;
 }
 
-// --- pushGroup: creates a new work group with flattening decision ---
-
 /**
+ * Creates a new work group with a flattening decision based on available space.
+ * Items and groups are in reverse order (last = next to process).
  * @param {"allOrNone" | "fill"} flb
- * @param {WorkItem[]} items
- * @param {WorkGroup[]} gs
+ * @param {WorkItem[]} items - in reverse order
+ * @param {WorkGroup[]} gs - in reverse order
  * @param {number} w
  * @param {RenderContext} ctx
  * @param {DOMMeasurer} measurer
@@ -283,58 +279,56 @@ function pushGroup(flb, items, gs, w, ctx, measurer) {
         return spaceUptoLineGroups(gs, k, w2, measurer);
     });
     var fits = !r.foundFlattenedHardLine && r2.space <= remaining;
-    g = { fla: { type: "allow", fits: fits }, flb: flb, items: items };
-    return [g].concat(gs);
+    gs.push({ fla: { type: "allow", fits: fits }, flb: flb, items: items });
+    return gs;
 }
 
-// --- be: the main layout engine (iterative port) ---
-
 /**
+ * Main layout engine (iterative port of Lean's `be`). Processes work groups,
+ * making flattening and line-break decisions, and emits output via the render context.
+ *
+ * Items within each group are stored in reverse order: the last element is
+ * processed next. This allows O(1) pop/push instead of O(n) slice/concat.
+ * Groups are also in reverse order (last = current group).
+ *
  * @param {number} w
- * @param {WorkGroup[]} groups
+ * @param {WorkGroup[]} groups - in reverse order (last = current)
  * @param {RenderContext} ctx
  * @param {DOMMeasurer} measurer
  */
 function be(w, groups, ctx, measurer) {
     while (groups.length > 0) {
-        var g = groups[0];
+        var g = groups[groups.length - 1];
         if (g.items.length === 0) {
-            groups = groups.slice(1);
+            groups.pop();
             continue;
         }
-        var i = g.items[0];
-        var restItems = g.items.slice(1);
-        var restGroup = { fla: g.fla, flb: g.flb, items: restItems };
-        var gs = [restGroup].concat(groups.slice(1));
+        // Pop current item — O(1). g.items retains the rest.
+        var i = g.items.pop();
 
         switch (i.f.type) {
             case "nil":
                 ctx.endTags(i.activeTags);
-                groups = gs;
                 break;
 
             case "tag":
                 ctx.startTag(i.f.n);
-                var newItem = { f: i.f.f, indent: i.indent, activeTags: i.activeTags + 1 };
-                gs[0] = { fla: g.fla, flb: g.flb, items: [newItem].concat(restItems) };
-                groups = gs;
+                // Push replacement (processed next) — O(1)
+                g.items.push({ f: i.f.f, indent: i.indent, activeTags: i.activeTags + 1 });
                 break;
 
             case "append":
-                var i1 = { f: i.f.f1, indent: i.indent, activeTags: 0 };
-                var i2 = { f: i.f.f2, indent: i.indent, activeTags: i.activeTags };
-                gs[0] = { fla: g.fla, flb: g.flb, items: [i1, i2].concat(restItems) };
-                groups = gs;
+                // Push f1 last so it is processed next (before f2) — O(1) each
+                g.items.push({ f: i.f.f2, indent: i.indent, activeTags: i.activeTags });
+                g.items.push({ f: i.f.f1, indent: i.indent, activeTags: 0 });
                 break;
 
             case "nest":
-                var nestItem = {
+                g.items.push({
                     f: i.f.f,
                     indent: i.indent + i.f.indent * measurer.spaceWidth,
                     activeTags: i.activeTags,
-                };
-                gs[0] = { fla: g.fla, flb: g.flb, items: [nestItem].concat(restItems) };
-                groups = gs;
+                });
                 break;
 
             case "text": {
@@ -343,7 +337,6 @@ function be(w, groups, ctx, measurer) {
                 if (nlIdx === -1) {
                     ctx.pushOutput(s);
                     ctx.endTags(i.activeTags);
-                    groups = gs;
                 } else {
                     ctx.pushOutput(s.substring(0, nlIdx));
                     ctx.pushNewline(Math.max(0, i.indent));
@@ -353,13 +346,16 @@ function be(w, groups, ctx, measurer) {
                         indent: i.indent,
                         activeTags: i.activeTags,
                     };
-                    var newItems = [newTextItem].concat(restItems);
                     // After hard line break, re-evaluate flattening
                     if (g.fla.type === "disallow") {
-                        gs[0] = { fla: g.fla, flb: g.flb, items: newItems };
-                        groups = gs;
+                        g.items.push(newTextItem);
                     } else {
-                        groups = pushGroup(g.flb, newItems, groups.slice(1), w, ctx, measurer);
+                        // Remaining items stay in g.items; add newTextItem
+                        g.items.push(newTextItem);
+                        // Steal items from current group, pop it, create new group
+                        var remainingItems = g.items;
+                        groups.pop();
+                        groups = pushGroup(g.flb, remainingItems, groups, w, ctx, measurer);
                     }
                 }
                 break;
@@ -369,40 +365,43 @@ function be(w, groups, ctx, measurer) {
                 if (g.flb === "allOrNone") {
                     if (shouldFlatten(g.fla)) {
                         ctx.pushOutput(" ");
-                        ctx.endTags(i.activeTags);
-                        groups = gs;
                     } else {
                         ctx.pushNewline(Math.max(0, i.indent));
-                        ctx.endTags(i.activeTags);
-                        groups = gs;
                     }
+                    ctx.endTags(i.activeTags);
                 } else {
                     // fill behavior
-                    var doBreak = function () {
-                        ctx.pushNewline(Math.max(0, i.indent));
-                        ctx.endTags(i.activeTags);
-                        return pushGroup("fill", restItems, groups.slice(1), w, ctx, measurer);
-                    };
                     if (shouldFlatten(g.fla)) {
-                        // Try to fit next item too
+                        // Try to fit next item too — need a copy since pushGroup mutates
+                        var savedItems = g.items.slice();
+                        var savedGroups = groups.slice(0, groups.length - 1);
                         var tryGs = pushGroup(
                             "fill",
-                            restItems,
-                            groups.slice(1),
+                            savedItems,
+                            savedGroups,
                             w - measurer.spaceWidth,
                             ctx,
                             measurer,
                         );
-                        var nextG = tryGs[0];
+                        var nextG = tryGs[tryGs.length - 1];
                         if (shouldFlatten(nextG.fla)) {
                             ctx.pushOutput(" ");
                             ctx.endTags(i.activeTags);
                             groups = tryGs;
                         } else {
-                            groups = doBreak();
+                            // Break: use original items
+                            ctx.pushNewline(Math.max(0, i.indent));
+                            ctx.endTags(i.activeTags);
+                            var breakItems = g.items;
+                            groups.pop();
+                            groups = pushGroup("fill", breakItems, groups, w, ctx, measurer);
                         }
                     } else {
-                        groups = doBreak();
+                        ctx.pushNewline(Math.max(0, i.indent));
+                        ctx.endTags(i.activeTags);
+                        var breakItems2 = g.items;
+                        groups.pop();
+                        groups = pushGroup("fill", breakItems2, groups, w, ctx, measurer);
                     }
                 }
                 break;
@@ -410,46 +409,38 @@ function be(w, groups, ctx, measurer) {
             case "align":
                 if (shouldFlatten(g.fla) && !i.f.force) {
                     ctx.endTags(i.activeTags);
-                    groups = gs;
                 } else {
                     var k = ctx.column;
                     if (k < i.indent) {
                         var pad = Math.max(0, i.indent - k);
                         ctx.pushOutput(" ".repeat(Math.round(pad / measurer.spaceWidth)));
-                        ctx.endTags(i.activeTags);
-                        groups = gs;
                     } else {
                         ctx.pushNewline(Math.max(0, i.indent));
-                        ctx.endTags(i.activeTags);
-                        groups = gs;
                     }
+                    ctx.endTags(i.activeTags);
                 }
                 break;
 
             case "group":
                 if (shouldFlatten(g.fla)) {
                     // flatten(group f) = flatten f
-                    var gItem = { f: i.f.f, indent: i.indent, activeTags: i.activeTags };
-                    gs[0] = { fla: g.fla, flb: g.flb, items: [gItem].concat(restItems) };
-                    groups = gs;
+                    g.items.push({ f: i.f.f, indent: i.indent, activeTags: i.activeTags });
                 } else {
                     var groupItem = { f: i.f.f, indent: i.indent, activeTags: i.activeTags };
-                    groups = pushGroup(i.f.behavior, [groupItem], gs, w, ctx, measurer);
+                    groups = pushGroup(i.f.behavior, [groupItem], groups, w, ctx, measurer);
                 }
                 break;
 
             default:
                 // Unknown format node, skip
                 ctx.endTags(i.activeTags);
-                groups = gs;
                 break;
         }
     }
 }
 
-// --- prettyM: entry point ---
-
 /**
+ * Entry point: pretty-prints a format tree at a given pixel width.
  * @param {FormatNode} f
  * @param {number} w
  * @param {number} indent
@@ -472,9 +463,8 @@ function prettyM(f, w, indent, ctx, measurer) {
     );
 }
 
-// --- Rendering context that collects tagged output segments ---
-
 /**
+ * Creates a rendering context that collects tagged output segments.
  * @param {Record<string, TokenAnnotation>} annotations
  * @param {DOMMeasurer} measurer
  * @return {RenderContext}
@@ -514,105 +504,6 @@ function makeRenderContext(annotations, measurer) {
         },
     };
 }
-
-// --- Public API ---
-
-// Known Lean keywords for styling untagged text
-/** @type {Set<string>} */
-var LEAN_KEYWORDS = new Set([
-    "def",
-    "theorem",
-    "lemma",
-    "example",
-    "instance",
-    "class",
-    "structure",
-    "inductive",
-    "where",
-    "let",
-    "have",
-    "do",
-    "if",
-    "then",
-    "else",
-    "match",
-    "with",
-    "fun",
-    "return",
-    "by",
-    "at",
-    "in",
-    "for",
-    "while",
-    "repeat",
-    "try",
-    "catch",
-    "finally",
-    "throw",
-    "import",
-    "open",
-    "namespace",
-    "section",
-    "end",
-    "variable",
-    "universe",
-    "axiom",
-    "opaque",
-    "abbrev",
-    "noncomputable",
-    "private",
-    "protected",
-    "partial",
-    "unsafe",
-    "mutual",
-    "deriving",
-    "sorry",
-    "admit",
-    "Type",
-    "Prop",
-    "Sort",
-    "true",
-    "false",
-    "calc",
-    "suffices",
-    "show",
-    "from",
-    "macro",
-    "syntax",
-    "elab",
-    "attribute",
-    "set_option",
-    "extends",
-    "intro",
-    "apply",
-    "exact",
-    "simp",
-    "rfl",
-    "rw",
-    "rewrite",
-    "cases",
-    "induction",
-    "constructor",
-    "exists",
-    "use",
-    "obtain",
-    "rcases",
-    "rintro",
-    "ring",
-    "omega",
-    "decide",
-    "norm_num",
-    "linarith",
-    "positivity",
-    "aesop",
-    "trivial",
-    "assumption",
-    "contradiction",
-    "absurd",
-    "exfalso",
-    "push_neg",
-    "contrapose",
-]);
 
 /**
  * Render a format tree to HTML at a given pixel width.
@@ -657,12 +548,7 @@ function segmentsToHtml(segments, annotations) {
                 : "";
             parts.push('<span class="' + cls + '"' + bindAttr + ">" + text + "</span>");
         } else {
-            var trimmed = seg.text.trim();
-            if (trimmed && LEAN_KEYWORDS.has(trimmed)) {
-                parts.push('<span class="keyword">' + text + "</span>");
-            } else {
-                parts.push(text);
-            }
+            parts.push(text);
         }
     }
     return parts.join("");
