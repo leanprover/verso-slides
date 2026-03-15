@@ -127,6 +127,31 @@
     color: inherit;
 }
 
+/* ── Non-Lean code blocks (highlight.js) ── */
+/* Match the Lean code block box styling; token colors come from monokai.css */
+.reveal pre:not(.code-with-panel pre) {
+    box-sizing: border-box;
+    margin: 0.5em auto;
+    width: fit-content;
+    max-width: 95%;
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    font-size: 0.55em;
+    line-height: 1.45;
+    text-align: left;
+    padding: 0.6em 0.8em;
+    overflow-x: auto;
+}
+.reveal pre > code[class*="language-"] {
+    display: block;
+    font-size: inherit;
+    padding: 0;
+}
+/* Override monokai: transparent background so slide bg shows through */
+.reveal pre > code.hljs {
+    background: none;
+}
+
 /* slide-click-only: always visible, but participates in fragment ordering */
 .reveal .fragment.slide-click-only {
     opacity: 1;

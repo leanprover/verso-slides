@@ -54,3 +54,14 @@ def growDef : Nat := 1
 -- !fragment highlight-current-red
 def redDef : Nat := 2
 ```
+
+# Rust Code
+
+```code rust
+fn main() {
+    let nums = vec![3, 1, 4, 1, 5];
+    for n in &nums {
+        println!("{n}");
+    }
+}
+```

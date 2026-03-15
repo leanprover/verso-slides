@@ -254,6 +254,26 @@ But not {lean +error}`β`.
 end
 ```
 
+# Other Languages
+
+```code rust
+fn main() {
+    let nums = vec![3, 1, 4, 1, 5, 9];
+    let max = nums.iter().max().unwrap();
+    println!("Max: {max}");
+}
+```
+
+```code "c++"
+#include <iostream>
+#include <vector>
+
+int main() {
+    std::vector<int> v = {1, 2, 3};
+    for (auto x : v) std::cout << x << "\n";
+}
+```
+
 # Thank You
 
 That concludes the *VersoSlides* demo.

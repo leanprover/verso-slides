@@ -52,6 +52,10 @@ function updateSlides() {
                 if (panelCell) panelCell.style.background = codeBg;
             }
         });
+        section.querySelectorAll("pre").forEach(function (el) {
+            if (el.closest(".code-with-panel")) return;
+            el.style.background = codeBg;
+        });
     });
 }
 Reveal.on("ready", updateSlides);
