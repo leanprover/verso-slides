@@ -109,9 +109,8 @@ class TestPanelInteraction:
         expect(token).to_be_visible()
 
         token.click()
-        page.wait_for_timeout(500)
 
-        expect(panel).not_to_be_empty()
+        expect(panel).not_to_be_empty(timeout=5000)
 
     def test_click_adds_panel_focus(self, code_url: str, page: Page):
         """Clicking a token should add .panel-focus class to it."""
