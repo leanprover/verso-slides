@@ -22,9 +22,16 @@ open Lean.Doc.Syntax
 
 namespace VersoSlides
 
+/-- Slides-specific code block configuration, extending {name}`LeanBlockConfig` with a panel toggle. -/
+private structure SlidesLeanBlockConfig extends LeanBlockConfig where
+  panel : Bool
+
+instance : Verso.ArgParse.FromArgs SlidesLeanBlockConfig DocElabM where
+  fromArgs := SlidesLeanBlockConfig.mk <$> Verso.ArgParse.fromArgs <*> .flag `panel true
+
 /-- Callback for `elabCommands`: produces a `Block.other (BlockExt.slideCode ...)` term. -/
-private def toSlidesHighlightedBlock (shouldShow : Bool) (hls : Highlighted) (str : StrLit) :
-    DocElabM Term := do
+private def toSlidesHighlightedBlock (panel shouldShow : Bool) (hls : Highlighted)
+    (str : StrLit) : DocElabM Term := do
   if !shouldShow then
     return ← ``(Verso.Doc.Block.concat #[])
 
@@ -37,7 +44,7 @@ private def toSlidesHighlightedBlock (shouldShow : Bool) (hls : Highlighted) (st
   match fragmentize hls.trim with
   | .ok sc =>
     let exported := scToExport sc
-    ``(Verso.Doc.Block.other (VersoSlides.BlockExt.slideCode $(quote exported)) #[Verso.Doc.Block.code $(quote str.getString)])
+    ``(Verso.Doc.Block.other (VersoSlides.BlockExt.slideCode $(quote exported) $(quote panel)) #[Verso.Doc.Block.code $(quote str.getString)])
   | .error msg =>
     throwErrorAt str.raw msg
 
@@ -167,8 +174,8 @@ where
 
 /-- Elaborated Lean code block for slides (with format data collection). -/
 @[code_block]
-def lean : CodeBlockExpanderOf LeanBlockConfig
-  | config, str => elabCommandsWithFormat config str toSlidesHighlightedBlock
+def lean : CodeBlockExpanderOf SlidesLeanBlockConfig
+  | config, str => elabCommandsWithFormat config.toLeanBlockConfig str (toSlidesHighlightedBlock config.panel)
 
 /-- Inline elaborated Lean command for slides (with format data collection). -/
 @[role]

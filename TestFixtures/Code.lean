@@ -55,6 +55,12 @@ def growDef : Nat := 1
 def redDef : Nat := 2
 ```
 
+# No Panel
+
+```lean -panel
+def noPanelDef : Nat := 99
+```
+
 # Rust Code
 
 ```code rust
