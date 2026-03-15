@@ -330,3 +330,38 @@ where
 
     testErr "error: unclosed hide"
       (.seq #[kw "def", u " ", id' "foo", u " /- !hide -/ ", id' "bar"])
+
+    ---- Replace: basic inline replace ----
+    testOk "inline replace"
+      (.seq #[kw "def", u " ", id' "foo", u " := ",
+              u "/- !replace ... -/", id' "some_large_term", u " /- !end replace -/"])
+      (.seq #[
+        .hl (.seq #[kw "def", u " ", id' "foo", u " := ", u "..."]),
+      ])
+
+    ---- Replace: replace removes tokens between markers ----
+    testOk "replace removes tokens"
+      (.seq #[kw "def", u " ", id' "foo", u " := ",
+              u "/- !replace ... -/",
+              kw "have", u " ", id' "h", u " := ", id' "sorry", u "\n",
+              u "/- !end replace -/",
+              id' "h"])
+      (.seq #[
+        .hl (.seq #[kw "def", u " ", id' "foo", u " := ", u "..."]),
+        .hl (id' "h")
+      ])
+
+    ---- Replace: replace with multi-word text ----
+    testOk "replace with multi-word text"
+      (.seq #[kw "def", u " ", id' "foo", u " := ",
+              u "/- !replace <large proof> -/", id' "sorry", u " /- !end replace -/"])
+      (.seq #[
+        .hl (.seq #[kw "def", u " ", id' "foo", u " := ", u "<large proof>"]),
+      ])
+
+    ---- Replace errors ----
+    testErr "error: end replace without open"
+      (.seq #[kw "def", u " ", id' "foo", u " /- !end replace -/"])
+
+    testErr "error: unclosed replace"
+      (.seq #[kw "def", u " ", id' "foo", u " /- !replace ... -/ ", id' "bar"])

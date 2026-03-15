@@ -260,6 +260,13 @@ end
 def simple : Nat := 42
 ```
 
+# Replace Example
+
+```lean
+def result : Nat :=
+  /- !replace ... -/ List.length [1, 2, 3] /- !end replace -/
+```
+
 # Other Languages
 
 ```code rust
