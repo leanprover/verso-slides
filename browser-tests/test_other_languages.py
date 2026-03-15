@@ -6,8 +6,8 @@ from playwright.sync_api import expect, Page
 class TestHighlightJs:
     def test_rust_code_block_highlighted(self, code_url: str, page: Page):
         """highlight.js should inject hljs-* spans into the Rust code block."""
-        # Rust Code is slide index 6
-        page.goto(f"{code_url}/index.html#/6")
+        # Rust Code is slide index 7
+        page.goto(f"{code_url}/index.html#/7")
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(1000)
 

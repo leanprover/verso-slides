@@ -61,6 +61,13 @@ def redDef : Nat := 2
 def noPanelDef : Nat := 99
 ```
 
+# Replace
+
+```lean
+def replaced : Nat :=
+  /- !replace ... -/ List.length [1, 2, 3] /- !end replace -/
+```
+
 # Rust Code
 
 ```code rust
