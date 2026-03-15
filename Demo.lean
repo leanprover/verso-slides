@@ -257,6 +257,7 @@ end
 # Without Panel
 
 ```lean -panel
+-- There is no info panel here
 def simple : Nat := 42
 ```
 

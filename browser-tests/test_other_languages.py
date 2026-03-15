@@ -6,8 +6,8 @@ from playwright.sync_api import expect, Page
 class TestHighlightJs:
     def test_rust_code_block_highlighted(self, code_url: str, page: Page):
         """highlight.js should inject hljs-* spans into the Rust code block."""
-        # Rust Code is slide index 7
-        page.goto(f"{code_url}/index.html#/7")
+        # Rust Code is slide index 8
+        page.goto(f"{code_url}/index.html#/8")
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(1000)
 
@@ -32,7 +32,7 @@ class TestHighlightJs:
 
     def test_rust_block_has_box_styling(self, code_url: str, page: Page):
         """Rust code blocks should have box styling (border-radius, shadow)."""
-        page.goto(f"{code_url}/index.html#/5")
+        page.goto(f"{code_url}/index.html#/8")
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(1000)
 

@@ -68,6 +68,14 @@ def replaced : Nat :=
   /- !replace ... -/ List.length [1, 2, 3] /- !end replace -/
 ```
 
+# Comments
+
+```lean
+-- A line comment
+def commented : Nat := 42
+/- A block comment -/
+```
+
 # Rust Code
 
 ```code rust
