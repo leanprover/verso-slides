@@ -42,7 +42,8 @@
         while (i < text.length) {
             // Block comment  /- … -/  (checked first so /-- is handled as block)
             if (i + 1 < text.length && text[i] === "/" && text[i + 1] === "-") {
-                if (i > plainStart) segments.push({ text: text.slice(plainStart, i), isComment: false });
+                if (i > plainStart)
+                    segments.push({ text: text.slice(plainStart, i), isComment: false });
                 var end = findBlockEnd(text, i);
                 segments.push({ text: text.slice(i, end), isComment: true });
                 i = end;
@@ -52,7 +53,8 @@
             }
             // Line comment  -- …
             if (i + 1 < text.length && text[i] === "-" && text[i + 1] === "-") {
-                if (i > plainStart) segments.push({ text: text.slice(plainStart, i), isComment: false });
+                if (i > plainStart)
+                    segments.push({ text: text.slice(plainStart, i), isComment: false });
                 var eol = text.indexOf("\n", i);
                 var end = eol === -1 ? text.length : eol;
                 segments.push({ text: text.slice(i, end), isComment: true });
@@ -65,7 +67,8 @@
         }
 
         if (!found) return null;
-        if (plainStart < text.length) segments.push({ text: text.slice(plainStart), isComment: false });
+        if (plainStart < text.length)
+            segments.push({ text: text.slice(plainStart), isComment: false });
         return segments;
     }
 
