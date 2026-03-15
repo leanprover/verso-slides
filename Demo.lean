@@ -254,6 +254,12 @@ But not {lean +error}`β`.
 end
 ```
 
+# Without Panel
+
+```lean -panel
+def simple : Nat := 42
+```
+
 # Other Languages
 
 ```code rust

@@ -77,6 +77,18 @@ def fragmentClass (style : Option String) : String :=
   | some s => "fragment " ++ camelToKebab s
 
 
+/-- Conditionally wraps a code block in the interactive info panel layout. -/
+private def wrapWithPanel (codeHtml : Html) (panel : Bool) : Html :=
+  if panel then
+    {{ <div class="code-with-panel">
+         {{codeHtml}}
+         <div class="panel-divider"></div>
+         <div class="panel-cell">
+           <div class="info-panel"></div>
+         </div>
+       </div> }}
+  else codeHtml
+
 instance [Monad m] : GenreHtml Slides m where
   part partHtml _metadata contents := partHtml contents
   block _inlineHtml blockHtml container contents := do
@@ -99,32 +111,16 @@ instance [Monad m] : GenreHtml Slides m where
     | .wrap attrs =>
       let inner ← contents.mapM blockHtml
       pure (.tag "div" attrs (.seq inner))
-    | .slideCode scExport =>
+    | .slideCode scExport panel =>
       let sc := scFromExport! scExport
       let codeHtml ← pure {{ <code class="hl lean block"> {{ ← sc.toHtml (g := Slides) }} </code> }}
-      pure {{
-        <div class="code-with-panel">
-          {{codeHtml}}
-          <div class="panel-divider"></div>
-          <div class="panel-cell">
-            <div class="info-panel"></div>
-          </div>
-        </div>
-      }}
-    | .leanCode hlExport =>
+      pure (wrapWithPanel codeHtml panel)
+    | .leanCode hlExport panel =>
       let hl := (hlFromExport! hlExport).trim
       let codeHtml ← match fragmentize hl with
         | .error _msg => hl.blockHtml (g := Slides) "lean"
         | .ok sc => pure {{ <code class="hl lean block"> {{ ← sc.toHtml (g := Slides) }} </code> }}
-      pure {{
-        <div class="code-with-panel">
-          {{codeHtml}}
-          <div class="panel-divider"></div>
-          <div class="panel-cell">
-            <div class="info-panel"></div>
-          </div>
-        </div>
-      }}
+      pure (wrapWithPanel codeHtml panel)
     | .otherLanguage language code =>
       pure {{ <pre><code class=s!"language-{language}">{{code}}</code></pre> }}
   inline inlineHtml container contents := do

@@ -19,6 +19,25 @@ class TestPanelStructure:
         expect(first.locator(".panel-divider")).to_be_visible()
         expect(first.locator(".info-panel")).to_be_visible()
 
+    def test_no_panel_flag(self, code_url: str, page: Page):
+        """lean -panel should render a code block without the panel wrapper."""
+        # "No Panel" is slide index 5
+        page.goto(f"{code_url}/index.html#/5")
+        page.wait_for_load_state("networkidle")
+        page.wait_for_timeout(1000)
+
+        slide = page.locator(".slides > section").nth(5)
+        # Should have a Lean code block
+        code_block = slide.locator("code.hl.lean.block")
+        expect(code_block).to_be_visible()
+
+        # Should NOT be wrapped in .code-with-panel
+        panels = slide.locator(".code-with-panel")
+        assert panels.count() == 0
+
+        # The code block should contain the definition
+        assert "noPanelDef" in code_block.inner_text()
+
     def test_panel_starts_empty(self, code_url: str, page: Page):
         """.info-panel should start with no content."""
         page.goto(f"{code_url}/index.html#/0")
