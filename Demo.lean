@@ -20,7 +20,7 @@ transition := "slide"
 # Introduction
 
 Welcome to *VersoSlides* — a Verso genre for building
-[reveal.js](https://revealjs.com) slide presentations from Lean 4.
+[reveal.js](https://revealjs.com) slide presentations from Lean.
 
 This demo exercises all the major features.
 
