@@ -33,99 +33,17 @@ Press *S* to open the speaker view.
 
 VersoSlides supports:
 
-* Horizontal and vertical slides
-* Per-slide metadata (backgrounds, transitions)
+* Elaborated Lean code blocks with hovers and info panels
+* Inline Lean expressions: elaborated and type-checked
+* Progressive proof reveals with magic comments
+* Hidden setup code and replaced expressions
 * Fragment animations (block and inline)
+* Per-slide metadata (backgrounds, transitions)
 * Speaker notes (press `s` on your keyboard)
-* Standard Verso markup: *bold*, _emphasis_, `code`
 
 :::fragment
-This paragraph appears as a fragment.
+Read on for examples of each.
 :::
-
-# Vertical Slides
-%%%
-vertical := true
-%%%
-
-This content appears on the first implicit vertical sub-slide.
-
-## Sub-slide A
-
-This is vertical sub-slide A.
-
-Navigate *down* to see the next sub-slide.
-
-## Sub-slide B
-%%%
-backgroundColor := "#4d7e65"
-%%%
-
-This vertical sub-slide has a custom green background.
-
-:::notes
-Vertical slides are great for supplementary content.
-:::
-
-# Fragment Styles
-
-:::fragment fadeUp
-This block fades up.
-:::
-
-:::fragment fadeUp (index := 2)
-This block also fades up, but with explicit index 2.
-:::
-
-Here is an {fragment (style := highlightRed)}[inline red highlight]
-within a sentence.
-
-And another {fragment (style := highlightBlue) (index := 3)}[inline blue highlight]
-with an explicit index.
-
-# Custom Attributes
-
-:::fitText
-Big text!
-:::
-
-:::id "custom-paragraph"
-This paragraph has a custom `id` attribute.
-:::
-
-:::attr («data-id» := "my-box")
-This paragraph has a custom `data-id` for auto-animate matching.
-:::
-
-# Auto-Animate
-
-%%%
-autoAnimate := true
-%%%
-
-:::attr («data-id» := "title")
-Small title
-:::
-
-# Auto-Animate (cont.)
-
-%%%
-autoAnimate := true
-%%%
-
-:::::fitText
-:::attr («data-id» := "title")
-*Big* title
-:::
-:::::
-
-# Custom Background
-%%%
-backgroundColor := "#2d1b69"
-transition := "zoom"
-%%%
-
-This slide has a purple background and uses the *zoom* transition.
 
 # Code Example
 
@@ -287,6 +205,90 @@ int main() {
     for (auto x : v) std::cout << x << "\n";
 }
 ```
+
+# Fragment Styles
+
+:::fragment fadeUp
+This block fades up.
+:::
+
+:::fragment fadeUp (index := 2)
+This block also fades up, but with explicit index 2.
+:::
+
+Here is an {fragment (style := highlightRed)}[inline red highlight]
+within a sentence.
+
+And another {fragment (style := highlightBlue) (index := 3)}[inline blue highlight]
+with an explicit index.
+
+# Vertical Slides
+%%%
+vertical := true
+%%%
+
+This content appears on the first implicit vertical sub-slide.
+
+## Sub-slide A
+
+This is vertical sub-slide A.
+
+Navigate *down* to see the next sub-slide.
+
+## Sub-slide B
+%%%
+backgroundColor := "#4d7e65"
+%%%
+
+This vertical sub-slide has a custom green background.
+
+:::notes
+Vertical slides are great for supplementary content.
+:::
+
+# Custom Attributes
+
+:::fitText
+Big text!
+:::
+
+:::id "custom-paragraph"
+This paragraph has a custom `id` attribute.
+:::
+
+:::attr («data-id» := "my-box")
+This paragraph has a custom `data-id` for auto-animate matching.
+:::
+
+# Auto-Animate
+
+%%%
+autoAnimate := true
+%%%
+
+:::attr («data-id» := "title")
+Small title
+:::
+
+# Auto-Animate (cont.)
+
+%%%
+autoAnimate := true
+%%%
+
+:::::fitText
+:::attr («data-id» := "title")
+*Big* title
+:::
+:::::
+
+# Custom Background
+%%%
+backgroundColor := "#2d1b69"
+transition := "zoom"
+%%%
+
+This slide has a purple background and uses the *zoom* transition.
 
 # Thank You
 
