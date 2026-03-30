@@ -121,6 +121,12 @@ def reduceMiddle := 10
 #reduce 10 * 2
 ```
 
+# Expected Error
+
+```lean +error
+#check (42 : String)
+```
+
 # Rust Code
 
 ```code rust

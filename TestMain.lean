@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 import VersoSlides
+import TestElab
 
 /-- Runs a process, printing its output. Returns its exit code. -/
 def runCmd (cmd : String) (args : Array String) (desc : String) : IO UInt32 := do

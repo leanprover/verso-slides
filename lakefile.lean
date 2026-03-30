@@ -36,6 +36,8 @@ lean_lib TestFixtures
 lean_exe «test-fixtures-build» where
   root := `TestFixtures.Build
 
+lean_lib TestElab
+
 lean_lib Tests
 
 lean_exe «test-fragmentize» where
