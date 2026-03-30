@@ -22,6 +22,44 @@ open Lean.Doc.Syntax
 
 namespace VersoSlides
 
+/-- Syntax node kinds whose output should be rendered inline after the command. -/
+private def queryCommandKinds : Array SyntaxNodeKind :=
+  open Lean.Parser.Command in
+  #[``eval, ``check, ``print, ``reduceCmd]
+
+/--
+Returns `true` if `stx` contains a query command (e.g. `#eval`, `#check`)
+anywhere in its syntax tree, accounting for wrappers like `open ... in`.
+-/
+private def isQueryCommand (stx : Syntax) : Bool :=
+  (stx.find? (queryCommandKinds.contains ·.getKind)).isSome
+
+/-- Token strings for query commands (used to find them in `Highlighted` trees). -/
+private def queryCommandTokens : Array String := #["#check", "#eval", "#print", "#reduce"]
+
+/-- Returns `true` if `hl` contains a query command keyword token anywhere in its tree. -/
+private partial def containsQueryToken : Highlighted → Bool
+  | .token tok => tok.kind matches .keyword .. && queryCommandTokens.contains tok.content
+  | .seq xs => xs.any containsQueryToken
+  | .span _ x | .tactics _ _ _ x => containsQueryToken x
+  | _ => false
+
+/--
+For a query command's highlighted code, find spans that contain a query command
+token and collect their info-severity messages as `point` nodes to append.
+The original tree is left intact (spans keep their info for diagnostic markers).
+-/
+private partial def collectQueryOutput : Highlighted → Array Highlighted
+  | .span info x =>
+    if containsQueryToken x then
+      info.filterMap fun (kind, msg) =>
+        if kind == .info then some (.point kind msg) else none
+    else
+      collectQueryOutput x
+  | .seq xs => xs.foldl (init := #[]) fun acc x => acc ++ collectQueryOutput x
+  | .tactics _ _ _ x => collectQueryOutput x
+  | _ => #[]
+
 /-- Slides-specific code block configuration, extending {name}`LeanBlockConfig` with a panel toggle. -/
 private structure SlidesLeanBlockConfig extends LeanBlockConfig where
   panel : Bool
@@ -132,8 +170,14 @@ def elabCommandsWithFormat (config : LeanBlockConfig) (str : StrLit)
       let nonSilentMsgs := cmdState.messages.toArray.filter (!·.isSilent)
       let mut lastPos : String.Pos.Raw := str.raw.getPos? |>.getD 0
       for cmd in cmds do
-        hls := hls ++ (← highlightIncludingUnparsed cmd nonSilentMsgs cmdState.infoState.trees (startPos? := lastPos) (collectFormat := true))
+        let cmdHl ← highlightIncludingUnparsed cmd nonSilentMsgs cmdState.infoState.trees (startPos? := lastPos) (collectFormat := true)
         lastPos := (cmd.getTrailingTailPos?).getD lastPos
+        -- For query commands (#eval, #check, etc.), extract output messages from
+        -- the highlighted spans and place them as point nodes after the command.
+        hls := hls ++ cmdHl
+        if isQueryCommand cmd then
+          for p in collectQueryOutput cmdHl do
+            hls := hls ++ p
 
       toHighlightedLeanContent config.show hls str
     finally
