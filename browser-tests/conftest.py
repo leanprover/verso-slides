@@ -122,3 +122,27 @@ def page(browser):
     page = browser.new_page()
     yield page
     page.close()
+
+
+def goto_slide_by_title(page, base_url, title):
+    """Navigate to a slide by its heading text.
+
+    Uses Reveal.js's slide indexing: finds the section whose heading matches
+    *title*, computes its index among top-level sections, and navigates to
+    ``#/<index>``.
+    """
+    page.goto(f"{base_url}/index.html")
+    page.wait_for_load_state("networkidle")
+    index = page.evaluate("""(title) => {
+        const sections = document.querySelectorAll('.slides > section');
+        for (let i = 0; i < sections.length; i++) {
+            const h = sections[i].querySelector('h1, h2, h3');
+            if (h && h.textContent.trim() === title) return i;
+        }
+        return -1;
+    }""", title)
+    assert index >= 0, f"Slide with title '{title}' not found"
+    page.goto(f"{base_url}/index.html#/{index}")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(1000)
+    return page.locator(".slides > section").nth(index)

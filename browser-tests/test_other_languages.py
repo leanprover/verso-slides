@@ -1,15 +1,13 @@
 """Browser tests for non-Lean code blocks (highlight.js integration)."""
 
+from conftest import goto_slide_by_title
 from playwright.sync_api import expect, Page
 
 
 class TestHighlightJs:
     def test_rust_code_block_highlighted(self, code_url: str, page: Page):
         """highlight.js should inject hljs-* spans into the Rust code block."""
-        # Rust Code is slide index 8
-        page.goto(f"{code_url}/index.html#/8")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        goto_slide_by_title(page, code_url, "Rust Code")
 
         block = page.locator("pre > code.language-rust")
         expect(block).to_be_visible()
@@ -32,9 +30,7 @@ class TestHighlightJs:
 
     def test_rust_block_has_box_styling(self, code_url: str, page: Page):
         """Rust code blocks should have box styling (border-radius, shadow)."""
-        page.goto(f"{code_url}/index.html#/8")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        goto_slide_by_title(page, code_url, "Rust Code")
 
         pre = page.locator("pre:has(> code.language-rust)")
         expect(pre).to_be_visible()

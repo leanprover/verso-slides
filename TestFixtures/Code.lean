@@ -76,6 +76,51 @@ def commented : Nat := 42
 /- A block comment -/
 ```
 
+# Eval Ordering
+
+```lean
+#eval s!"It is {1 + 1} first"
+def evalMiddle := 5
+#eval s!"Then it is {2 + 2}"
+#eval s!"Then it is {4 + 4}"
+```
+
+# Eval Multiline
+
+```lean
+#eval 1 +
+
+  2 +
+
+3
+```
+
+# Check Ordering
+
+```lean
+def checkTarget := 42
+#check checkTarget
+def checkMiddle := "hi"
+#check checkMiddle
+```
+
+# Print Ordering
+
+```lean
+def printTarget := 100
+#print printTarget
+def printMiddle := true
+#print printMiddle
+```
+
+# Reduce Ordering
+
+```lean
+#reduce 2 + 3
+def reduceMiddle := 10
+#reduce 10 * 2
+```
+
 # Rust Code
 
 ```code rust

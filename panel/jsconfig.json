@@ -2,7 +2,8 @@
     "compilerOptions": {
         "lib": ["ES2024", "DOM", "DOM.Iterable"],
         "target": "ES2024",
-        "noEmit": true
+        "noEmit": true,
+        "strict": true
     },
     "include": ["pretty.js", "panel.js", "lightbox.js", "globals.d.ts"]
 }

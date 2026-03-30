@@ -141,8 +141,6 @@ private structure FragState where
   pendingFragments : Array FragmentData
   activeLineFragment : Option LineFragInfo
   openInlineFragments : Array InlineFragInfo
-  pendingCommandOutput : Option (Array (Span.Kind × MessageContents Highlighted))
-  insideQuerySpan : Bool
   hideDepth : Nat := 0
 
 
@@ -196,9 +194,6 @@ private def findSubstr (haystack needle : String) : Option Nat := Id.run do
     slice := slice.drop 1
     ch := ch + 1
   return none
-
-/-- Known “query commands” whose output is rendered inline. -/
-private def queryCommands : Array String := #["#check", "#eval", "#print", "#reduce"]
 
 /--
 Finds the last newline in a {name}`SlideCode` and splits into (before-including-newline, after-newline).
@@ -625,11 +620,6 @@ private def processPlainLines (st : FragState) (s : String) (isText : Bool) : Ex
     else if let some (caretCol, index) := parseClickComment line then
       st ← st.resolveClickOnCurrent caretCol index
     else
-      if let some cmdInfo := st.pendingCommandOutput then
-        if line == "\n" || (line.startsWith Char.isWhitespace) then
-          st := st.pushSC (.commandOutput cmdInfo)
-          st := { st with pendingCommandOutput := none }
-
       st := st.pushSC (mkLeaf line.toString)
   return st
 
@@ -676,55 +666,36 @@ and then line-level magic comments.
 private def processTextNode (st : FragState) (s : String) (isText : Bool) : Except String FragState :=
   (splitInlineMarkers s).foldlM (init := st) fun acc seg => processSegment acc seg isText
 
-/-- Finds the first {name}`span` context in a context stack (searching from top). -/
-private def findSpanInfo (ctxStack : Array HlCtx) : Option (Array (Span.Kind × MessageContents Highlighted)) :=
-  ctxStack.reverse.findSome? fun
-    | .span info => some info
-    | _ => none
-
 /-- Main worklist loop for the fragmentize transformation. -/
 private partial def fragmentizeLoop
     (todo : List (Option Highlighted))
     (ctxStack : Array HlCtx)
-    (querySpanStack : Array Bool)
     (st : FragState) : Except String FragState := do
   match todo with
   | [] => return st
   | none :: rest =>
     let st := st.closeCtx
-    let querySpanStack := if !querySpanStack.isEmpty then querySpanStack.pop else querySpanStack
-    let st := { st with insideQuerySpan := if querySpanStack.isEmpty then false else querySpanStack.back! }
-    fragmentizeLoop rest ctxStack.pop querySpanStack st
+    fragmentizeLoop rest ctxStack.pop st
   | some (.seq xs) :: rest =>
-    fragmentizeLoop (xs.toList.map some ++ rest) ctxStack querySpanStack st
+    fragmentizeLoop (xs.toList.map some ++ rest) ctxStack st
   | some (.tactics info s e x) :: rest =>
     let st := st.openCtx (.tactics info s e)
-    fragmentizeLoop (some x :: none :: rest) (ctxStack.push (.tactics info s e)) (querySpanStack.push st.insideQuerySpan) st
+    fragmentizeLoop (some x :: none :: rest) (ctxStack.push (.tactics info s e)) st
   | some (.span info x) :: rest =>
     let st := st.openCtx (.span info)
-    let st := { st with insideQuerySpan := false }
-    fragmentizeLoop (some x :: none :: rest) (ctxStack.push (.span info)) (querySpanStack.push false) st
+    fragmentizeLoop (some x :: none :: rest) (ctxStack.push (.span info)) st
   | some (.token tok) :: rest =>
-    let mut qss := querySpanStack
-    let mut s := st
-    if tok.kind matches .keyword .. then
-      if queryCommands.contains tok.content then
-        if !qss.isEmpty then
-          qss := qss.pop.push true
-          s := { s with insideQuerySpan := true }
-          if let some info := findSpanInfo ctxStack then
-            s := { s with pendingCommandOutput := some info }
-    s := s.pushSC (SlideCode.hl (.token tok))
-    fragmentizeLoop rest ctxStack qss s
+    let st := st.pushSC (SlideCode.hl (.token tok))
+    fragmentizeLoop rest ctxStack st
   | some (.point kind info) :: rest =>
-    let st := st.pushSC (SlideCode.hl (.point kind info))
-    fragmentizeLoop rest ctxStack querySpanStack st
+    let st := st.pushSC (.commandOutput #[(kind, info)])
+    fragmentizeLoop rest ctxStack st
   | some (.text s) :: rest =>
     let st ← processTextNode st s true
-    fragmentizeLoop rest ctxStack querySpanStack st
+    fragmentizeLoop rest ctxStack st
   | some (.unparsed s) :: rest =>
     let st ← processTextNode st s false
-    fragmentizeLoop rest ctxStack querySpanStack st
+    fragmentizeLoop rest ctxStack st
 
 /--
 Transforms a {name}`Highlighted` tree into a {name}`SlideCode` tree, processing magic comments.
@@ -735,17 +706,11 @@ public def fragmentize (hl : Highlighted) : Except String SlideCode := do
     pendingFragments := #[]
     activeLineFragment := none
     openInlineFragments := #[]
-    pendingCommandOutput := none
-    insideQuerySpan := false
   }
-  let finalSt ← fragmentizeLoop [some hl] #[] #[] initSt
+  let finalSt ← fragmentizeLoop [some hl] #[] initSt
   if !finalSt.openInlineFragments.isEmpty then
     throw "Unclosed inline fragment (/- !fragment -/ without /- !end fragment -/)"
   if finalSt.hideDepth > 0 then
     throw "Unclosed hide or replace region (/- !hide -/ or /- !replace ... -/ without matching end marker)"
-  -- Emit any pending command output before closing
-  let finalSt := match finalSt.pendingCommandOutput with
-    | some info => { finalSt.pushSC (.commandOutput info) with pendingCommandOutput := none }
-    | none => finalSt
   let finalSt := finalSt.closeActiveLine
   return finalSt.doc.toSlideCode

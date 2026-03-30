@@ -1,17 +1,14 @@
 """Browser tests for /- !replace ... -/ magic comments."""
 
+from conftest import goto_slide_by_title
 from playwright.sync_api import expect, Page
 
 
 class TestReplace:
     def test_replacement_text_visible(self, code_url: str, page: Page):
         """The replacement text '...' should appear in the rendered code."""
-        # Replace is slide index 6
-        page.goto(f"{code_url}/index.html#/6")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        slide = goto_slide_by_title(page, code_url, "Replace")
 
-        slide = page.locator(".slides > section").nth(6)
         code_block = slide.locator("code.hl.lean.block")
         expect(code_block).to_be_visible()
 
@@ -20,11 +17,8 @@ class TestReplace:
 
     def test_original_code_hidden(self, code_url: str, page: Page):
         """The original code between replace markers should not appear."""
-        page.goto(f"{code_url}/index.html#/6")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        slide = goto_slide_by_title(page, code_url, "Replace")
 
-        slide = page.locator(".slides > section").nth(6)
         code_block = slide.locator("code.hl.lean.block")
         text = code_block.inner_text()
 
@@ -34,11 +28,8 @@ class TestReplace:
 
     def test_surrounding_code_present(self, code_url: str, page: Page):
         """Code outside the replace markers should render normally."""
-        page.goto(f"{code_url}/index.html#/6")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        slide = goto_slide_by_title(page, code_url, "Replace")
 
-        slide = page.locator(".slides > section").nth(6)
         code_block = slide.locator("code.hl.lean.block")
         text = code_block.inner_text()
 

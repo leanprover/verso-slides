@@ -167,14 +167,15 @@
 
         // Render docstrings with marked
         if (typeof marked !== "undefined") {
+            var m = /** @type {typeof marked} */ (marked);
             inner.querySelectorAll(".docstring").forEach(function (ds) {
-                ds.innerHTML = marked.parse(ds.textContent || "");
+                ds.innerHTML = /** @type {string} */ (m.parse(ds.textContent || ""));
             });
         }
 
         // Set up binding highlighting within the lightbox
         inner.addEventListener("mouseover", function (e) {
-            var tok = /** @type {Element | null} */ (e.target).closest(".token[data-binding]");
+            var tok = /** @type {Element} */ (e.target).closest(".token[data-binding]");
             if (!tok) return;
             var binding = tok.getAttribute("data-binding");
             if (!binding) return;
@@ -184,7 +185,7 @@
             });
         });
         inner.addEventListener("mouseout", function (e) {
-            var tok = /** @type {Element | null} */ (e.target).closest(".token[data-binding]");
+            var tok = /** @type {Element} */ (e.target).closest(".token[data-binding]");
             if (!tok) return;
             inner.querySelectorAll(".token.binding-hl").forEach(function (t) {
                 t.classList.remove("binding-hl");
