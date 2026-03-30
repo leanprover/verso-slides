@@ -45,3 +45,21 @@ class TestCodeBlocks:
         """#check and #eval commands should produce diagnostic info spans."""
         info_spans = code_doc.select("code.hl.lean.block .has-info.information")
         assert len(info_spans) >= 2  # #check hello, #eval greet "Lean"
+
+    def test_error_block_renders(self, code_doc: BeautifulSoup):
+        """A code block with +error should render with error diagnostics as warnings."""
+        # Find the slide titled "Expected Error"
+        sections = code_doc.select("section")
+        error_section = None
+        for s in sections:
+            h = s.select_one("h1, h2, h3")
+            if h and "Expected Error" in h.get_text():
+                error_section = s
+                break
+        assert error_section is not None, "Expected Error slide not found"
+        # The code block should be rendered
+        code_block = error_section.select_one("code.hl.lean.block")
+        assert code_block is not None, "Code block not rendered in +error slide"
+        # Should contain the #check token
+        tokens = code_block.get_text()
+        assert "#check" in tokens

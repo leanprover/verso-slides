@@ -193,7 +193,7 @@ def elabCommandsWithFormat (config : LeanBlockConfig) (str : StrLit)
 
         saveOutputs name msgs
 
-      reportMessages config.error str cmdState.messages
+      reportMessages (if config.error then some true else none) str cmdState.messages
 
       if config.show then
         Verso.Genre.Manual.warnLongLines col? str
@@ -298,19 +298,7 @@ def leanInline : RoleExpanderOf LeanInlineConfig
         Verso.Hover.addCustomHover (mkNullNode #[s, e]) type
         Verso.Hover.addCustomHover f type
 
-      if config.error then
-        if newMsgs.hasErrors then
-          for msg in newMsgs.errorsToWarnings.toArray do
-            logMessage {msg with isSilent := true}
-        else
-          throwErrorAt term "Error expected in code block, but none occurred"
-      else
-        for msg in newMsgs.toArray do
-          logMessage {msg with
-            isSilent := msg.isSilent || msg.severity != .error
-          }
-
-      reportMessages config.error term newMsgs
+      reportMessages (if config.error then some true else none) term newMsgs
 
       let hls := (← highlight stx newMsgs.toArray (PersistentArray.empty.push tree) (collectFormat := true))
 
