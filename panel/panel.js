@@ -36,9 +36,9 @@
     /** @param {Element} blockEl */
     function setupBlock(blockEl) {
         var block = /** @type {PanelBlock} */ (blockEl);
-        var codeEl = block.querySelector("code.hl.lean.block");
-        var panel = /** @type {InfoPanel | null} */ (block.querySelector(".info-panel"));
-        if (!codeEl || !panel) return;
+        var codeEl = /** @type {Element} */ (block.querySelector("code.hl.lean.block"));
+        var panel = /** @type {InfoPanel} */ (block.querySelector(".info-panel"));
+        if (!block.querySelector("code.hl.lean.block") || !block.querySelector(".info-panel")) return;
 
         block._activeSource = null;
 
@@ -63,16 +63,16 @@
                 clearHoverPreview(codeEl);
             }
         });
-        codeEl.addEventListener("mouseout", function (/** @type {MouseEvent} */ e) {
+        /** @type {HTMLElement} */ (codeEl).addEventListener("mouseout", function (e) {
             if (!e.relatedTarget || !codeEl.contains(/** @type {Node} */ (e.relatedTarget))) {
                 clearHoverPreview(codeEl);
             }
         });
 
         // Binding highlighting — works across code and panel
-        /** @param {MouseEvent} e */
+        /** @param {Event} e */
         function onBindingOver(e) {
-            var tok = /** @type {Element | null} */ (e.target).closest(".token[data-binding]");
+            var tok = /** @type {Element} */ (e.target).closest(".token[data-binding]");
             if (!tok) return;
             var binding = tok.getAttribute("data-binding");
             if (!binding) return;
@@ -84,9 +84,9 @@
                 t.classList.add("binding-hl");
             });
         }
-        /** @param {MouseEvent} e */
+        /** @param {Event} e */
         function onBindingOut(e) {
-            var tok = /** @type {Element | null} */ (e.target).closest(".token[data-binding]");
+            var tok = /** @type {Element} */ (e.target).closest(".token[data-binding]");
             if (!tok) return;
             codeEl.querySelectorAll(".token.binding-hl").forEach(function (t) {
                 t.classList.remove("binding-hl");
@@ -167,7 +167,7 @@
     function cycleClickable(block, chain) {
         if (chain.length === 0) return null;
         var active = block._activeSource;
-        var idx = chain.indexOf(active);
+        var idx = active ? chain.indexOf(active) : -1;
         if (idx >= 0 && idx < chain.length - 1) {
             return chain[idx + 1];
         }
@@ -253,8 +253,9 @@
 
         // Render docstrings with marked
         if (typeof marked !== "undefined") {
+            var m = /** @type {typeof marked} */ (marked);
             panel.querySelectorAll(".docstring").forEach(function (ds) {
-                ds.innerHTML = marked.parse(ds.textContent || "");
+                ds.innerHTML = /** @type {string} */ (m.parse(ds.textContent || ""));
             });
         }
     }

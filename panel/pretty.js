@@ -304,7 +304,8 @@ function be(w, groups, ctx, measurer) {
             continue;
         }
         // Pop current item — O(1). g.items retains the rest.
-        var i = g.items.pop();
+        // Length was checked above, so pop always returns a value.
+        var i = /** @type {WorkItem} */ (g.items.pop());
 
         switch (i.f.type) {
             case "nil":
