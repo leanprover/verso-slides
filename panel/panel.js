@@ -38,7 +38,8 @@
         var block = /** @type {PanelBlock} */ (blockEl);
         var codeEl = /** @type {Element} */ (block.querySelector("code.hl.lean.block"));
         var panel = /** @type {InfoPanel} */ (block.querySelector(".info-panel"));
-        if (!block.querySelector("code.hl.lean.block") || !block.querySelector(".info-panel")) return;
+        if (!block.querySelector("code.hl.lean.block") || !block.querySelector(".info-panel"))
+            return;
 
         block._activeSource = null;
 
