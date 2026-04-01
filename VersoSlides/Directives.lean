@@ -5,12 +5,13 @@ Author: David Thrane Christiansen
 -/
 module
 import VersoSlides.Basic
+import VersoSlides.ImageWidget
 import Verso.Doc.Elab
 import Verso.Doc.ArgParse
 public import Verso.Doc.Elab.Monad
 
 open Verso Doc Elab ArgParse
-open Lean Elab
+open Lean Elab Widget
 open Lean.Doc.Syntax
 
 register_option verso.slides.warnOnImage : Bool := {
@@ -398,6 +399,10 @@ public instance : FromArgs ImageArgs m where
       .named `class .string true
 end
 
+
+private def isUrl (s : String) : Bool :=
+  s.startsWith "http://" || s.startsWith "https://" || s.startsWith "data:" || s.startsWith "//"
+
 /--
 Image role with configurable dimensions. Alt text must be plain text.
 
@@ -406,10 +411,6 @@ Usage:
 {image "logo.png" (width := "200px")}[Company Logo]
 ```
 -/
-private def isUrl (s : String) : Bool :=
-  s.startsWith "http://" || s.startsWith "https://" || s.startsWith "data:" || s.startsWith "//"
-
-open Lean.Doc.Syntax in
 @[role]
 public def image : RoleExpanderOf ImageArgs
   | args, stxs => do
@@ -421,23 +422,30 @@ public def image : RoleExpanderOf ImageArgs
     | `(inline| line! $_) => continue
     | _ => logErrorAt stx "image alt text must be plain text, not formatted content"
   let alt : String := " ".intercalate altParts.toList
+
   -- Resolve the image source: URLs pass through, local paths get normalized to project root
-  let imgSrc ← if isUrl args.src then
-      pure (.remote args.src : ImgSrc)
-    else do
+  let imgSrc : ImgSrc ←
+    if isUrl args.src then
+      pure <| ImgSrc.remote args.src
+    else
       let srcDir := (System.FilePath.mk (← getFileName)).parent.getD "."
       let absPath ← IO.FS.realPath (srcDir / args.src)
       let cwd ← IO.FS.realPath "."
       let cwdPrefix : String := cwd.toString ++ toString System.FilePath.pathSeparator
       let absStr : String := absPath.toString
       let rel : String := absStr.dropPrefix cwdPrefix |>.copy
-      pure (.projectRelative rel)
+      pure <| .projectRelative rel
+
+  match imgSrc with
+  | .projectRelative rel => saveImagePreview rel alt true (← getRef)
+  | .remote url => saveImagePreview url alt false (← getRef)
+
   ``(Inline.other (VersoSlides.InlineExt.image $(quote imgSrc) $(quote alt) $(quote args.width) $(quote args.height) $(quote args.class)) #[])
 
 /--
-Intercepts the Markdown `![alt](url)` syntax and warns that the `{image}` role should be used
-instead, since it supports width, height, class, and local path resolution. Controlled by the
-`verso.slides.warnOnImage` option. After warning, delegates to the default handler.
+Intercepts the Markdown-like `![alt](url)` syntax and warns that the `{image}` role should be used
+instead, since it supports width, height, and class, and uses local path resolution. Controlled by
+the `verso.slides.warnOnImage` option. After warning, delegates to the default handler.
 -/
 @[inline_expander Lean.Doc.Syntax.image]
 public meta def warnOnMarkdownImage : InlineExpander

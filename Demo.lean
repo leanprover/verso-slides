@@ -389,12 +389,13 @@ This text is styled with custom CSS injected via a `css` code block.
 :::
 
 # Image Role
+%%%
+theme := "white"
+%%%
 
 The `{image}` role renders an `<img>` tag with configurable width and height. The path to the image is relative to the source file.
 
-{image "https://lean-lang.org/images/lean_logo.svg" (width := "300px")}[Lean logo from URL]
-
-{image "demo-images/test-logo.svg" (width := "150px") (height := "150px")}[Local test logo]
+{image "demo-images/demo-image.svg" (width := "300px")}[Demo image]
 
 
 # Lean Command Role
