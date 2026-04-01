@@ -20,20 +20,20 @@ public def base64Encode (data : ByteArray) : String := Id.run do
   let mut out := ""
   let len := data.size
   let mut i := 0
-  while i + 2 < len do
-    let a := data[i]!; let b := data[i+1]!; let c := data[i+2]!
+  while h : i + 2 < len do
+    let a := data[i]; let b := data[i+1]; let c := data[i+2]
     out := out.push (enc (a >>> 2))
     out := out.push (enc (((a &&& 3) <<< 4) ||| (b >>> 4)))
     out := out.push (enc (((b &&& 15) <<< 2) ||| (c >>> 6)))
     out := out.push (enc (c &&& 63))
     i := i + 3
-  if i + 1 == len then
-    let a := data[i]!
+  if h : i + 1 = len then
+    let a := data[i]
     out := out.push (enc (a >>> 2))
     out := out.push (enc ((a &&& 3) <<< 4))
     out := out ++ "=="
-  else if i + 2 == len then
-    let a := data[i]!; let b := data[i+1]!
+  else if h : i + 2 = len then
+    let a := data[i]; let b := data[i+1]
     out := out.push (enc (a >>> 2))
     out := out.push (enc (((a &&& 3) <<< 4) ||| (b >>> 4)))
     out := out.push (enc ((b &&& 15) <<< 2))
@@ -45,9 +45,8 @@ def imagePreviewWidget : Widget.Module where
   javascript := include_str "../widget/image-preview.js"
 
 /-- Returns a MIME type for common image extensions, or `none` for unknown types. -/
-public def mimeType (path : String) : Option String :=
-  let ext := (System.FilePath.extension ⟨path⟩).map String.toLower
-  match ext with
+public def mimeType (path : System.FilePath) : Option String :=
+  match path.extension.map (·.toLower) with
   | some "svg" => some "image/svg+xml"
   | some "png" => some "image/png"
   | some "jpg" | some "jpeg" => some "image/jpeg"
@@ -57,7 +56,7 @@ public def mimeType (path : String) : Option String :=
 
 /-- Builds a data URI for an image file. Returns `none` if the MIME type is unknown. -/
 public def mkDataUri (path : System.FilePath) : IO (Option String) := do
-  let some mime := mimeType path.toString
+  let some mime := mimeType path
     | return none
   let data ← IO.FS.readBinFile path
   return some s!"data:{mime};base64,{base64Encode data}"
