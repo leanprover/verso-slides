@@ -437,8 +437,8 @@ public def image : RoleExpanderOf ImageArgs
       pure <| .projectRelative rel
 
   match imgSrc with
-  | .projectRelative rel => saveImagePreview rel alt true (← getRef)
-  | .remote url => saveImagePreview url alt false (← getRef)
+  | .projectRelative rel => saveLocalImagePreview rel alt
+  | .remote url => saveRemoteImagePreview url alt
 
   ``(Inline.other (VersoSlides.InlineExt.image $(quote imgSrc) $(quote alt) $(quote args.width) $(quote args.height) $(quote args.class)) #[])
 
