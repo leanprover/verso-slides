@@ -5,6 +5,9 @@ Author: David Thrane Christiansen
 -/
 module
 public import Verso.Doc
+import Std.Data.HashMap
+
+open Lean
 
 set_option doc.verso true
 /-!
@@ -78,7 +81,7 @@ public structure SlideMetadata where
   height : Option Nat := none
   margin : Option Float := none
   navigationMode : Option String := none
-deriving Inhabited, BEq, Repr, Lean.ToJson, Lean.FromJson
+deriving Inhabited, BEq, Repr, ToJson, FromJson
 
 /-- Extracts document-level {name}`Config` from the top-level {name}`SlideMetadata`. -/
 public def Config.fromMetadata (md : SlideMetadata) (base : Config := {}) : Config where
@@ -114,7 +117,20 @@ public inductive BlockExt where
   | slideCode (scExport : String) (panel : Bool)
   /-- Non-Lean code block with a language tag for highlight.js. -/
   | otherLanguage (language : String) (code : String)
-deriving BEq, Repr, Lean.ToJson, Lean.FromJson
+  /-- Custom CSS block to be injected into the page header. -/
+  | css (content : String)
+deriving BEq, Repr, ToJson, FromJson
+
+/-- The source of an image: either a remote URL or a project-root-relative local path. -/
+public inductive ImgSrc where
+  | remote (url : String)
+  | projectRelative (path : String)
+deriving BEq, Repr, ToJson, FromJson
+
+public instance : Quote ImgSrc where
+  quote
+    | .remote url => Syntax.mkApp (mkCIdent ``ImgSrc.remote) #[quote url]
+    | .projectRelative path => Syntax.mkApp (mkCIdent ``ImgSrc.projectRelative) #[quote path]
 
 /-- Custom inline elements for the Slides genre -/
 public inductive InlineExt where
@@ -122,11 +138,23 @@ public inductive InlineExt where
   | fragment (style : Option String) (index : Option Nat)
   /-- Wraps content in a `<span>` with the given attributes. -/
   | styled (attrs : Array (String × String))
+  /-- Image with configurable dimensions. All fields determined at elaboration time. -/
+  | image (src : ImgSrc) (alt : String) (width : Option String) (height : Option String) (cssClass : Option String)
   /-- Elaborated inline Lean code with syntax highlighting (fallback when fragmentize fails). -/
   | leanCode (hlExport : String)
   /-- Fragmentized inline Lean code, serialized via {lit}`ExportSlideCode`. -/
   | slideCode (scExport : String)
-deriving BEq, Repr, Lean.ToJson, Lean.FromJson
+deriving BEq, Repr, ToJson, FromJson
+
+/-- State accumulated during the traversal pass. -/
+public structure TraverseState where
+  /-- CSS blocks collected from {lit}`css` code blocks, injected into the page header. -/
+  cssBlocks : Array String := #[]
+  /-- Map from project-root-relative source path to output filename in {lit}`images/`. -/
+  imageFiles : Std.HashMap String String := {}
+  /-- Set of already-used output filenames for dedup. -/
+  imageOutputNames : Std.HashSet String := {}
+deriving Inhabited
 
 /-- The Slides genre for reveal.js presentations -/
 @[expose]
@@ -135,7 +163,7 @@ public def Slides : Verso.Doc.Genre where
   Block := BlockExt
   Inline := InlineExt
   TraverseContext := Unit
-  TraverseState := Unit
+  TraverseState := TraverseState
 
 -- Type alias instances
 public instance : Repr Slides.PartMetadata := inferInstanceAs (Repr SlideMetadata)
@@ -144,23 +172,51 @@ public instance : Repr Slides.Inline := inferInstanceAs (Repr InlineExt)
 public instance : BEq Slides.PartMetadata := inferInstanceAs (BEq SlideMetadata)
 public instance : BEq Slides.Block := inferInstanceAs (BEq BlockExt)
 public instance : BEq Slides.Inline := inferInstanceAs (BEq InlineExt)
-public instance : Lean.ToJson Slides.PartMetadata := inferInstanceAs (Lean.ToJson SlideMetadata)
-public instance : Lean.ToJson Slides.Block := inferInstanceAs (Lean.ToJson BlockExt)
-public instance : Lean.ToJson Slides.Inline := inferInstanceAs (Lean.ToJson InlineExt)
-public instance : Lean.FromJson Slides.PartMetadata := inferInstanceAs (Lean.FromJson SlideMetadata)
-public instance : Lean.FromJson Slides.Block := inferInstanceAs (Lean.FromJson BlockExt)
-public instance : Lean.FromJson Slides.Inline := inferInstanceAs (Lean.FromJson InlineExt)
+public instance : ToJson Slides.PartMetadata := inferInstanceAs (ToJson SlideMetadata)
+public instance : ToJson Slides.Block := inferInstanceAs (ToJson BlockExt)
+public instance : ToJson Slides.Inline := inferInstanceAs (ToJson InlineExt)
+public instance : FromJson Slides.PartMetadata := inferInstanceAs (FromJson SlideMetadata)
+public instance : FromJson Slides.Block := inferInstanceAs (FromJson BlockExt)
+public instance : FromJson Slides.Inline := inferInstanceAs (FromJson InlineExt)
 
 -- Trivial traversal instances
 public instance : Verso.Doc.TraversePart Slides where
 public instance : Verso.Doc.TraverseBlock Slides where
 
-public abbrev TraverseM := ReaderT Unit (StateT Unit IO)
+public abbrev TraverseM := ReaderT Unit (StateT TraverseState IO)
+
+/-- Find an unused output filename, deduplicating with {lit}`-1`, {lit}`-2`, etc. if needed. -/
+public def dedupName (base : String) (used : Std.HashSet String) : String :=
+  if !used.contains base then base
+  else
+    let path : System.FilePath := ⟨base⟩
+    let stem := path.fileStem.getD base
+    let ext := path.extension.map (s!".{·}") |>.getD ""
+    Id.run do
+      let mut i := 1
+      while used.contains s!"{stem}-{i}{ext}" do
+        i := i + 1
+      return s!"{stem}-{i}{ext}"
 
 public instance : Verso.Doc.Traverse Slides TraverseM where
   part _ := pure none
   block _ := pure ()
   inline _ := pure ()
   genrePart _ _ := pure none
-  genreBlock _ _ := pure none
-  genreInline _ _ := pure none
+  genreBlock container _content := do
+    match container with
+    | .css content => modify fun st => { st with cssBlocks := st.cssBlocks.push content }; pure none
+    | _ => pure none
+  genreInline container _content := do
+    match container with
+    | .image (.projectRelative resolved) .. =>
+      modify fun st =>
+        if st.imageFiles.contains resolved then st
+        else
+          let base := System.FilePath.fileName ⟨resolved⟩ |>.getD resolved
+          let outputName := dedupName base st.imageOutputNames
+          { st with
+            imageFiles := st.imageFiles.insert resolved outputName
+            imageOutputNames := st.imageOutputNames.insert outputName }
+      pure none
+    | _ => pure none

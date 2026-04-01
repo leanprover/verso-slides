@@ -63,6 +63,24 @@ autoAnimate := some true
 %%%
 Second.
 
+# Image Test
+
+{image "images/test-logo.png" (width := "200px") (height := "100px") (class := "test-img-class")}[Test logo]
+
+{image "images/plain.png"}[Plain image]
+
+{image "https://example.com/remote.png"}[Remote image]
+
+{image "images/subdir/test-logo.png"}[Dedup logo]
+
+# CSS Test
+
+{image "images/styled.png" (class := "css-target")}[Styled image]
+
+```css
+.css-target { border: 3px solid red; opacity: 0.5; }
+```
+
 # Last Slide
 :::fragment
 A fragment paragraph.

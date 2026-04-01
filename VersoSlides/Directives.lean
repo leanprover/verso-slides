@@ -373,3 +373,73 @@ public def attrRole : RoleExpanderOf AttrArgs
   | args, stxs => do
   let contents ← stxs.mapM elabInline
   ``(Inline.other (VersoSlides.InlineExt.styled $(quote args.attrs)) #[$contents,*])
+
+/-- Arguments for the `{image}` role. -/
+public structure ImageArgs where
+  src : String
+  width : Option String := none
+  height : Option String := none
+  «class» : Option String := none
+
+section
+variable [Monad m] [MonadInfoTree m] [MonadResolveName m] [MonadEnv m] [MonadError m] [MonadLiftT CoreM m] [MonadLog m] [AddMessageContext m] [MonadOptions m]
+
+public instance : FromArgs ImageArgs m where
+  fromArgs :=
+    ImageArgs.mk <$>
+      .positional `src .string <*>
+      .named `width .string true <*>
+      .named `height .string true <*>
+      .named `class .string true
+end
+
+/--
+Image role with configurable dimensions. Alt text must be plain text.
+
+Usage:
+```
+{image "logo.png" (width := "200px")}[Company Logo]
+```
+-/
+private def isUrl (s : String) : Bool :=
+  s.startsWith "http://" || s.startsWith "https://" || s.startsWith "data:" || s.startsWith "//"
+
+open Lean.Doc.Syntax in
+@[role]
+public def image : RoleExpanderOf ImageArgs
+  | args, stxs => do
+  let mut altParts : Array String := #[]
+  for stx in stxs do
+    match stx with
+    | `(inline| $strLit:str) =>
+      altParts := altParts.push strLit.getString
+    | _ => logErrorAt stx "image alt text must be plain text, not formatted content"
+  let alt := String.join altParts.toList
+  -- Resolve the image source: URLs pass through, local paths get normalized to project root
+  let imgSrc ← if isUrl args.src then
+      pure (.remote args.src : ImgSrc)
+    else do
+      let srcDir := (System.FilePath.mk (← getFileName)).parent.getD "."
+      let absPath ← IO.FS.realPath (srcDir / args.src)
+      let cwd ← IO.FS.realPath "."
+      let cwdPrefix : String := cwd.toString ++ toString System.FilePath.pathSeparator
+      let absStr : String := absPath.toString
+      let rel : String := absStr.dropPrefix cwdPrefix |>.copy
+      pure (.projectRelative rel)
+  ``(Inline.other (VersoSlides.InlineExt.image $(quote imgSrc) $(quote alt) $(quote args.width) $(quote args.height) $(quote args.class)) #[])
+
+/--
+Custom CSS block. The content is collected during traversal and injected
+as a `<style>` element in the page header.
+
+Usage:
+````
+```css
+.my-class { color: red; }
+```
+````
+-/
+@[code_block]
+public def css : CodeBlockExpanderOf Unit
+  | (), str =>
+    ``(Verso.Doc.Block.other (BlockExt.css $(quote str.getString)) #[])

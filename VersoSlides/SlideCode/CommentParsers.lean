@@ -6,13 +6,15 @@ Author: David Thrane Christiansen
 module
 public import Lean.Data.Json.FromToJson.Basic
 
+open Lean
+
 namespace VersoSlides
 
 /-- Fragment wrapper metadata: optional CSS style class and optional explicit fragment index. -/
 public structure FragmentData where
   style : Option String
   index : Option Nat
-deriving BEq, ReflBEq, LawfulBEq, Hashable, Repr, Inhabited, Lean.ToJson, Lean.FromJson
+deriving BEq, ReflBEq, LawfulBEq, Hashable, Repr, Inhabited, ToJson, FromJson
 
 /--
 Parses a line as a `-- !fragment [style] [index]` magic comment.

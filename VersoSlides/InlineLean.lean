@@ -203,7 +203,7 @@ where
       DocElabM Command.State := do
     let (output, cmdState) ←
       match (← liftM <| IO.FS.withIsolatedStreams <| EIO.toIO' <| (act.run cctx).run cmdState) with
-      | (output, .error e) => Lean.logError e.toMessageData; pure (output, cmdState)
+      | (output, .error e) => logError e.toMessageData; pure (output, cmdState)
       | (output, .ok ((), cmdState)) => pure (output, cmdState)
 
     if output.trimAscii.isEmpty then return cmdState
