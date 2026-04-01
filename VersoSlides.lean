@@ -9,6 +9,7 @@ import VersoSlides.Attributes
 import VersoSlidesVendored
 import VersoSlides.Render
 import VersoSlides.Directives
+import VersoSlides.ImageWidget
 import VersoSlides.OtherLanguages
 import VersoSlides.InlineLean
 import VersoSlides.SlideCode

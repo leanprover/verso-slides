@@ -5,15 +5,21 @@ Author: David Thrane Christiansen
 -/
 module
 import VersoSlides.Basic
+import VersoSlides.ImageWidget
 import Verso.Doc.Elab
 import Verso.Doc.ArgParse
 public import Verso.Doc.Elab.Monad
 
 open Verso Doc Elab ArgParse
-open Lean Elab
+open Lean Elab Widget
+open Lean.Doc.Syntax
+
+register_option verso.slides.warnOnImage : Bool := {
+  defValue := true
+  descr := "if true, warn when Markdown image syntax ![alt](url) is used instead of the {image} role"
+}
 
 namespace VersoSlides
-
 
 /-- Arguments for the `:::fragment` directive. -/
 public structure FragmentArgs where
@@ -373,3 +379,100 @@ public def attrRole : RoleExpanderOf AttrArgs
   | args, stxs => do
   let contents ← stxs.mapM elabInline
   ``(Inline.other (VersoSlides.InlineExt.styled $(quote args.attrs)) #[$contents,*])
+
+/-- Arguments for the `{image}` role. -/
+public structure ImageArgs where
+  src : String
+  width : Option String := none
+  height : Option String := none
+  «class» : Option String := none
+
+section
+variable [Monad m] [MonadInfoTree m] [MonadResolveName m] [MonadEnv m] [MonadError m] [MonadLiftT CoreM m] [MonadLog m] [AddMessageContext m] [MonadOptions m]
+
+public instance : FromArgs ImageArgs m where
+  fromArgs :=
+    ImageArgs.mk <$>
+      .positional `src .string <*>
+      .named `width .string true <*>
+      .named `height .string true <*>
+      .named `class .string true
+end
+
+
+private def isUrl (s : String) : Bool :=
+  s.startsWith "http://" || s.startsWith "https://" || s.startsWith "data:" || s.startsWith "//"
+
+/--
+Image role with configurable dimensions. Alt text must be plain text.
+
+Usage:
+```
+{image "logo.png" (width := "200px")}[Company Logo]
+```
+-/
+@[role]
+public def image : RoleExpanderOf ImageArgs
+  | args, stxs => do
+  let mut altParts : Array String := #[]
+  for stx in stxs do
+    match stx with
+    | `(inline| $strLit:str) =>
+      altParts := altParts.push strLit.getString.trimAscii.copy
+    | `(inline| line! $_) => continue
+    | _ => logErrorAt stx "image alt text must be plain text, not formatted content"
+  let alt : String := " ".intercalate altParts.toList
+
+  -- Resolve the image source: URLs pass through, local paths get normalized to project root
+  let imgSrc : ImgSrc ←
+    if isUrl args.src then
+      pure <| ImgSrc.remote args.src
+    else
+      let srcDir := (System.FilePath.mk (← getFileName)).parent.getD "."
+      let absPath ← IO.FS.realPath (srcDir / args.src)
+      let cwd ← IO.FS.realPath "."
+      let cwdPrefix : String := cwd.toString ++ toString System.FilePath.pathSeparator
+      let absStr : String := absPath.toString
+      let rel : String := absStr.dropPrefix cwdPrefix |>.copy
+      pure <| .projectRelative rel
+
+  match imgSrc with
+  | .projectRelative rel => saveLocalImagePreview rel alt
+  | .remote url => saveRemoteImagePreview url alt
+
+  ``(Inline.other (VersoSlides.InlineExt.image $(quote imgSrc) $(quote alt) $(quote args.width) $(quote args.height) $(quote args.class)) #[])
+
+/--
+Intercepts the Markdown-like `![alt](url)` syntax and warns that the `{image}` role should be used
+instead, since it supports width, height, and class, and uses local path resolution. Controlled by
+the `verso.slides.warnOnImage` option. After warning, delegates to the default handler.
+-/
+@[inline_expander Lean.Doc.Syntax.image]
+public meta def warnOnMarkdownImage : InlineExpander
+  | `(inline| image( $alt:str ) ( $url )) => do
+    if (← getOptions).getBool `verso.slides.warnOnImage true then
+      let suggestion := "{image " ++ url.getString.quote ++ "}[" ++ alt.getString ++ "]"
+      let msg := m!"This image syntax is missing features that are useful for slides, such as width and height."
+      let h ←
+        (m!"Use the `{.ofConstName ``image}` role instead of `![alt](url)` for slides. " ++
+         m!"It supports width, height, and CSS class, and it copies images to the output directory.").hint
+        #[{ suggestion := .string suggestion }]
+      logWarningAt alt (msg ++ h)
+    throwUnsupportedSyntax
+  | _ => throwUnsupportedSyntax
+
+/--
+Custom CSS block. The content is collected during traversal and injected
+as a `<style>` element in the page header.
+
+Usage:
+````
+```css
+.my-class { color: red; }
+```
+````
+-/
+@[code_block]
+public def css : CodeBlockExpanderOf Unit
+  | (), str =>
+    ``(Verso.Doc.Block.other (BlockExt.css $(quote str.getString)) #[])

@@ -7,6 +7,8 @@ module
 public import SubVerso.Highlighting.Export
 public import VersoSlides.SlideCode
 
+open Lean
+
 /-!
 De-duplicating serialization for {name}`SlideCode`, following the pattern of SubVerso's
 {name}`ExportCode` for {name}`Highlighted`.

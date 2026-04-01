@@ -123,6 +123,8 @@ instance [Monad m] : GenreHtml Slides m where
       pure (wrapWithPanel codeHtml panel)
     | .otherLanguage language code =>
       pure {{ <pre><code class=s!"language-{language}">{{code}}</code></pre> }}
+    | .css _ =>
+      pure .empty
   inline inlineHtml container contents := do
     match container with
     | .fragment style index =>
@@ -135,6 +137,21 @@ instance [Monad m] : GenreHtml Slides m where
     | .styled attrs =>
       let inner ← contents.mapM inlineHtml
       pure (.tag "span" attrs (.seq inner))
+    | .image imgSrcVal alt width height cssClass =>
+      let imgSrc ← match imgSrcVal with
+        | .projectRelative resolved => do
+          let st ← HtmlT.state
+          match st.imageFiles[resolved]? with
+          | some outputName => pure s!"images/{outputName}"
+          | none =>
+            HtmlT.logError s!"internal error: image '{resolved}' was not collected during traversal"
+            pure resolved
+        | .remote url => pure url
+      let mut attrs := #[("src", imgSrc), ("alt", alt)]
+      if let some w := width then attrs := attrs.push ("width", w)
+      if let some h := height then attrs := attrs.push ("height", h)
+      if let some c := cssClass then attrs := attrs.push ("class", c)
+      pure (.tag "img" attrs .empty)
     | .slideCode scExport =>
       let sc := scFromExport! scExport
       pure {{ <code class="hl lean inline"> {{ ← sc.toHtml (g := Slides) }} </code> }}
@@ -270,7 +287,7 @@ private def codeBlockBgJs : String := include_str "../panel/code-block-bg.js"
 private def libPrefix : String := "lib"
 
 /-- Renders the full standalone HTML page. -/
-def renderFullHtml (config : Config) (title : String) (slidesBody : Html) : Html :=
+def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (customCss : Array String := #[]) : Html :=
   let extraCssLinks := config.extraCss.map fun url =>
     {{ <link rel="stylesheet" href={{url}} /> }}
   let extraJsScripts := config.extraJs.map fun url =>
@@ -307,6 +324,7 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) : Html
       <link rel="stylesheet" href={{s!"{libPrefix}/slides-highlight.css"}} />
       <link rel="stylesheet" href={{s!"{libPrefix}/panel.css"}} />
       <link rel="stylesheet" href={{s!"{libPrefix}/lightbox.css"}} />
+      {{ customCss.map fun css => {{ <style>{{Html.text false css}}</style> }} }}
     </head>
     <body>
       <div class="reveal">
@@ -401,14 +419,14 @@ def slidesMain (config : Config := {}) (doc : Part Slides) (args : List String :
   let hasError ← IO.mkRef false
   let logError (msg : String) : IO Unit := do hasError.set true; IO.eprintln msg
 
-  -- Run the trivial traversal pass
-  let (doc, ()) ← (Slides.traverse doc : TraverseM (Part Slides)) () ()
+  -- Run the traversal pass (collects CSS blocks, etc.)
+  let (doc, traverseState) ← (Slides.traverse doc : TraverseM (Part Slides)) () {}
 
   -- Set up HtmlT context
   let ctx : HtmlT.Context Slides IO := {
     options := { logError := logError }
     traverseContext := ()
-    traverseState := ()
+    traverseState := traverseState
     definitionIds := {}
     linkTargets := {}
     codeOptions := {}
@@ -419,7 +437,7 @@ def slidesMain (config : Config := {}) (doc : Part Slides) (args : List String :
 
   -- Produce full HTML document
   let title := inlinesToPlainText doc.title
-  let fullHtml := renderFullHtml config title slidesHtml
+  let fullHtml := renderFullHtml config title slidesHtml traverseState.cssBlocks
 
   -- Write output
   let dir := config.outputDir
@@ -434,6 +452,14 @@ def slidesMain (config : Config := {}) (doc : Part Slides) (args : List String :
 
   -- Write vendored library assets to the output directory
   writeVendoredAssets dir config.theme
+
+  -- Copy local images to the output directory
+  if !traverseState.imageFiles.isEmpty then
+    let imagesDir := dir / "images"
+    IO.FS.createDirAll imagesDir
+    for (resolved, outputName) in traverseState.imageFiles.toList do
+      let contents ← IO.FS.readBinFile resolved
+      writeBinFileWithDirs (imagesDir / outputName) contents
 
   IO.println s!"Slides written to {indexPath}"
 

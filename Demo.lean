@@ -290,6 +290,120 @@ transition := "zoom"
 
 This slide has a purple background and uses the *zoom* transition.
 
+# Horizontal Stack
+
+The `:::hstack` directive arranges children side by side.
+
+:::hstack
+Left column content.
+
+Center column content.
+
+Right column content.
+:::
+
+# Vertical Stack
+
+The `:::vstack` directive arranges children vertically with centered alignment.
+
+:::vstack
+Top item.
+
+Middle item.
+
+Bottom item.
+:::
+
+# Stack (Overlay)
+
+The `:::stack` directive overlays children on top of each other.
+Combine with fragments to reveal them one at a time.
+
+:::::stack
+:::fragment fadeOut
+First layer (visible initially).
+:::
+
+:::fragment fadeIn
+Second layer (appears on click).
+:::
+:::::
+
+# Frame
+
+The `:::frame` directive adds a default styled border around content.
+
+:::frame
+This paragraph is framed.
+:::
+
+:::frame
+Another framed block, separately bordered.
+:::
+
+# Stretch
+
+The `:::stretch` directive makes an element fill the remaining slide space.
+
+:::stretch
+This content stretches to fill available vertical space.
+:::
+
+A footer line after the stretched content.
+
+# Class Directive
+
+The `:::class` directive pushes one or more CSS classes onto each child block.
+
+:::class "r-fit-text"
+Custom-classed text!
+:::
+
+# Inline Class Role
+
+The `{class}` role wraps inline content in a `<span>` with CSS classes.
+
+This sentence has {class "fragment highlight-green"}[green highlighted] text
+that appears as a fragment.
+
+# Inline ID Role
+
+The `{id}` role wraps inline content with an HTML `id` attribute.
+
+This word is {id "special-word"}[identifiable] by its ID.
+
+# Inline Attr Role
+
+The `{attr}` role applies arbitrary HTML attributes to inline content.
+
+This {attr («data-id» := "morphing-word")}[word] has a custom data attribute.
+
+# Custom CSS
+
+```css
+.demo-highlight { color: #ff6600; font-weight: bold; }
+```
+
+:::class "demo-highlight"
+This text is styled with custom CSS injected via a `css` code block.
+:::
+
+# Image Role
+%%%
+theme := "white"
+%%%
+
+The `{image}` role renders an `<img>` tag with configurable width and height. The path to the image is relative to the source file.
+
+{image "demo-images/demo-image.svg" (width := "300px")}[Demo image]
+
+
+# Lean Command Role
+
+The `{leanCommand}` role renders a single elaborated Lean command inline.
+
+Here is an inline command: {leanCommand}`#check Nat.add_comm`
+
 # Thank You
 
 That concludes the *VersoSlides* demo.
