@@ -11,9 +11,14 @@ public import Verso.Doc.Elab.Monad
 
 open Verso Doc Elab ArgParse
 open Lean Elab
+open Lean.Doc.Syntax
+
+register_option verso.slides.warnOnImage : Bool := {
+  defValue := true
+  descr := "if true, warn when Markdown image syntax ![alt](url) is used instead of the {image} role"
+}
 
 namespace VersoSlides
-
 
 /-- Arguments for the `:::fragment` directive. -/
 public structure FragmentArgs where
@@ -412,9 +417,10 @@ public def image : RoleExpanderOf ImageArgs
   for stx in stxs do
     match stx with
     | `(inline| $strLit:str) =>
-      altParts := altParts.push strLit.getString
+      altParts := altParts.push strLit.getString.trimAscii.copy
+    | `(inline| line! $_) => continue
     | _ => logErrorAt stx "image alt text must be plain text, not formatted content"
-  let alt := String.join altParts.toList
+  let alt : String := " ".intercalate altParts.toList
   -- Resolve the image source: URLs pass through, local paths get normalized to project root
   let imgSrc ← if isUrl args.src then
       pure (.remote args.src : ImgSrc)
@@ -427,6 +433,25 @@ public def image : RoleExpanderOf ImageArgs
       let rel : String := absStr.dropPrefix cwdPrefix |>.copy
       pure (.projectRelative rel)
   ``(Inline.other (VersoSlides.InlineExt.image $(quote imgSrc) $(quote alt) $(quote args.width) $(quote args.height) $(quote args.class)) #[])
+
+/--
+Intercepts the Markdown `![alt](url)` syntax and warns that the `{image}` role should be used
+instead, since it supports width, height, class, and local path resolution. Controlled by the
+`verso.slides.warnOnImage` option. After warning, delegates to the default handler.
+-/
+@[inline_expander Lean.Doc.Syntax.image]
+public meta def warnOnMarkdownImage : InlineExpander
+  | `(inline| image( $alt:str ) ( $url )) => do
+    if (← getOptions).getBool `verso.slides.warnOnImage true then
+      let suggestion := "{image " ++ url.getString.quote ++ "}[" ++ alt.getString ++ "]"
+      let msg := m!"This image syntax is missing features that are useful for slides, such as width and height."
+      let h ←
+        (m!"Use the `{.ofConstName ``image}` role instead of `![alt](url)` for slides. " ++
+         m!"It supports width, height, and CSS class, and it copies images to the output directory.").hint
+        #[{ suggestion := .string suggestion }]
+      logWarningAt alt (msg ++ h)
+    throwUnsupportedSyntax
+  | _ => throwUnsupportedSyntax
 
 /--
 Custom CSS block. The content is collected during traversal and injected
