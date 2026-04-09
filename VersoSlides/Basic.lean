@@ -5,6 +5,7 @@ Author: David Thrane Christiansen
 -/
 module
 public import Verso.Doc
+public import VersoSlides.ImgSrc
 import Std.Data.HashMap
 
 open Lean
@@ -121,16 +122,6 @@ public inductive BlockExt where
   | css (content : String)
 deriving BEq, Repr, ToJson, FromJson
 
-/-- The source of an image: either a remote URL or a project-root-relative local path. -/
-public inductive ImgSrc where
-  | remote (url : String)
-  | projectRelative (path : String)
-deriving BEq, Repr, ToJson, FromJson
-
-public instance : Quote ImgSrc where
-  quote
-    | .remote url => Syntax.mkApp (mkCIdent ``ImgSrc.remote) #[quote url]
-    | .projectRelative path => Syntax.mkApp (mkCIdent ``ImgSrc.projectRelative) #[quote path]
 
 /-- Custom inline elements for the Slides genre -/
 public inductive InlineExt where
