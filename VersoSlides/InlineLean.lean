@@ -132,26 +132,41 @@ def elabCommandsWithFormat (config : LeanBlockConfig) (str : StrLit)
 
     let mut cmdState : Command.State := {env := ← getEnv, maxRecDepth := ← MonadRecDepth.getMaxRecDepth, scopes := origScopes}
     let mut pstate := {pos := startPos, recovering := false, hasLeading := false}
-    let mut cmds := #[]
+    let mut cmds : Array Syntax := #[]
 
-    repeat
-      let scope := cmdState.scopes.head!
-      let pmctx := { env := cmdState.env, options := scope.opts, currNamespace := scope.currNamespace, openDecls := scope.openDecls }
-      let (cmd, ps', messages) := Parser.parseCommand ictx pmctx pstate cmdState.messages
-      cmds := cmds.push cmd
-      pstate := ps'
-      cmdState := { cmdState with messages := messages }
+    -- Check whether whitespace (including comments) consumes the entire block content.
+    -- If so, there are no commands to parse. We synthesize an EOI node that preserves
+    -- any comments as leading whitespace so they still appear in the highlighted output.
+    let scope := cmdState.scopes.head!
+    let pmctx := { env := cmdState.env, options := scope.opts, currNamespace := scope.currNamespace, openDecls := scope.openDecls }
+    let wsState := Parser.whitespace.run ictx pmctx (Parser.getTokenTable cmdState.env)
+      { cache := Parser.initCacheForInput ictx.inputString, pos := startPos }
 
-      let savedMsgs := cmdState.messages
-      let savedTrees := cmdState.infoState.trees
-      cmdState ← withInfoTreeContext (mkInfoTree := pure ∘ InfoTree.node (.ofCommandInfo {elaborator := `Manual.Meta.lean, stx := cmd})) <|
-        runCommand (Command.elabCommandTopLevel cmd) cmd cctx cmdState
-      cmdState := { cmdState with
-        messages := savedMsgs ++ cmdState.messages,
-        infoState := { cmdState.infoState with trees := savedTrees ++ cmdState.infoState.trees }
-      }
+    if ictx.atEnd wsState.pos then
+      -- This is equivalent to mkEOI in Lean.Parser.Module
+      let leading := ictx.substring startPos wsState.pos
+      let emptyAt := ictx.substring wsState.pos wsState.pos
+      let atom := Syntax.atom (.original leading wsState.pos emptyAt wsState.pos) ""
+      cmds := cmds.push (mkNode ``Lean.Parser.Command.eoi #[atom])
+    else
+      repeat
+        let scope := cmdState.scopes.head!
+        let pmctx := { env := cmdState.env, options := scope.opts, currNamespace := scope.currNamespace, openDecls := scope.openDecls }
+        let (cmd, ps', messages) := Parser.parseCommand ictx pmctx pstate cmdState.messages
+        cmds := cmds.push cmd
+        pstate := ps'
+        cmdState := { cmdState with messages := messages }
 
-      if Parser.isTerminalCommand cmd then break
+        if Parser.isTerminalCommand cmd then break
+
+        let savedMsgs := cmdState.messages
+        let savedTrees := cmdState.infoState.trees
+        cmdState ← withInfoTreeContext (mkInfoTree := pure ∘ InfoTree.node (.ofCommandInfo {elaborator := `Manual.Meta.lean, stx := cmd})) <|
+          runCommand (Command.elabCommandTopLevel cmd) cmd cctx cmdState
+        cmdState := { cmdState with
+          messages := savedMsgs ++ cmdState.messages,
+          infoState := { cmdState.infoState with trees := savedTrees ++ cmdState.infoState.trees }
+        }
 
     let nonTerm := cmds.filter (! Parser.isTerminalCommand ·)
     if let some maxCmds := maxCommands then

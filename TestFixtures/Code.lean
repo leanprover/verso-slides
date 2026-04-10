@@ -127,6 +127,26 @@ def reduceMiddle := 10
 #check (42 : String)
 ```
 
+# Empty Code Block
+
+```lean
+```
+
+# Whitespace-Only Code Block
+
+```lean
+
+
+
+
+```
+
+# Comment-Only Code Block
+
+```lean
+-- This comment stands alone
+```
+
 # Rust Code
 
 ```code rust
