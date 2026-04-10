@@ -104,7 +104,8 @@ theorem replicate_length : ∀ {n : Nat} {x : α},
 ```lean
 /- !hide -/def fact : Nat → Nat
   | 0 => 1
-  | n + 1 => (n + 1) * fact n/- !end hide -/
+  | n + 1 => (n + 1) * fact n
+-- !end hide
 theorem fact_pos : ∀ n, 0 < fact n := by
 -- !fragment
   intro n
@@ -120,12 +121,11 @@ theorem fact_pos : ∀ n, 0 < fact n := by
 # Proof with Fragment Indices
 
 ```lean
-/- !hide -/
+-- !hide
 def sum_to : Nat → Nat
   | 0 => 0
   | n + 1 => (n + 1) + sum_to n
-/- !end hide -/
-
+-- !end hide
 -- !fragment 2
 theorem sum_to_formula : ∀ n,
     2 * sum_to n = n * (n + 1) := by

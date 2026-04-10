@@ -1,11 +1,11 @@
-{"version": "1.1.0",
+{"version": "1.2.0",
  "packagesDir": ".lake/packages",
  "packages":
  [{"url": "https://github.com/leanprover/verso.git",
    "type": "git",
    "subDir": null,
    "scope": "",
-   "rev": "7ae82ac2ae54ae5dcc9948a701669e9b596e5cae",
+   "rev": "5eb5ac5069b6bf69a24e86fb194c8ffa45e97859",
    "name": "verso",
    "manifestFile": "lake-manifest.json",
    "inputRev": "main",
@@ -15,7 +15,7 @@
    "type": "git",
    "subDir": null,
    "scope": "",
-   "rev": "83e90935a17ca19ebe4b7893c7f7066e266f50d3",
+   "rev": "2541d6b9e923b0b2f867d7b037ac344551cc7feb",
    "name": "plausible",
    "manifestFile": "lake-manifest.json",
    "inputRev": "main",
@@ -42,4 +42,5 @@
    "inherited": true,
    "configFile": "lakefile.lean"}],
  "name": "«verso-slides»",
- "lakeDir": ".lake"}
+ "lakeDir": ".lake",
+ "fixedToolchain": false}

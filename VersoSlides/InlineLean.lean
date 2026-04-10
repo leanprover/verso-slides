@@ -14,7 +14,7 @@ open Lean Elab
 open Verso Doc Elab
 open Verso.Genre.Manual.InlineLean (LeanBlockConfig LeanInlineConfig)
 open SubVerso.Highlighting (Highlighted hlToExport highlight highlightIncludingUnparsed highlightMessage)
-open Verso.SyntaxUtils (parserInputString)
+open Verso.SyntaxUtils (strLitInputContext parseStrLitAsCategory)
 open Verso.Genre.Manual.InlineLean (reportMessages firstToken? saveOutputs)
 open Verso.Genre.Manual.InlineLean.Scopes (getScopes setScopes runWithOpenDecls runWithVariables)
 open Verso (withoutAsync)
@@ -126,13 +126,12 @@ def elabCommandsWithFormat (config : LeanBlockConfig) (str : StrLit)
     let origScopes := origScopes.modifyHead fun sc =>
       { sc with opts := pp.tagAppFns.set (Elab.async.set sc.opts false) true }
 
-    let altStr ← parserInputString str
-
-    let ictx := Parser.mkInputContext altStr (← getFileName)
-    let cctx : Command.Context := { fileName := ← getFileName, fileMap := FileMap.ofString altStr, snap? := none, cancelTk? := none}
+    let text ← getFileMap
+    let (ictx, startPos) ← strLitInputContext str.raw (← getFileName)
+    let cctx : Command.Context := { fileName := ← getFileName, fileMap := text, snap? := none, cancelTk? := none}
 
     let mut cmdState : Command.State := {env := ← getEnv, maxRecDepth := ← MonadRecDepth.getMaxRecDepth, scopes := origScopes}
-    let mut pstate := {pos := 0, recovering := false}
+    let mut pstate := {pos := startPos, recovering := false, hasLeading := false}
     let mut cmds := #[]
 
     repeat
@@ -143,8 +142,14 @@ def elabCommandsWithFormat (config : LeanBlockConfig) (str : StrLit)
       pstate := ps'
       cmdState := { cmdState with messages := messages }
 
+      let savedMsgs := cmdState.messages
+      let savedTrees := cmdState.infoState.trees
       cmdState ← withInfoTreeContext (mkInfoTree := pure ∘ InfoTree.node (.ofCommandInfo {elaborator := `Manual.Meta.lean, stx := cmd})) <|
-        runCommand (Command.elabCommand cmd) cmd cctx cmdState
+        runCommand (Command.elabCommandTopLevel cmd) cmd cctx cmdState
+      cmdState := { cmdState with
+        messages := savedMsgs ++ cmdState.messages,
+        infoState := { cmdState.infoState with trees := savedTrees ++ cmdState.infoState.trees }
+      }
 
       if Parser.isTerminalCommand cmd then break
 
@@ -168,7 +173,7 @@ def elabCommandsWithFormat (config : LeanBlockConfig) (str : StrLit)
 
       let mut hls := Highlighted.empty
       let nonSilentMsgs := cmdState.messages.toArray.filter (!·.isSilent)
-      let mut lastPos : String.Pos.Raw := str.raw.getPos? |>.getD 0
+      let mut lastPos : String.Pos.Raw := startPos
       for cmd in cmds do
         let cmdHl ← highlightIncludingUnparsed cmd nonSilentMsgs cmdState.infoState.trees (startPos? := lastPos) (collectFormat := true)
         lastPos := (cmd.getTrailingTailPos?).getD lastPos
@@ -238,8 +243,6 @@ def leanInline : RoleExpanderOf LeanInlineConfig
       | throwError "Expected exactly one argument"
     let `(inline|code( $term:str )) := arg
       | throwErrorAt arg "Expected code literal with the example name"
-    let altStr ← parserInputString term
-
     let leveller :=
       if let some us := config.universes then
         let us :=
@@ -248,58 +251,56 @@ def leanInline : RoleExpanderOf LeanInlineConfig
         Elab.Term.withLevelNames us
       else id
 
-    match Parser.runParserCategory (← getEnv) `term altStr (← getFileName) with
-    | .error e => throwErrorAt term e
-    | .ok stx =>
+    let stx ← parseStrLitAsCategory `term term
 
-      let (newMsgs, type, tree) ← do
-        let initMsgs ← Core.getMessageLog
-        try
-          Core.resetMessageLog
-          let (tree', t) ← runWithOpenDecls <| runWithVariables fun _ => do
+    let (newMsgs, type, tree) ← do
+      let initMsgs ← Core.getMessageLog
+      try
+        Core.resetMessageLog
+        let (tree', t) ← runWithOpenDecls <| runWithVariables fun _ => do
 
-            let expectedType ← config.type.mapM fun (s : StrLit) => do
-              match Parser.runParserCategory (← getEnv) `term s.getString (← getFileName) with
-              | .error e => throwErrorAt term e
-              | .ok stx => withEnableInfoTree false do
-                let t ← leveller <| Elab.Term.elabType stx
-                Term.synthesizeSyntheticMVarsNoPostponing
-                let t ← instantiateMVars t
-                if t.hasExprMVar || t.hasLevelMVar then
-                  throwErrorAt s "Type contains metavariables: {t}"
-                pure t
+          let expectedType ← config.type.mapM fun (s : StrLit) => do
+            match Parser.runParserCategory (← getEnv) `term s.getString (← getFileName) with
+            | .error e => throwErrorAt term e
+            | .ok stx => withEnableInfoTree false do
+              let t ← leveller <| Elab.Term.elabType stx
+              Term.synthesizeSyntheticMVarsNoPostponing
+              let t ← instantiateMVars t
+              if t.hasExprMVar || t.hasLevelMVar then
+                throwErrorAt s "Type contains metavariables: {t}"
+              pure t
 
-            let e ← leveller <| Elab.Term.elabTerm (catchExPostpone := true) stx expectedType
-            Term.synthesizeSyntheticMVarsNoPostponing
-            let e ← Term.levelMVarToParam (← instantiateMVars e)
-            let t ← Meta.inferType e >>= instantiateMVars >>= (Meta.ppExpr ·)
-            let t := Std.Format.group <| (← Meta.ppExpr e) ++ (" :" ++ .line) ++ t
+          let e ← leveller <| Elab.Term.elabTerm (catchExPostpone := true) stx expectedType
+          Term.synthesizeSyntheticMVarsNoPostponing
+          let e ← Term.levelMVarToParam (← instantiateMVars e)
+          let t ← Meta.inferType e >>= instantiateMVars >>= (Meta.ppExpr ·)
+          let t := Std.Format.group <| (← Meta.ppExpr e) ++ (" :" ++ .line) ++ t
 
-            Term.synthesizeSyntheticMVarsNoPostponing
-            let ctx := PartialContextInfo.commandCtx {
-              env := ← getEnv, fileMap := ← getFileMap, mctx := ← getMCtx, currNamespace := ← getCurrNamespace,
-              openDecls := ← getOpenDecls, options := ← getOptions, ngen := ← getNGen
-            }
-            pure <| (InfoTree.context ctx (.node (Info.ofCommandInfo ⟨`VersoSlides.leanInline, arg⟩) (← getInfoState).trees), t)
-          pure (← Core.getMessageLog, t, tree')
-        finally
-          Core.setMessageLog initMsgs
+          Term.synthesizeSyntheticMVarsNoPostponing
+          let ctx := PartialContextInfo.commandCtx {
+            env := ← getEnv, fileMap := ← getFileMap, mctx := ← getMCtx, currNamespace := ← getCurrNamespace,
+            openDecls := ← getOpenDecls, options := ← getOptions, ngen := ← getNGen
+          }
+          pure <| (InfoTree.context ctx (.node (Info.ofCommandInfo ⟨`VersoSlides.leanInline, arg⟩) (← getInfoState).trees), t)
+        pure (← Core.getMessageLog, t, tree')
+      finally
+        Core.setMessageLog initMsgs
 
-      if let some name := config.name then
-        let msgs ← newMsgs.toList.mapM fun (msg : Message) => do
-          let head := if msg.caption != "" then msg.caption ++ ":\n" else ""
-          let msg ← highlightMessage msg
-          pure { msg with contents := .append #[.text head, msg.contents] }
-        saveOutputs name msgs
+    if let some name := config.name then
+      let msgs ← newMsgs.toList.mapM fun (msg : Message) => do
+        let head := if msg.caption != "" then msg.caption ++ ":\n" else ""
+        let msg ← highlightMessage msg
+        pure { msg with contents := .append #[.text head, msg.contents] }
+      saveOutputs name msgs
 
-      pushInfoTree tree
+    pushInfoTree tree
 
-      if let `(inline|role{%$s $f $_*}%$e[$_*]) ← getRef then
-        Verso.Hover.addCustomHover (mkNullNode #[s, e]) type
-        Verso.Hover.addCustomHover f type
+    if let `(inline|role{%$s $f $_*}%$e[$_*]) ← getRef then
+      Verso.Hover.addCustomHover (mkNullNode #[s, e]) type
+      Verso.Hover.addCustomHover f type
 
-      reportMessages (if config.error then some true else none) term newMsgs
+    reportMessages (if config.error then some true else none) term newMsgs
 
-      let hls := (← highlight stx newMsgs.toArray (PersistentArray.empty.push tree) (collectFormat := true))
+    let hls := (← highlight stx newMsgs.toArray (PersistentArray.empty.push tree) (collectFormat := true))
 
-      toSlidesHighlightedInline config.show hls term
+    toSlidesHighlightedInline config.show hls term

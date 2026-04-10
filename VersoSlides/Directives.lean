@@ -6,9 +6,13 @@ Author: David Thrane Christiansen
 module
 import VersoSlides.Basic
 import VersoSlides.ImageWidget
+public meta import VersoSlides.ImageWidget
+public meta import VersoSlides.ImgSrc
 import Verso.Doc.Elab
 import Verso.Doc.ArgParse
 public import Verso.Doc.Elab.Monad
+public meta import Verso.Doc.Elab.Block
+public meta import Verso.Doc.Elab.Inline
 
 open Verso Doc Elab ArgParse
 open Lean Elab Widget
@@ -29,7 +33,7 @@ public structure FragmentArgs where
 section
 variable [Monad m] [MonadInfoTree m] [MonadResolveName m] [MonadEnv m] [MonadError m] [MonadLiftT CoreM m] [MonadLog m] [AddMessageContext m] [MonadOptions m]
 
-public instance : FromArgs FragmentArgs m where
+public meta instance : FromArgs FragmentArgs m where
   fromArgs :=
     FragmentArgs.mk <$>
       (some <$> .positional `style .name <|> pure none) <*>
@@ -37,14 +41,14 @@ public instance : FromArgs FragmentArgs m where
 end
 
 /-- Arguments for the `{fragment}` inline role. -/
-public structure InlineFragmentArgs where
+public meta structure InlineFragmentArgs where
   style : Option Name := none
   index : Option Nat := none
 
 section
 variable [Monad m] [MonadInfoTree m] [MonadResolveName m] [MonadEnv m] [MonadError m] [MonadLiftT CoreM m] [MonadLog m] [AddMessageContext m] [MonadOptions m]
 
-public instance : FromArgs InlineFragmentArgs m where
+public meta instance : FromArgs InlineFragmentArgs m where
   fromArgs :=
     InlineFragmentArgs.mk <$>
       .named `style .name true <*>
@@ -52,37 +56,37 @@ public instance : FromArgs InlineFragmentArgs m where
 end
 
 /-- Arguments for variadic class directives/roles: one or more positional string args. -/
-public structure ClassArgs where
+public meta structure ClassArgs where
   classes : Array String
 
 section
 variable [Monad m] [MonadInfoTree m] [MonadResolveName m] [MonadEnv m] [MonadError m] [MonadLiftT CoreM m] [MonadLog m] [AddMessageContext m] [MonadOptions m]
 
-public instance : FromArgs ClassArgs m where
+public meta instance : FromArgs ClassArgs m where
   fromArgs :=
     ClassArgs.mk <$> (List.toArray <$> ArgParse.many (.positional `class .string))
 end
 
 /-- Arguments for the `:::id` directive / `{id}` role: single positional string arg. -/
-public structure IdArgs where
+public meta structure IdArgs where
   id : String
 
 section
 variable [Monad m] [MonadInfoTree m] [MonadResolveName m] [MonadEnv m] [MonadError m] [MonadLiftT CoreM m] [MonadLog m] [AddMessageContext m] [MonadOptions m]
 
-public instance : FromArgs IdArgs m where
+public meta instance : FromArgs IdArgs m where
   fromArgs :=
     IdArgs.mk <$> .positional `id .string
 end
 
 /-- Arguments for the `:::attr` directive / `{attr}` role: variadic named key-value pairs. -/
-public structure AttrArgs where
+public meta structure AttrArgs where
   attrs : Array (String × String)
 
 section
 variable [Monad m] [MonadInfoTree m] [MonadResolveName m] [MonadEnv m] [MonadError m] [MonadLiftT CoreM m] [MonadLog m] [AddMessageContext m] [MonadOptions m]
 
-public instance : FromArgs AttrArgs m where
+public meta instance : FromArgs AttrArgs m where
   fromArgs :=
     AttrArgs.mk <$> (List.toArray <$>
       ArgParse.many ((fun (k, v) => (k.getId.toString (escape := false), v)) <$>
@@ -91,7 +95,7 @@ end
 
 
 /-- Converts a Lean `Name` to a kebab-case fragment style string. -/
-private def nameToStyle (n : Name) : String :=
+private meta def nameToStyle (n : Name) : String :=
   camelToKebab (n.toString (escape := false))
 where
   camelToKebab (s : String) : String := Id.run do
@@ -117,7 +121,7 @@ Remember to explain this point.
 ```
 -/
 @[directive]
-public def notes : DirectiveExpanderOf Unit
+public meta def notes : DirectiveExpanderOf Unit
   | (), stxs => do
   let contents ← stxs.mapM elabBlock
   ``(Block.other (VersoSlides.BlockExt.notes) #[$contents,*])
@@ -134,7 +138,7 @@ Block content here.
 ```
 -/
 @[directive]
-public def fragment : DirectiveExpanderOf FragmentArgs
+public meta def fragment : DirectiveExpanderOf FragmentArgs
   | args, stxs => do
   let style := args.style.map nameToStyle
   let blocks ← stxs.mapM fun stx => do
@@ -154,7 +158,7 @@ Big text!
 ```
 -/
 @[directive]
-public def «class» : DirectiveExpanderOf ClassArgs
+public meta def «class» : DirectiveExpanderOf ClassArgs
   | args, stxs => do
   let cls := " ".intercalate args.classes.toList
   let attrs : Array (String × String) := #[("class", cls)]
@@ -174,7 +178,7 @@ This paragraph has a custom id.
 ```
 -/
 @[directive id]
-public def idDirective : DirectiveExpanderOf IdArgs
+public meta def idDirective : DirectiveExpanderOf IdArgs
   | args, stxs => do
   let attrs : Array (String × String) := #[("id", args.id)]
   let blocks ← stxs.mapM fun stx => do
@@ -194,7 +198,7 @@ Content here.
 ```
 -/
 @[directive]
-public def attr : DirectiveExpanderOf AttrArgs
+public meta def attr : DirectiveExpanderOf AttrArgs
   | args, stxs => do
   let blocks ← stxs.mapM fun stx => do
     let b ← elabBlock stx
@@ -213,7 +217,7 @@ Big text!
 ```
 -/
 @[directive]
-public def fitText : DirectiveExpanderOf Unit
+public meta def fitText : DirectiveExpanderOf Unit
   | (), stxs => do
   let attrs : Array (String × String) := #[("class", "r-fit-text")]
   let blocks ← stxs.mapM fun stx => do
@@ -233,7 +237,7 @@ Usage:
 ```
 -/
 @[directive]
-public def stretch : DirectiveExpanderOf Unit
+public meta def stretch : DirectiveExpanderOf Unit
   | (), stxs => do
   let attrs : Array (String × String) := #[("class", "r-stretch")]
   let blocks ← stxs.mapM fun stx => do
@@ -253,7 +257,7 @@ Framed content.
 ```
 -/
 @[directive]
-public def frame : DirectiveExpanderOf Unit
+public meta def frame : DirectiveExpanderOf Unit
   | (), stxs => do
   let attrs : Array (String × String) := #[("class", "r-frame")]
   let blocks ← stxs.mapM fun stx => do
@@ -276,7 +280,7 @@ Second element (on top).
 ```
 -/
 @[directive]
-public def stack : DirectiveExpanderOf Unit
+public meta def stack : DirectiveExpanderOf Unit
   | (), stxs => do
   let contents ← stxs.mapM elabBlock
   ``(Block.other (VersoSlides.BlockExt.wrap #[("class", "r-stack")]) #[$contents,*])
@@ -295,7 +299,7 @@ Right element.
 ```
 -/
 @[directive]
-public def hstack : DirectiveExpanderOf Unit
+public meta def hstack : DirectiveExpanderOf Unit
   | (), stxs => do
   let contents ← stxs.mapM elabBlock
   ``(Block.other (VersoSlides.BlockExt.wrap #[("class", "r-hstack")]) #[$contents,*])
@@ -314,7 +318,7 @@ Bottom element.
 ```
 -/
 @[directive]
-public def vstack : DirectiveExpanderOf Unit
+public meta def vstack : DirectiveExpanderOf Unit
   | (), stxs => do
   let contents ← stxs.mapM elabBlock
   ``(Block.other (VersoSlides.BlockExt.wrap #[("class", "r-vstack")]) #[$contents,*])
@@ -329,7 +333,7 @@ This is {fragment (style := highlightRed)}[important text].
 ```
 -/
 @[role VersoSlides.fragment]
-public def fragmentRole : RoleExpanderOf InlineFragmentArgs
+public meta def fragmentRole : RoleExpanderOf InlineFragmentArgs
   | args, stxs => do
   let style := args.style.map nameToStyle
   let contents ← stxs.mapM elabInline
@@ -344,7 +348,7 @@ This is {class "highlight"}[highlighted text].
 ```
 -/
 @[role VersoSlides.«class»]
-public def classRole : RoleExpanderOf ClassArgs
+public meta def classRole : RoleExpanderOf ClassArgs
   | args, stxs => do
   let cls := " ".intercalate args.classes.toList
   let attrs : Array (String × String) := #[("class", cls)]
@@ -360,7 +364,7 @@ This is {id "my-element"}[identified text].
 ```
 -/
 @[role id]
-public def idRole : RoleExpanderOf IdArgs
+public meta def idRole : RoleExpanderOf IdArgs
   | args, stxs => do
   let attrs : Array (String × String) := #[("id", args.id)]
   let contents ← stxs.mapM elabInline
@@ -375,13 +379,13 @@ Some {attr (data-id := "word")}[animated word] here.
 ```
 -/
 @[role VersoSlides.attr]
-public def attrRole : RoleExpanderOf AttrArgs
+public meta def attrRole : RoleExpanderOf AttrArgs
   | args, stxs => do
   let contents ← stxs.mapM elabInline
   ``(Inline.other (VersoSlides.InlineExt.styled $(quote args.attrs)) #[$contents,*])
 
 /-- Arguments for the `{image}` role. -/
-public structure ImageArgs where
+public meta structure ImageArgs where
   src : String
   width : Option String := none
   height : Option String := none
@@ -390,7 +394,7 @@ public structure ImageArgs where
 section
 variable [Monad m] [MonadInfoTree m] [MonadResolveName m] [MonadEnv m] [MonadError m] [MonadLiftT CoreM m] [MonadLog m] [AddMessageContext m] [MonadOptions m]
 
-public instance : FromArgs ImageArgs m where
+public meta instance : FromArgs ImageArgs m where
   fromArgs :=
     ImageArgs.mk <$>
       .positional `src .string <*>
@@ -400,7 +404,7 @@ public instance : FromArgs ImageArgs m where
 end
 
 
-private def isUrl (s : String) : Bool :=
+private meta def isUrl (s : String) : Bool :=
   s.startsWith "http://" || s.startsWith "https://" || s.startsWith "data:" || s.startsWith "//"
 
 /--
@@ -412,7 +416,7 @@ Usage:
 ```
 -/
 @[role]
-public def image : RoleExpanderOf ImageArgs
+public meta def image : RoleExpanderOf ImageArgs
   | args, stxs => do
   let mut altParts : Array String := #[]
   for stx in stxs do
@@ -473,6 +477,6 @@ Usage:
 ````
 -/
 @[code_block]
-public def css : CodeBlockExpanderOf Unit
+public meta def css : CodeBlockExpanderOf Unit
   | (), str =>
     ``(Verso.Doc.Block.other (BlockExt.css $(quote str.getString)) #[])

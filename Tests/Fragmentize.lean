@@ -365,3 +365,48 @@ where
 
     testErr "error: unclosed replace"
       (.seq #[kw "def", u " ", id' "foo", u " /- !replace ... -/ ", id' "bar"])
+
+    ---- Line-level hide: basic ----
+    testOk "line-level hide"
+      (.seq #[u "-- !hide\n",
+              kw "def", u " ", id' "secret", u " := ", id' "1", u "\n",
+              u "-- !end hide\n",
+              kw "def", u " ", id' "foo", u " := ", id' "2"])
+      (.hl (.seq #[kw "def", u " ", id' "foo", u " := ", id' "2"]))
+
+    ---- Line-level hide: no blank lines leak after end hide ----
+    testOk "line-level hide no blank line leakage"
+      (.seq #[u "-- !hide\n",
+              kw "def", u " ", id' "secret", u " := ", id' "1", u "\n",
+              u "-- !end hide\n-- !fragment\n",
+              kw "def", u " ", id' "foo", u " := ", id' "2"])
+      (.fragment ⟨none, none⟩ true
+        (.hl (.seq #[kw "def", u " ", id' "foo", u " := ", id' "2"])))
+
+    ---- Line-level hide: preserves blank line when visible content precedes ----
+    testOk "line-level hide preserves surrounding whitespace"
+      (.seq #[kw "def", u " ", id' "y", u " := ", id' "8", u "\n",
+              u "-- !hide\n",
+              kw "def", u " ", id' "x", u " := ", id' "5", u "\n",
+              u "-- !end hide\n\n",
+              id' "#eval", u " ", id' "x"])
+      (.hl (.seq #[kw "def", u " ", id' "y", u " := ", id' "8", u "\n",
+                    u "\n",
+                    id' "#eval", u " ", id' "x"]))
+
+    ---- Line-level hide: with leading indent ----
+    testOk "line-level hide with indent"
+      (.seq #[u "  -- !hide\n",
+              kw "def", u " ", id' "secret", u " := ", id' "1", u "\n",
+              u "  -- !end hide\n",
+              kw "def", u " ", id' "foo", u " := ", id' "2"])
+      (.hl (.seq #[kw "def", u " ", id' "foo", u " := ", id' "2"]))
+
+    ---- Line-level hide errors ----
+    testErr "error: line-level end hide without open"
+      (.seq #[kw "def", u " ", id' "foo", u "\n",
+              u "-- !end hide\n"])
+
+    testErr "error: unclosed line-level hide"
+      (.seq #[u "-- !hide\n",
+              kw "def", u " ", id' "foo"])

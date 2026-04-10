@@ -68,3 +68,34 @@ public def parseClickComment (line : String.Slice) : Option (Nat × Option Nat) 
       pure (some index)
     else pure none
   if todo.all (·.isWhitespace) then return (caretCol, index) else failure
+
+/--
+Parses a line as a `-- !hide` magic comment.
+Returns `true` if the line matches, `false` otherwise.
+-/
+public def parseHideComment (line : String.Slice) : Bool :=
+  (do
+    let mut todo := line.dropWhile (· == ' ')
+    todo ← todo.dropPrefix? "--"
+    todo := todo.dropWhile (· == ' ')
+    todo ← todo.dropPrefix? "!hide"
+    if todo.startsWith (·.isAlpha) then failure
+    guard (todo.all (·.isWhitespace))
+  : Option Unit).isSome
+
+/--
+Parses a line as a `-- !end hide` magic comment.
+Returns `true` if the line matches, `false` otherwise.
+-/
+public def parseEndHideComment (line : String.Slice) : Bool :=
+  (do
+    let mut todo := line.dropWhile (· == ' ')
+    todo ← todo.dropPrefix? "--"
+    todo := todo.dropWhile (· == ' ')
+    todo ← todo.dropPrefix? "!end"
+    guard (todo.startsWith (· == ' '))
+    todo := todo.dropWhile (· == ' ')
+    todo ← todo.dropPrefix? "hide"
+    if todo.startsWith (·.isAlpha) then failure
+    guard (todo.all (·.isWhitespace))
+  : Option Unit).isSome
