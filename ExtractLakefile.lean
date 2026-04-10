@@ -15,7 +15,7 @@ open Lean Elab System
 
 /-- Compute the path to Lake's shared library in the toolchain. -/
 def lakeSharedLib (sysroot : FilePath) : FilePath :=
-  sysroot / "lib" / "lean" / "libLake_shared.dylib"
+  sysroot / "lib" / "lean" / s!"libLake_shared.{Lake.sharedLibExt}"
 
 /-- Returns the node kind of the command, skipping outer `in` nodes. -/
 partial def commandKind (cmd : Syntax) : SyntaxNodeKind :=
