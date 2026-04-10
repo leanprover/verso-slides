@@ -160,6 +160,9 @@ instance [Monad m] : GenreHtml Slides m where
       match fragmentize hl with
       | .error _msg => hl.inlineHtml (g := Slides) (some "lean")
       | .ok sc => pure {{ <code class="hl lean inline"> {{ ← sc.toHtml (g := Slides) }} </code> }}
+    | .name hlExport =>
+      let hl := (hlFromExport! hlExport).trim
+      hl.inlineHtml (g := Slides) (some "lean")
 
 
 section

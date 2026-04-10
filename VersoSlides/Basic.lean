@@ -135,6 +135,8 @@ public inductive InlineExt where
   | leanCode (hlExport : String)
   /-- Fragmentized inline Lean code, serialized via {lit}`ExportSlideCode`. -/
   | slideCode (scExport : String)
+  /-- A reference to a Lean name (constant), with syntax highlighting and hover info. -/
+  | name (hlExport : String)
 deriving BEq, Repr, ToJson, FromJson
 
 /-- State accumulated during the traversal pass. -/

@@ -28,6 +28,8 @@ lean_lib Demo
 
 @[default_target] lean_exe «demo-slides» where root := `Main
 
+lean_exe «extract-lakefile» where root := `ExtractLakefile
+
 @[test_driver]
 lean_exe «verso-slides-test» where root := `TestMain
 

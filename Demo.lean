@@ -206,6 +206,66 @@ int main() {
 }
 ```
 
+# Complete Modules
+
+```leanModule
+module
+import Std.Data.HashMap
+
+open Std
+def xs : HashMap Nat String := {}
+```
+
+# Lake Configs
+
+```leanModule +lakefile
+import Lake
+open Lake DSL
+
+require «verso-slides» from git
+  "https://github.com/leanprover/verso-slides.git"@"main"
+
+package «etaps-tutorial» where
+  version := v!"0.1.0"
+
+lean_lib MiniRadix
+```
+
+# Multi-Module Examples
+
+:::leanModules (moduleRoot := Lib)
+```leanModule (moduleName := Lib.A)
+module
+public def x : Nat := 1
+def y : Nat := 2
+```
+```leanModule (moduleName := Lib.B)
+module
+import Lib.A
+def z := x
+/-- error: Unknown identifier `y` -/
+#guard_msgs in
+def x' := y
+```
+:::
+
+# Multi-Module Examples with Lakefiles
+
+:::leanModules
+```leanModule +lakefile
+import Lake
+open Lake DSL
+
+package p
+
+lean_lib A
+```
+```leanModule (moduleName := A)
+def x := "Module A!"
+```
+We can refer to {name}`x`.
+:::
+
 # Fragment Styles
 
 :::fragment fadeUp
