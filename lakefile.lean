@@ -7,7 +7,7 @@ import Lake
 
 open System Lake DSL
 
-require verso from git "https://github.com/leanprover/verso.git"@"main"
+require verso from git "https://github.com/leanprover/verso.git"@"metadata-annot"
 
 package «verso-slides» where
   version := v!"0.1.0"
@@ -27,6 +27,8 @@ lean_lib VersoSlides where
 lean_lib Demo
 
 @[default_target] lean_exe «demo-slides» where root := `Main
+
+lean_exe «extract-lakefile» where root := `ExtractLakefile
 
 @[test_driver]
 lean_exe «verso-slides-test» where root := `TestMain

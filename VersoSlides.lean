@@ -15,3 +15,4 @@ import VersoSlides.InlineLean
 import VersoSlides.SlideCode
 import VersoSlides.SlideCode.Export
 import VersoSlides.SlideCode.Render
+import VersoSlides.ModuleExample

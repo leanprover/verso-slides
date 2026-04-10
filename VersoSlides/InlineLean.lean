@@ -304,3 +304,73 @@ def leanInline : RoleExpanderOf LeanInlineConfig
     let hls := (← highlight stx newMsgs.toArray (PersistentArray.empty.push tree) (collectFormat := true))
 
     toSlidesHighlightedInline config.show hls term
+
+/-- Configuration for the `name` role. -/
+private structure NameConfig where
+  full : Option Name
+
+section
+open Verso.ArgParse
+variable [Monad m] [MonadError m] [MonadLiftT CoreM m] [MonadLiftT TermElabM m]
+
+private def NameConfig.parse : ArgParse m NameConfig :=
+  NameConfig.mk <$> ((fun _ => none) <$> .done <|> .positional `name ref)
+where
+  ref : ValDesc m (Option Name) := {
+    description := "reference name"
+    signature := .Ident
+    get := fun
+      | .name x =>
+        try
+          let resolved ← liftM (runWithOpenDecls (runWithVariables fun _ => realizeGlobalConstNoOverloadWithInfo x))
+          return some resolved
+        catch
+          | .error ref e => throwErrorAt ref e
+          | _ => return none
+      | other => throwError "Expected reference name, got {repr other}"
+  }
+
+instance : FromArgs NameConfig m := ⟨NameConfig.parse⟩
+end
+
+/-- Create a highlighted token for a resolved constant name. -/
+private def constTok [Monad m] [MonadEnv m] [MonadLiftT MetaM m] [MonadLiftT IO m]
+    (resolvedName : Name) (str : String) :
+    m Highlighted := do
+  let docs ← findDocString? (← getEnv) resolvedName
+  let sig := toString (← (PrettyPrinter.ppSignature resolvedName)).1
+  pure <| .token ⟨.const resolvedName sig docs false none, str⟩
+
+/--
+`name` role: refers to a Lean name (constant) without fully elaborating.
+Resolves the name in the current environment, producing a highlighted token
+with signature and docstring hover info.
+
+Usage: `{name}[List.map]` or `{name List.map'}[map']`
+-/
+@[role]
+def name : RoleExpanderOf NameConfig
+  | cfg, #[arg] => do
+    let `(inline|code( $nameStx:str )) := arg
+      | throwErrorAt arg "Expected code literal with the example name"
+    let exampleName := nameStx.getString.toName
+    let identStx := mkIdentFrom arg (cfg.full.getD exampleName) (canonical := true)
+
+    try
+      let resolvedName ←
+        runWithOpenDecls <| runWithVariables fun _ =>
+          withInfoTreeContext (mkInfoTree := pure ∘ InfoTree.node (.ofCommandInfo {elaborator := `VersoSlides.name, stx := identStx})) do
+            realizeGlobalConstNoOverloadWithInfo identStx
+
+      let hl : Highlighted ← constTok resolvedName nameStx.getString
+      let exported := hlToExport hl
+
+      ``(Verso.Doc.Inline.other (VersoSlides.InlineExt.name $(quote exported)) #[Verso.Doc.Inline.code $(quote nameStx.getString)])
+    catch e =>
+      logErrorAt identStx e.toMessageData
+      ``(Verso.Doc.Inline.code $(quote nameStx.getString))
+  | _, more =>
+    if h : more.size > 0 then
+      throwErrorAt more[0] "Unexpected contents"
+    else
+      throwError "Unexpected arguments"
