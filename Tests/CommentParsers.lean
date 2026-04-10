@@ -48,6 +48,15 @@ def testClick (name : String) (input : String) (expected : Option (Nat × Option
       errors := s.errors.push s!"FAIL: {name}\n  expected: {repr expected}\n  actual:   {repr actual}"
     }
 
+def testBool (name : String) (actual expected : Bool) : TestM Unit := do
+  if actual == expected then
+    modify fun s => { s with passed := s.passed + 1 }
+  else
+    modify fun s => { s with
+      failed := s.failed + 1
+      errors := s.errors.push s!"FAIL: {name}\n  expected: {repr expected}\n  actual:   {repr actual}"
+    }
+
 
 def main : IO UInt32 := do
   let ((), s) ← tests.run {}
@@ -79,3 +88,26 @@ where
     testClick "click extra space before caret" "--  ^  !click" (some (4, none))
     testClick "double caret rejected" "-- ^^ !click" none
     testClick "click with index then junk" "-- ^ !click 5 x" none
+
+    ---- parseHideComment ----
+
+    testBool "hide: empty string" (parseHideComment "") false
+    testBool "hide: basic" (parseHideComment "-- !hide") true
+    testBool "hide: with trailing whitespace" (parseHideComment "-- !hide  ") true
+    testBool "hide: with trailing newline" (parseHideComment "-- !hide\n") true
+    testBool "hide: with leading indent" (parseHideComment "  -- !hide") true
+    testBool "hide: trailing alpha rejected" (parseHideComment "-- !hidex") false
+    testBool "hide: not a comment" (parseHideComment "!hide") false
+    testBool "hide: bare comment" (parseHideComment "-- ") false
+
+    ---- parseEndHideComment ----
+
+    testBool "end hide: empty string" (parseEndHideComment "") false
+    testBool "end hide: basic" (parseEndHideComment "-- !end hide") true
+    testBool "end hide: with trailing whitespace" (parseEndHideComment "-- !end hide  ") true
+    testBool "end hide: with trailing newline" (parseEndHideComment "-- !end hide\n") true
+    testBool "end hide: with leading indent" (parseEndHideComment "  -- !end hide") true
+    testBool "end hide: trailing alpha rejected" (parseEndHideComment "-- !end hidex") false
+    testBool "end hide: extra spaces" (parseEndHideComment "--  !end  hide") true
+    testBool "end hide: no space after !end" (parseEndHideComment "-- !endhide") false
+    testBool "end hide: not a comment" (parseEndHideComment "!end hide") false

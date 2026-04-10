@@ -606,7 +606,8 @@ private def processPlainLines (st : FragState) (s : String) (isText : Bool) : Ex
   let lines := getLines s
   -- Fast path: no magic comments → push entire text as one node
   let hasMagic := lines.any fun line =>
-    (parseFragmentBreak line).isSome || (parseClickComment line).isSome
+    (parseFragmentBreak line).isSome || (parseClickComment line).isSome ||
+    parseHideComment line || parseEndHideComment line
   if !hasMagic then
     return st.pushSC (mkLeaf s)
   -- Slow path: process line by line
@@ -619,6 +620,12 @@ private def processPlainLines (st : FragState) (s : String) (isText : Bool) : Ex
       st := { st with pendingFragments := st.pendingFragments.push w }
     else if let some (caretCol, index) := parseClickComment line then
       st ← st.resolveClickOnCurrent caretCol index
+    else if parseHideComment line then
+      st := { st with hideDepth := st.hideDepth + 1 }
+    else if parseEndHideComment line then
+      if st.hideDepth == 0 then
+        throw "-- !end hide without matching -- !hide"
+      st := { st with hideDepth := st.hideDepth - 1 }
     else
       st := st.pushSC (mkLeaf line.toString)
   return st
