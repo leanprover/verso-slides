@@ -5,6 +5,7 @@ Author: David Thrane Christiansen
 -/
 import VersoSlides
 import Verso.Doc.Concrete
+import Illuminate
 
 open VersoSlides
 
@@ -463,6 +464,109 @@ The `{image}` role renders an `<img>` tag with configurable width and height. Th
 The `{leanCommand}` role renders a single elaborated Lean command inline.
 
 Here is an inline command: {leanCommand}`#check Nat.add_comm`
+
+# Diagram
+
+```diagram (background := "#ffffff")
+open Illuminate in
+let box (n : Lean.Name) (label : String) (clr : Color) : Diagram SVG :=
+  Diagram.atop
+    (Diagram.text label { fontSize := 14, fontFamily := "text" })
+    (Diagram.roundedRect 120 40 6
+      (fill := clr) (stroke := { width := 1.5 })
+      (name := n))
+let src := Diagram.paper
+  (label := some (Diagram.text "Lean\nSource" { fontSize := 14, fontFamily := "text" }))
+  (width := some 70) (cornerFold := 0.2)
+  (fill := rgb!"#5b8bd4") (stroke := { width := 1.5 })
+  (name := some `src)
+let tip : LineEnd := { point := `elab.west, arrowhead := some { type := .latex } }
+let tip2 : LineEnd := { point := `hl.north, arrowhead := some { type := .latex }, angle := some (3 * pi / 2), pull := 0.5 }
+let tip3 : LineEnd := { point := `html.west, arrowhead := some { type := .latex } }
+Diagram.vsep 80 [
+  .hsep 60 [ src, box `elab "Elaborate" (rgb!"#7cc47c")],
+  .hsep 60 [box `hl "Highlight" (rgb!"#f0c050"), box `html "HTML" (rgb!"#e06050") ]
+]
+|>.connect `src.east tip (stroke := { width := 1.5 })
+|>.connect { point := `elab.south, angle := some (3 * pi / 2), pull := 0.5 } tip2 (stroke := { width := 1.5 })
+|>.connect `hl.east tip3 (stroke := { width := 1.5 })
+```
+
+# Animation
+
+```animate (fps := 70) (background := "#ffffff") +autoplay
+open Illuminate VersoSlides in
+{ steps :=
+    [{ duration := 1.0 },
+     { duration := 1.5 },
+     { duration := 0, pause := true },
+     { duration := 1.0 },
+     { duration := 2.0, loop := true }],
+  render := fun v =>
+    let dot :=
+      Diagram.circle 20 (fill := rgb!"#5b8bd4") (stroke := { width := 2 })
+      |>.scale (1.0 + 0.8 * (v[4] - 0.5).abs)
+    let start : Vec2 := { x := -100, y := 0 }
+    let stop : Vec2 := { x := 100, y := 0 }
+    let pos := Interpolate.interpolate start stop (Easing.easeInOut v[1])
+    let opacity := v[0]
+    dot.translate pos.x pos.y |>.cellophane opacity |>.compose
+      (Diagram.text "Click to advance" { fontSize := 12, fontFamily := "text" }
+        |>.translate 0 (-40)
+        |>.cellophane (v[1] - v[3])) }
+```
+
+# Shape Morphing
+
+:::::::::hstack
+
+:::::::attr (style := "text-align: center; font-size: 2em")
+
+:::::stack
+:::fragment fadeOut (index := 1)
+*Square*
+:::
+:::fragment fadeInThenOut (index := 1)
+*Circle*
+:::
+:::fragment fadeIn (index := 2)
+*Star*
+:::
+:::::
+
+:::::::
+
+```animate (background := "#ffffff")
+open Illuminate VersoSlides in
+let sq := Diagram.roundedRect 60 60 4
+  (fill := rgb!"#5b8bd4") (stroke := { width := 2 })
+let circ := Diagram.circle 34
+  (fill := rgb!"#7cc47c") (stroke := { width := 2 })
+let st := Diagram.star 5 38 18
+  (fill := rgb!"#f0c050") (stroke := { width := 2 })
+let rotatedSq := sq.rotate (pi / 4)
+let morph1 : Morph SVG :=
+  { node := prepareMorph rotatedSq circ, source := rotatedSq, target := circ }
+let morph2 : Morph SVG :=
+  { node := prepareMorph circ st, source := circ, target := st }
+{ steps :=
+    [{ duration := 0.5, pause := true, fragmentIndex := some 1 },
+     { duration := 1.0 },
+     { duration := 1.0, pause := true, fragmentIndex := some 2 },
+     { duration := 4.0, loop := true, pause := true, fragmentIndex := some 3 }],
+  render := fun v =>
+    let t1 := Easing.easeInOut v[0]
+    let t2 := Easing.easeInOut v[1]
+    let t3 := Easing.easeInOut v[2]
+    let shape :=
+      if t3 > 0 then morph2.evaluate t3
+      else if t2 > 0 then morph1.evaluate t2
+      else sq.rotate (t1 * pi / 4)
+    let angle := v[3] * 2 * pi
+    shape.rotate angle }
+```
+
+:::::::::
 
 # Thank You
 

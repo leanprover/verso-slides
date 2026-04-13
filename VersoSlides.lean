@@ -12,6 +12,8 @@ import VersoSlides.Directives
 import VersoSlides.ImageWidget
 import VersoSlides.OtherLanguages
 import VersoSlides.InlineLean
+import VersoSlides.Diagram
+import VersoSlides.Animate
 import VersoSlides.SlideCode
 import VersoSlides.SlideCode.Export
 import VersoSlides.SlideCode.Render

@@ -8,6 +8,7 @@ import Lake
 open System Lake DSL
 
 require verso from git "https://github.com/leanprover/verso.git"@"main"
+require illuminate from git "https://github.com/leanprover/illuminate.git"@"main"
 
 package «verso-slides» where
   version := v!"0.1.0"
@@ -21,8 +22,11 @@ lean_lib VersoSlidesVendored where
 input_dir panelAssets where
   path := "panel"
 
+input_dir animateAssets where
+  path := "animate"
+
 lean_lib VersoSlides where
-  needs := #[panelAssets]
+  needs := #[panelAssets, animateAssets]
 
 lean_lib Demo
 

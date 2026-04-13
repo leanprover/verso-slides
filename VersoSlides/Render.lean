@@ -12,6 +12,7 @@ import Verso.Doc.Html
 import Verso.Output.Html
 import Verso.Code.Highlighted
 import Verso.Code.Highlighted.WebAssets
+import Illuminate.Animation.Render
 
 set_option doc.verso true
 
@@ -125,6 +126,43 @@ instance [Monad m] : GenreHtml Slides m where
       pure {{ <pre><code class=s!"language-{language}">{{code}}</code></pre> }}
     | .css _ =>
       pure .empty
+    | .diagram svgStr cssWidth background =>
+      let bgStyle := match background with
+        | some bg => s!"; background: {bg}; padding: 1em; border-radius: 0.5em"
+        | none => ""
+      let style := s!"width: {cssWidth}{bgStyle}"
+      pure {{
+        <div class="diagram" style={{style}}>
+          {{Html.text false svgStr}}
+        </div>
+      }}
+    | .animate containerId animDataJson cssWidth background fragmentIndices autoplay =>
+      let bgStyle := match background with
+        | some bg => s!"; background: {bg}; padding: 1em; border-radius: 0.5em"
+        | none => ""
+      let style := s!"width: {cssWidth}{bgStyle}"
+      -- Emit hidden fragment spans for each pause step so Reveal sees them at init time.
+      -- The JS finds these by data-illuminate-container instead of creating them dynamically.
+      let fragSpans : Array Html := fragmentIndices.mapIdx fun i idx =>
+        let baseAttrs : Array (String × String) :=
+          #[("class", "fragment"),
+            ("style", "display:none"),
+            ("data-illuminate-container", containerId),
+            ("data-illuminate-step-index", toString i)]
+        let attrs := match idx with
+          | some n => baseAttrs.push ("data-fragment-index", toString n)
+          | none => baseAttrs
+        .tag "span" attrs .empty
+      let autoplayAttr := if autoplay then "true" else "false"
+      pure {{
+        <div class="illuminate-anim" id={{containerId}} style={{style}}
+             data-illuminate-autoplay={{autoplayAttr}}>
+        </div>
+        {{fragSpans}}
+        <script type="application/json" data-illuminate-anim={{containerId}}>
+          {{Html.text false animDataJson}}
+        </script>
+      }}
   inline inlineHtml container contents := do
     match container with
     | .fragment style index =>
@@ -271,6 +309,17 @@ private def lightboxCss : String := include_str "../panel/lightbox.css"
 /-- JS for the inline Lean term lightbox overlay. -/
 private def lightboxJs : String := include_str "../panel/lightbox.js"
 
+/-- CSS for Illuminate diagrams. -/
+private def diagramCss : String := include_str "../diagrams/diagram.css"
+
+/-- CSS for Illuminate animation containers. -/
+private def illuminateAnimCss : String := include_str "../animate/illuminate-anim.css"
+
+/-- JS for Illuminate reveal.js animation integration.
+    Combines the shared {lit}`anim_core.js` helpers with the multi-animation init script. -/
+private def illuminateRevealJs : String :=
+  Illuminate.animCoreJs ++ "\n" ++ include_str "../animate/illuminate-reveal-init.js"
+
 /-- CSS overrides for Verso highlighted code within reveal.js slides. -/
 private def slidesHighlightCss : String := include_str "../panel/slides-highlight.css"
 
@@ -327,6 +376,8 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
       <link rel="stylesheet" href={{s!"{libPrefix}/slides-highlight.css"}} />
       <link rel="stylesheet" href={{s!"{libPrefix}/panel.css"}} />
       <link rel="stylesheet" href={{s!"{libPrefix}/lightbox.css"}} />
+      <link rel="stylesheet" href={{s!"{libPrefix}/diagram.css"}} />
+      <link rel="stylesheet" href={{s!"{libPrefix}/illuminate-anim.css"}} />
       {{ customCss.map fun css => {{ <style>{{Html.text false css}}</style> }} }}
     </head>
     <body>
@@ -352,6 +403,7 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
       <script src={{s!"{libPrefix}/pretty.js"}}></script>
       <script src={{s!"{libPrefix}/panel.js"}}></script>
       <script src={{s!"{libPrefix}/lightbox.js"}}></script>
+      <script src={{s!"{libPrefix}/illuminate-reveal.js"}}></script>
     </body>
   </html> }}
 
@@ -411,6 +463,9 @@ def writeVendoredAssets (outputDir : System.FilePath) (theme : String) : IO Unit
   writeFileWithDirs (libDir / "panel.js") slideCodePanelJs
   writeFileWithDirs (libDir / "lightbox.css") lightboxCss
   writeFileWithDirs (libDir / "lightbox.js") lightboxJs
+  writeFileWithDirs (libDir / "diagram.css") diagramCss
+  writeFileWithDirs (libDir / "illuminate-anim.css") illuminateAnimCss
+  writeFileWithDirs (libDir / "illuminate-reveal.js") illuminateRevealJs
 
 /-- Generates a reveal.js slide presentation from a Verso document. -/
 def slidesMain (config : Config := {}) (doc : Part Slides) (args : List String := []) : IO UInt32 := do

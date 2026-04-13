@@ -1,0 +1,13 @@
+.illuminate-anim {
+    margin: 0 auto;
+}
+.illuminate-anim svg {
+    width: 100%;
+    height: auto;
+}
+.illuminate-anim svg text[font-family="text"] {
+    font-family: inherit;
+}
+.illuminate-anim svg text[font-family="monospace"] {
+    font-family: monospace;
+}
