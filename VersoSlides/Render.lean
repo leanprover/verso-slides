@@ -136,14 +136,29 @@ instance [Monad m] : GenreHtml Slides m where
           {{Html.text false svgStr}}
         </div>
       }}
-    | .animate containerId animDataJson cssWidth background =>
+    | .animate containerId animDataJson cssWidth background fragmentIndices autoplay =>
       let bgStyle := match background with
         | some bg => s!"; background: {bg}; padding: 1em; border-radius: 0.5em"
         | none => ""
       let style := s!"width: {cssWidth}{bgStyle}"
+      -- Emit hidden fragment spans for each pause step so Reveal sees them at init time.
+      -- The JS finds these by data-illuminate-container instead of creating them dynamically.
+      let fragSpans : Array Html := fragmentIndices.mapIdx fun i idx =>
+        let baseAttrs : Array (String × String) :=
+          #[("class", "fragment"),
+            ("style", "display:none"),
+            ("data-illuminate-container", containerId),
+            ("data-illuminate-step-index", toString i)]
+        let attrs := match idx with
+          | some n => baseAttrs.push ("data-fragment-index", toString n)
+          | none => baseAttrs
+        .tag "span" attrs .empty
+      let autoplayAttr := if autoplay then "true" else "false"
       pure {{
-        <div class="illuminate-anim" id={{containerId}} style={{style}}>
+        <div class="illuminate-anim" id={{containerId}} style={{style}}
+             data-illuminate-autoplay={{autoplayAttr}}>
         </div>
+        {{fragSpans}}
         <script type="application/json" data-illuminate-anim={{containerId}}>
           {{Html.text false animDataJson}}
         </script>

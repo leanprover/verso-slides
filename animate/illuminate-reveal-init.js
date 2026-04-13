@@ -54,24 +54,12 @@
         // Show first frame
         showFrame(state, 0);
 
-        // Create hidden fragment spans for each pause step
-        var parent = container.parentElement;
-        if (parent) {
-            for (var i = 0; i < state.pauseSteps.length; i++) {
-                var frag = document.createElement("span");
-                frag.className = "fragment";
-                frag.style.display = "none";
-                frag.dataset.illuminateContainer = containerId;
-                frag.dataset.illuminateStepIndex = String(i);
-                parent.appendChild(frag);
-            }
-        }
+        // Fragment spans are emitted in the HTML at build time (not created dynamically),
+        // so Reveal.js sees them during its initial scan. Nothing to create here.
 
-        // If the first step is not a pause, auto-play to the first pause step
-        // (or to the end) when the slide becomes visible.
-        if (data.steps.length > 0 && !data.steps[0].pause) {
-            state.autoPlay = true;
-        }
+        // Read autoplay setting from the container element
+        state.autoPlay =
+            container.getAttribute("data-illuminate-autoplay") === "true";
     }
 
     /**
@@ -173,26 +161,25 @@
         }
 
         if (visibleCount > 0) {
-            // Backward navigation: fragments already shown — jump to that state
+            // Backward navigation: fragments already shown — jump to end of that step sequence
             var idx = Math.min(visibleCount - 1, st.pauseSteps.length - 1);
             var ps = st.pauseSteps[idx];
-            showFrame(st, ps.frame);
             if (ps.loop) {
                 var stepIdx = animFindCurrentStep(st.data.steps, ps.frame);
-                startLoop(
-                    st,
-                    ps.frame,
-                    animFindStepEnd(st.data.steps, stepIdx, st.data.totalFrames),
-                );
+                var stepEnd = animFindStepEnd(st.data.steps, stepIdx, st.data.totalFrames);
+                showFrame(st, ps.frame);
+                startLoop(st, ps.frame, stepEnd);
+            } else {
+                showFrame(st, findTargetFrame(st, idx));
             }
         } else if (st.autoPlay) {
-            // Forward navigation: auto-play to first pause step
+            // Forward navigation: auto-play up to (not through) the first pause step
             showFrame(st, 0);
-            var target =
-                st.pauseSteps.length > 0
-                    ? st.pauseSteps[0].frame
-                    : st.data.totalFrames - 1;
-            animateTo(st, target);
+            if (st.pauseSteps.length > 0) {
+                animateTo(st, st.pauseSteps[0].frame);
+            } else {
+                animateTo(st, st.data.totalFrames - 1);
+            }
         } else {
             // Forward navigation, no auto-play: show frame 0
             showFrame(st, 0);
@@ -222,64 +209,104 @@
             }
         });
 
-        Reveal.on("fragmentshown", function (/** @type {{fragment: HTMLElement}} */ e) {
-            var cid = e.fragment.dataset.illuminateContainer;
+        /**
+         * Finds the frame to animate to when pause step `idx` is triggered.
+         * Plays through the pause step and any subsequent non-pause steps,
+         * stopping at the frame before the next pause step (or at the end).
+         */
+        function findTargetFrame(state, idx) {
+            var nextPauseIdx = idx + 1;
+            if (nextPauseIdx < state.pauseSteps.length) {
+                // Stop just before the next pause step starts
+                return Math.max(state.pauseSteps[nextPauseIdx].frame - 1, state.pauseSteps[idx].frame);
+            }
+            // Last pause step: play to the end
+            return state.data.totalFrames - 1;
+        }
+
+        // Helper: process a single animation fragment for fragmentshown
+        function handleFragShown(frag) {
+            var cid = frag.dataset.illuminateContainer;
             if (!cid) return;
             var state = animations[cid];
             if (!state) return;
-            var idx = parseInt(
-                e.fragment.dataset.illuminateStepIndex || "",
-                10,
-            );
+            var idx = parseInt(frag.dataset.illuminateStepIndex || "", 10);
             if (isNaN(idx) || idx >= state.pauseSteps.length) return;
             stopAnim(state);
             var ps = state.pauseSteps[idx];
-            var stepIdx = animFindCurrentStep(state.data.steps, ps.frame);
-            animateTo(state, ps.frame, function () {
-                if (ps.loop) {
-                    startLoop(
-                        state,
-                        ps.frame,
-                        animFindStepEnd(
-                            state.data.steps,
-                            stepIdx,
-                            state.data.totalFrames,
-                        ),
+            if (ps.loop) {
+                var stepIdx = animFindCurrentStep(state.data.steps, ps.frame);
+                var stepEnd = animFindStepEnd(
+                    state.data.steps,
+                    stepIdx,
+                    state.data.totalFrames,
+                );
+                // Looping step: animate to start, then loop
+                animateTo(state, ps.frame, function () {
+                    startLoop(state, ps.frame, stepEnd);
+                });
+            } else {
+                // Animate through this step and any following non-pause steps
+                var target = findTargetFrame(state, idx);
+                animateTo(state, target, function () {
+                    // If we landed in a loop step, start looping
+                    var finalStepIdx = animFindCurrentStep(
+                        state.data.steps,
+                        target,
                     );
-                }
-            });
-        });
-        Reveal.on("fragmenthidden", function (/** @type {{fragment: HTMLElement}} */ e) {
-            var cid = e.fragment.dataset.illuminateContainer;
+                    var finalStep = state.data.steps[finalStepIdx];
+                    if (finalStep && finalStep.loop) {
+                        var loopEnd = animFindStepEnd(
+                            state.data.steps,
+                            finalStepIdx,
+                            state.data.totalFrames,
+                        );
+                        startLoop(state, finalStep.frame, loopEnd);
+                    }
+                });
+            }
+        }
+
+        // Helper: process a single animation fragment for fragmenthidden
+        function handleFragHidden(frag) {
+            var cid = frag.dataset.illuminateContainer;
             if (!cid) return;
             var state = animations[cid];
             if (!state) return;
-            var idx = parseInt(
-                e.fragment.dataset.illuminateStepIndex || "",
-                10,
-            );
+            var idx = parseInt(frag.dataset.illuminateStepIndex || "", 10);
             if (isNaN(idx)) return;
             stopAnim(state);
             var prevIdx = idx - 1;
-            if (prevIdx >= 0 && state.pauseSteps[prevIdx].loop) {
+            if (prevIdx >= 0) {
                 var ps = state.pauseSteps[prevIdx];
-                var stepIdx = animFindCurrentStep(
-                    state.data.steps,
-                    ps.frame,
-                );
-                startLoop(
-                    state,
-                    ps.frame,
-                    animFindStepEnd(
-                        state.data.steps,
-                        stepIdx,
-                        state.data.totalFrames,
-                    ),
-                );
+                if (ps.loop) {
+                    var stepIdx = animFindCurrentStep(state.data.steps, ps.frame);
+                    var stepEnd = animFindStepEnd(
+                        state.data.steps, stepIdx, state.data.totalFrames);
+                    startLoop(state, ps.frame, stepEnd);
+                } else {
+                    var target = findTargetFrame(state, prevIdx);
+                    animateTo(state, target);
+                }
             } else {
-                var prevFrame =
-                    prevIdx >= 0 ? state.pauseSteps[prevIdx].frame : 0;
-                animateTo(state, prevFrame);
+                // No previous step — go back to frame 0
+                animateTo(state, 0);
+            }
+        }
+
+        // Reveal.js may fire fragmentshown/hidden with e.fragment (one element)
+        // or e.fragments (all elements at that index). Iterate all to find
+        // animation fragments when multiple fragments share the same index.
+        Reveal.on("fragmentshown", function (e) {
+            var frags = e.fragments || [e.fragment];
+            for (var fi = 0; fi < frags.length; fi++) {
+                handleFragShown(frags[fi]);
+            }
+        });
+        Reveal.on("fragmenthidden", function (e) {
+            var frags = e.fragments || [e.fragment];
+            for (var fi = 0; fi < frags.length; fi++) {
+                handleFragHidden(frags[fi]);
             }
         });
     }
