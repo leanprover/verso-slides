@@ -492,6 +492,31 @@ Diagram.vsep 80 [
 |>.connect `hl.east tip3 (stroke := { width := 1.5 })
 ```
 
+# Animation
+
+```animate (fps := 70) (background := "#ffffff")
+open Illuminate in
+[{ duration := 1.0 },
+ { duration := 1.5 },
+ { duration := 0, pause := true },
+ { duration := 1.0 },
+ { duration := 2.0, loop := true, pause := true }]
+fun v =>
+  let dot :=
+    Diagram.circle 20 (fill := rgb!"#5b8bd4") (stroke := { width := 2 })
+    |>.scale (1.0 + 0.8 * (v[4] - 0.5).abs)
+  let start : Vec2 := { x := -100, y := 0 }
+  let stop : Vec2 := { x := 100, y := 0 }
+  let pos := Interpolate.interpolate start stop (Easing.easeInOut v[1])
+  let opacity := v[0]
+  let finalOpacity := v[3]
+  Diagram.compose
+    (dot.translate pos.x pos.y |>.cellophane opacity)
+    (Diagram.text "Click to advance" { fontSize := 12, fontFamily := "text" }
+      |>.translate 0 (-40)
+      |>.cellophane (1.0 - finalOpacity))
+```
+
 # Thank You
 
 That concludes the *VersoSlides* demo.

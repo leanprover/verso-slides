@@ -122,6 +122,8 @@ public inductive BlockExt where
   | css (content : String)
   /-- Illuminate diagram rendered to SVG. -/
   | diagram (svg : String) (cssWidth : String) (background : Option String)
+  /-- Illuminate animation compiled to JSON for reveal.js fragment-driven playback. -/
+  | animate (containerId : String) (animDataJson : String) (cssWidth : String) (background : Option String)
 deriving BEq, Repr, ToJson, FromJson
 
 

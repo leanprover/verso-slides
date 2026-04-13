@@ -34,7 +34,7 @@ end
 
 /-- Extracts the `viewBox` width from an SVG string produced by Illuminate.
     The viewBox format is `"minX minY width height"`. -/
-private def svgViewBoxWidth (svg : String) : Float :=
+def svgViewBoxWidth (svg : String) : Float :=
   let go : Option Float := do
     let parts := (svg.splitOn "viewBox=\"").toArray
     if h : parts.size > 1 then

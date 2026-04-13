@@ -22,8 +22,11 @@ lean_lib VersoSlidesVendored where
 input_dir panelAssets where
   path := "panel"
 
+input_dir animateAssets where
+  path := "animate"
+
 lean_lib VersoSlides where
-  needs := #[panelAssets]
+  needs := #[panelAssets, animateAssets]
 
 lean_lib Demo
 
