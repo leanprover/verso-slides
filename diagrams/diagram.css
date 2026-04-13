@@ -1,0 +1,13 @@
+.diagram {
+  margin: 0 auto;
+}
+.diagram svg {
+  width: 100%;
+  height: auto;
+}
+.diagram svg text[font-family="text"] {
+  font-family: inherit;
+}
+.diagram svg text[font-family="monospace"] {
+  font-family: monospace;
+}

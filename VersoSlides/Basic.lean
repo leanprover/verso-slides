@@ -120,6 +120,8 @@ public inductive BlockExt where
   | otherLanguage (language : String) (code : String)
   /-- Custom CSS block to be injected into the page header. -/
   | css (content : String)
+  /-- Illuminate diagram rendered to SVG. -/
+  | diagram (svg : String) (cssWidth : String) (background : Option String)
 deriving BEq, Repr, ToJson, FromJson
 
 

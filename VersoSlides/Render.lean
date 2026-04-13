@@ -125,6 +125,16 @@ instance [Monad m] : GenreHtml Slides m where
       pure {{ <pre><code class=s!"language-{language}">{{code}}</code></pre> }}
     | .css _ =>
       pure .empty
+    | .diagram svgStr cssWidth background =>
+      let bgStyle := match background with
+        | some bg => s!"; background: {bg}; padding: 1em; border-radius: 0.5em"
+        | none => ""
+      let style := s!"width: {cssWidth}{bgStyle}"
+      pure {{
+        <div class="diagram" style={{style}}>
+          {{Html.text false svgStr}}
+        </div>
+      }}
   inline inlineHtml container contents := do
     match container with
     | .fragment style index =>
@@ -271,6 +281,9 @@ private def lightboxCss : String := include_str "../panel/lightbox.css"
 /-- JS for the inline Lean term lightbox overlay. -/
 private def lightboxJs : String := include_str "../panel/lightbox.js"
 
+/-- CSS for Illuminate diagrams. -/
+private def diagramCss : String := include_str "../diagrams/diagram.css"
+
 /-- CSS overrides for Verso highlighted code within reveal.js slides. -/
 private def slidesHighlightCss : String := include_str "../panel/slides-highlight.css"
 
@@ -327,6 +340,7 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
       <link rel="stylesheet" href={{s!"{libPrefix}/slides-highlight.css"}} />
       <link rel="stylesheet" href={{s!"{libPrefix}/panel.css"}} />
       <link rel="stylesheet" href={{s!"{libPrefix}/lightbox.css"}} />
+      <link rel="stylesheet" href={{s!"{libPrefix}/diagram.css"}} />
       {{ customCss.map fun css => {{ <style>{{Html.text false css}}</style> }} }}
     </head>
     <body>
@@ -411,6 +425,7 @@ def writeVendoredAssets (outputDir : System.FilePath) (theme : String) : IO Unit
   writeFileWithDirs (libDir / "panel.js") slideCodePanelJs
   writeFileWithDirs (libDir / "lightbox.css") lightboxCss
   writeFileWithDirs (libDir / "lightbox.js") lightboxJs
+  writeFileWithDirs (libDir / "diagram.css") diagramCss
 
 /-- Generates a reveal.js slide presentation from a Verso document. -/
 def slidesMain (config : Config := {}) (doc : Part Slides) (args : List String := []) : IO UInt32 := do

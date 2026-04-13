@@ -5,6 +5,7 @@ Author: David Thrane Christiansen
 -/
 import VersoSlides
 import Verso.Doc.Concrete
+import Illuminate
 
 open VersoSlides
 
@@ -463,6 +464,33 @@ The `{image}` role renders an `<img>` tag with configurable width and height. Th
 The `{leanCommand}` role renders a single elaborated Lean command inline.
 
 Here is an inline command: {leanCommand}`#check Nat.add_comm`
+
+# Diagram
+
+```diagram (background := "#ffffff")
+open Illuminate in
+let box (n : Lean.Name) (label : String) (clr : Color) : Diagram SVG :=
+  Diagram.atop
+    (Diagram.text label { fontSize := 14, fontFamily := "text" })
+    (Diagram.roundedRect 120 40 6
+      (fill := clr) (stroke := { width := 1.5 })
+      (name := n))
+let src := Diagram.paper
+  (label := some (Diagram.text "Lean\nSource" { fontSize := 14, fontFamily := "text" }))
+  (width := some 70) (cornerFold := 0.2)
+  (fill := rgb!"#5b8bd4") (stroke := { width := 1.5 })
+  (name := some `src)
+let tip : LineEnd := { point := `elab.west, arrowhead := some { type := .latex } }
+let tip2 : LineEnd := { point := `hl.north, arrowhead := some { type := .latex }, angle := some (3 * pi / 2), pull := 0.5 }
+let tip3 : LineEnd := { point := `html.west, arrowhead := some { type := .latex } }
+Diagram.vsep 80 [
+  .hsep 60 [ src, box `elab "Elaborate" (rgb!"#7cc47c")],
+  .hsep 60 [box `hl "Highlight" (rgb!"#f0c050"), box `html "HTML" (rgb!"#e06050") ]
+]
+|>.connect `src.east tip (stroke := { width := 1.5 })
+|>.connect { point := `elab.south, angle := some (3 * pi / 2), pull := 0.5 } tip2 (stroke := { width := 1.5 })
+|>.connect `hl.east tip3 (stroke := { width := 1.5 })
+```
 
 # Thank You
 
