@@ -58,8 +58,7 @@
         // so Reveal.js sees them during its initial scan. Nothing to create here.
 
         // Read autoplay setting from the container element
-        state.autoPlay =
-            container.getAttribute("data-illuminate-autoplay") === "true";
+        state.autoPlay = container.getAttribute("data-illuminate-autoplay") === "true";
     }
 
     /**
@@ -85,12 +84,7 @@
         /** @param {number} timestamp */
         function tick(timestamp) {
             if (startTime === null) startTime = timestamp;
-            var frame = animComputeFrame(
-                startTime,
-                timestamp,
-                state.data.fps,
-                loopStart,
-            );
+            var frame = animComputeFrame(startTime, timestamp, state.data.fps, loopStart);
             var loop = animWrapLoop(frame, loopStart, loopEnd);
             showFrame(state, loop.wrapped);
             state.animId = requestAnimationFrame(tick);
@@ -112,19 +106,11 @@
         /** @param {number} timestamp */
         function tick(timestamp) {
             if (startTime === null) startTime = timestamp;
-            var frame = animComputeFrame(
-                startTime,
-                timestamp,
-                state.data.fps,
-                startFrame,
-            );
+            var frame = animComputeFrame(startTime, timestamp, state.data.fps, startFrame);
             if (dir < 0) {
                 frame = startFrame - (frame - startFrame);
             }
-            if (
-                (dir > 0 && frame >= targetFrame) ||
-                (dir < 0 && frame <= targetFrame)
-            ) {
+            if ((dir > 0 && frame >= targetFrame) || (dir < 0 && frame <= targetFrame)) {
                 showFrame(state, targetFrame);
                 state.animId = null;
                 if (onComplete) onComplete();
@@ -218,7 +204,10 @@
             var nextPauseIdx = idx + 1;
             if (nextPauseIdx < state.pauseSteps.length) {
                 // Stop just before the next pause step starts
-                return Math.max(state.pauseSteps[nextPauseIdx].frame - 1, state.pauseSteps[idx].frame);
+                return Math.max(
+                    state.pauseSteps[nextPauseIdx].frame - 1,
+                    state.pauseSteps[idx].frame,
+                );
             }
             // Last pause step: play to the end
             return state.data.totalFrames - 1;
@@ -236,11 +225,7 @@
             var ps = state.pauseSteps[idx];
             if (ps.loop) {
                 var stepIdx = animFindCurrentStep(state.data.steps, ps.frame);
-                var stepEnd = animFindStepEnd(
-                    state.data.steps,
-                    stepIdx,
-                    state.data.totalFrames,
-                );
+                var stepEnd = animFindStepEnd(state.data.steps, stepIdx, state.data.totalFrames);
                 // Looping step: animate to start, then loop
                 animateTo(state, ps.frame, function () {
                     startLoop(state, ps.frame, stepEnd);
@@ -250,10 +235,7 @@
                 var target = findTargetFrame(state, idx);
                 animateTo(state, target, function () {
                     // If we landed in a loop step, start looping
-                    var finalStepIdx = animFindCurrentStep(
-                        state.data.steps,
-                        target,
-                    );
+                    var finalStepIdx = animFindCurrentStep(state.data.steps, target);
                     var finalStep = state.data.steps[finalStepIdx];
                     if (finalStep && finalStep.loop) {
                         var loopEnd = animFindStepEnd(
@@ -282,7 +264,10 @@
                 if (ps.loop) {
                     var stepIdx = animFindCurrentStep(state.data.steps, ps.frame);
                     var stepEnd = animFindStepEnd(
-                        state.data.steps, stepIdx, state.data.totalFrames);
+                        state.data.steps,
+                        stepIdx,
+                        state.data.totalFrames,
+                    );
                     startLoop(state, ps.frame, stepEnd);
                 } else {
                     var target = findTargetFrame(state, prevIdx);
