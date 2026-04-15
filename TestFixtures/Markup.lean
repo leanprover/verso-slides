@@ -73,7 +73,7 @@ Second.
 
 {image "images/subdir/test-logo.png"}[Dedup logo]
 
-{image "images/plain.png" (width := "2000px") (height := "1500px")}[Oversized image]
+{image "images/oversized-test.png" (width := "2000px") (height := "1500px")}[Oversized image]
 
 # CSS Test
 

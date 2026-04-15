@@ -168,6 +168,14 @@
     background: none;
 }
 
+/* Images sized with the {image} role get the explicit-size class so the
+   theme's blanket .reveal img { max-width: 95%; max-height: 95% } rule does
+   not silently clamp the author's specified dimensions. */
+.reveal img.explicit-size {
+    max-width: none;
+    max-height: none;
+}
+
 /* slide-click-only: always visible, but participates in fragment ordering */
 .reveal .fragment.slide-click-only {
     opacity: 1;

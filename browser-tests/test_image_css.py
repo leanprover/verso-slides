@@ -7,7 +7,7 @@ from conftest import goto_slide_by_title
 
 class TestImageRole:
     def test_image_with_all_attrs(self, markup_doc: BeautifulSoup):
-        """An image with width, height, and class emits inline style (not HTML attrs)."""
+        """An image with width, height, and class emits inline style and explicit-size class."""
         img = markup_doc.select_one('img[alt="Test logo"]')
         assert img is not None
         assert img["src"] == "images/test-logo.png"
@@ -18,32 +18,39 @@ class TestImageRole:
         # HTML presentation attributes should NOT be set
         assert img.get("width") is None
         assert img.get("height") is None
-        assert "test-img-class" in img.get("class", [])
+        # explicit-size class is added so the CSS can lift max-width/max-height
+        classes = img.get("class", [])
+        assert "explicit-size" in classes
+        assert "test-img-class" in classes
 
     def test_image_plain(self, markup_doc: BeautifulSoup):
-        """An image with no optional attrs should have no style, width, or height."""
+        """An image with no optional attrs should have no style, width, height, or explicit-size."""
         img = markup_doc.select_one('img[alt="Plain image"]')
         assert img is not None
         assert img["src"] == "images/plain.png"
         assert img.get("width") is None
         assert img.get("height") is None
         assert img.get("style") is None
+        assert "explicit-size" not in img.get("class", [])
 
     def test_image_with_class(self, markup_doc: BeautifulSoup):
-        """An image with a class should have the class attribute."""
+        """An image with only a class (no size) should not get explicit-size."""
         img = markup_doc.select_one('img[alt="Styled image"]')
         assert img is not None
         assert "css-target" in img.get("class", [])
+        assert "explicit-size" not in img.get("class", [])
 
     def test_oversized_image_uses_style(self, markup_doc: BeautifulSoup):
-        """An image with dimensions larger than the viewport emits them as inline style."""
+        """An image with dimensions larger than the viewport emits inline style and explicit-size."""
         img = markup_doc.select_one('img[alt="Oversized image"]')
         assert img is not None
+        assert img["src"] == "images/oversized-test.png"
         style = img.get("style", "")
         assert "width: 2000px" in style
         assert "height: 1500px" in style
         assert img.get("width") is None
         assert img.get("height") is None
+        assert "explicit-size" in img.get("class", [])
 
     def test_remote_image_keeps_url(self, markup_doc: BeautifulSoup):
         """A remote URL image should keep its full URL, not be rewritten to images/."""
@@ -68,6 +75,7 @@ class TestImageFiles:
         assert (images_dir / "test-logo.png").exists()
         assert (images_dir / "plain.png").exists()
         assert (images_dir / "styled.png").exists()
+        assert (images_dir / "oversized-test.png").exists()
 
     def test_dedup_file_exists(self, site_dir):
         """The deduplicated image file should exist in the output."""
@@ -100,33 +108,49 @@ class TestCustomCss:
         assert len(pres) == 0
 
     def test_image_sizing_respected(self, page, markup_url):
-        """Inline style width/height override the slide template's max-width/max-height."""
+        """width/height specified on {image} produce the correct rendered proportions.
+
+        Reveal.js scales the whole slide with CSS zoom, so getComputedStyle returns
+        zoom-adjusted values — we can't assert exact pixel numbers.  Instead we
+        check the ratio of the image width to the slide section width.  With the
+        slide configured at 960 px, a 200 px image should occupy 200/960 ≈ 20.8%
+        of the slide width.
+        """
         slide = goto_slide_by_title(page, markup_url, "Image Test")
         img = slide.locator('img[alt="Test logo"]')
         assert img.count() == 1
-        # getComputedStyle reflects the actual rendered size; with inline style the
-        # specified value wins over any max-width/max-height rules in the theme CSS.
-        computed_width = img.evaluate("el => getComputedStyle(el).width")
-        computed_height = img.evaluate("el => getComputedStyle(el).height")
-        assert computed_width == "200px", f"Expected 200px width, got {computed_width!r}"
-        assert computed_height == "100px", f"Expected 100px height, got {computed_height!r}"
+        ratio = img.evaluate("""el => {
+            const section = el.closest('section');
+            const imgW = el.getBoundingClientRect().width;
+            const secW = section.getBoundingClientRect().width;
+            return imgW / secW;
+        }""")
+        expected = 200 / 960
+        assert abs(ratio - expected) < 0.02, (
+            f"Expected image/slide width ratio ≈ {expected:.3f} (200px in 960px slide), "
+            f"got {ratio:.3f} — width may not be taking effect"
+        )
 
     def test_oversized_image_not_clamped(self, page, markup_url):
-        """An image larger than the viewport keeps its inline-style dimensions.
+        """An image wider than the slide is not clamped by max-width.
 
-        The slide template applies max-width/max-height to .reveal section img.
-        Before the fix, width/height were emitted as HTML presentation attributes
-        which lose to stylesheet max-width rules, silently clamping the image.
-        With inline style= the author's value wins the cascade, so an image
-        specified at 2000×1500 px must be rendered at exactly that size.
+        Before the fix the theme's .reveal img { max-width: 95% } would silently
+        cap any image, whether the size came from an HTML attribute or inline style.
+        With the CSS override (.reveal img[style*="width"] { max-width: none }) an
+        image specified at 2000 px on a 960 px slide should overflow the slide —
+        its rendered width must be greater than the section width.
         """
         slide = goto_slide_by_title(page, markup_url, "Image Test")
         img = slide.locator('img[alt="Oversized image"]')
         assert img.count() == 1
-        computed_width = img.evaluate("el => getComputedStyle(el).width")
-        computed_height = img.evaluate("el => getComputedStyle(el).height")
-        assert computed_width == "2000px", f"Expected 2000px width, got {computed_width!r} — inline style may have been overridden by max-width"
-        assert computed_height == "1500px", f"Expected 1500px height, got {computed_height!r} — inline style may have been overridden by max-height"
+        img_wider_than_slide = img.evaluate("""el => {
+            const section = el.closest('section');
+            return el.getBoundingClientRect().width > section.getBoundingClientRect().width;
+        }""")
+        assert img_wider_than_slide, (
+            "Oversized image (2000px) should be wider than the slide (960px), "
+            "but it was clamped — max-width may still be in effect"
+        )
 
     def test_css_affects_image(self, page, markup_url):
         """CSS defined after the image should still style it (injected in head)."""
