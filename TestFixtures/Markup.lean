@@ -73,6 +73,8 @@ Second.
 
 {image "images/subdir/test-logo.png"}[Dedup logo]
 
+{image "images/plain.png" (width := "2000px") (height := "1500px")}[Oversized image]
+
 # CSS Test
 
 {image "images/styled.png" (class := "css-target")}[Styled image]

@@ -7,27 +7,43 @@ from conftest import goto_slide_by_title
 
 class TestImageRole:
     def test_image_with_all_attrs(self, markup_doc: BeautifulSoup):
-        """An image with width, height, and class should have all attributes."""
+        """An image with width, height, and class emits inline style (not HTML attrs)."""
         img = markup_doc.select_one('img[alt="Test logo"]')
         assert img is not None
         assert img["src"] == "images/test-logo.png"
-        assert img["width"] == "200px"
-        assert img["height"] == "100px"
+        # width and height are emitted as inline style so they override max-width/max-height CSS
+        style = img.get("style", "")
+        assert "width: 200px" in style
+        assert "height: 100px" in style
+        # HTML presentation attributes should NOT be set
+        assert img.get("width") is None
+        assert img.get("height") is None
         assert "test-img-class" in img.get("class", [])
 
     def test_image_plain(self, markup_doc: BeautifulSoup):
-        """An image with no optional attrs should only have src and alt."""
+        """An image with no optional attrs should have no style, width, or height."""
         img = markup_doc.select_one('img[alt="Plain image"]')
         assert img is not None
         assert img["src"] == "images/plain.png"
         assert img.get("width") is None
         assert img.get("height") is None
+        assert img.get("style") is None
 
     def test_image_with_class(self, markup_doc: BeautifulSoup):
         """An image with a class should have the class attribute."""
         img = markup_doc.select_one('img[alt="Styled image"]')
         assert img is not None
         assert "css-target" in img.get("class", [])
+
+    def test_oversized_image_uses_style(self, markup_doc: BeautifulSoup):
+        """An image with dimensions larger than the viewport emits them as inline style."""
+        img = markup_doc.select_one('img[alt="Oversized image"]')
+        assert img is not None
+        style = img.get("style", "")
+        assert "width: 2000px" in style
+        assert "height: 1500px" in style
+        assert img.get("width") is None
+        assert img.get("height") is None
 
     def test_remote_image_keeps_url(self, markup_doc: BeautifulSoup):
         """A remote URL image should keep its full URL, not be rewritten to images/."""
@@ -82,6 +98,35 @@ class TestCustomCss:
         # No <pre> or raw CSS text should appear in the slide body
         pres = css_slide.find_all("pre")
         assert len(pres) == 0
+
+    def test_image_sizing_respected(self, page, markup_url):
+        """Inline style width/height override the slide template's max-width/max-height."""
+        slide = goto_slide_by_title(page, markup_url, "Image Test")
+        img = slide.locator('img[alt="Test logo"]')
+        assert img.count() == 1
+        # getComputedStyle reflects the actual rendered size; with inline style the
+        # specified value wins over any max-width/max-height rules in the theme CSS.
+        computed_width = img.evaluate("el => getComputedStyle(el).width")
+        computed_height = img.evaluate("el => getComputedStyle(el).height")
+        assert computed_width == "200px", f"Expected 200px width, got {computed_width!r}"
+        assert computed_height == "100px", f"Expected 100px height, got {computed_height!r}"
+
+    def test_oversized_image_not_clamped(self, page, markup_url):
+        """An image larger than the viewport keeps its inline-style dimensions.
+
+        The slide template applies max-width/max-height to .reveal section img.
+        Before the fix, width/height were emitted as HTML presentation attributes
+        which lose to stylesheet max-width rules, silently clamping the image.
+        With inline style= the author's value wins the cascade, so an image
+        specified at 2000×1500 px must be rendered at exactly that size.
+        """
+        slide = goto_slide_by_title(page, markup_url, "Image Test")
+        img = slide.locator('img[alt="Oversized image"]')
+        assert img.count() == 1
+        computed_width = img.evaluate("el => getComputedStyle(el).width")
+        computed_height = img.evaluate("el => getComputedStyle(el).height")
+        assert computed_width == "2000px", f"Expected 2000px width, got {computed_width!r} — inline style may have been overridden by max-width"
+        assert computed_height == "1500px", f"Expected 1500px height, got {computed_height!r} — inline style may have been overridden by max-height"
 
     def test_css_affects_image(self, page, markup_url):
         """CSS defined after the image should still style it (injected in head)."""
