@@ -186,9 +186,17 @@ instance [Monad m] : GenreHtml Slides m where
             pure resolved
         | .remote url => pure url
       let mut attrs := #[("src", imgSrc), ("alt", alt)]
-      if let some w := width then attrs := attrs.push ("width", w)
-      if let some h := height then attrs := attrs.push ("height", h)
-      if let some c := cssClass then attrs := attrs.push ("class", c)
+      let styleW := width.map (fun w => s!"width: {w};")
+      let styleH := height.map (fun h => s!"height: {h};")
+      let style := " ".intercalate ([styleW, styleH].filterMap id)
+      if !style.isEmpty then attrs := attrs.push ("style", style)
+      let explicitSize := width.isSome || height.isSome
+      let classVal := match (explicitSize, cssClass) with
+        | (true,  some c) => some s!"explicit-size {c}"
+        | (true,  none)   => some "explicit-size"
+        | (false, some c) => some c
+        | (false, none)   => none
+      if let some c := classVal then attrs := attrs.push ("class", c)
       pure (.tag "img" attrs .empty)
     | .slideCode scExport =>
       let sc := scFromExport! scExport
