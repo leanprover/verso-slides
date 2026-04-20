@@ -4,3 +4,4 @@
 /_test/
 -verso-docs.json
 /_*
+/node_modules/

@@ -5,5 +5,13 @@
         "noEmit": true,
         "strict": true
     },
-    "include": ["pretty.js", "panel.js", "lightbox.js", "globals.d.ts"]
+    "include": [
+        "pretty.js",
+        "panel.js",
+        "lightbox.js",
+        "code-block-bg.js",
+        "lean-comments.js",
+        "tippy-panel-filter.js",
+        "globals.d.ts"
+    ]
 }

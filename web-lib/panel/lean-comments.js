@@ -10,7 +10,12 @@
 (function () {
     "use strict";
 
-    /** Finds the end of a /- … -/ block comment, handling nesting. */
+    /**
+     * Finds the end of a /- … -/ block comment, handling nesting.
+     * @param {string} text
+     * @param {number} start
+     * @returns {number}
+     */
     function findBlockEnd(text, start) {
         var depth = 0;
         var i = start;
@@ -31,6 +36,7 @@
 
     /**
      * Splits text into segments, tagging comment regions.
+     * @param {string} text
      * @returns {Array<{text: string, isComment: boolean}>|null}
      */
     function parseComments(text) {
@@ -72,9 +78,13 @@
         return segments;
     }
 
-    /** Replaces text nodes inside an inter-text span with comment-wrapped spans. */
+    /**
+     * Replaces text nodes inside an inter-text span with comment-wrapped spans.
+     * @param {Element} el
+     */
     function processElement(el) {
         var text = el.textContent;
+        if (text === null) return;
         if (text.indexOf("--") === -1 && text.indexOf("/-") === -1) return;
 
         var segments = parseComments(text);
