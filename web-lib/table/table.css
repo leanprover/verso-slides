@@ -1,0 +1,157 @@
+/*
+ * Slide table styles for VersoSlides.
+ *
+ * Colors are derived from the active Reveal.js theme via --r-main-color and color-mix(),
+ * so they automatically adapt to both light and dark themes.
+ * Override any --slide-table-* custom property in your own CSS to customise.
+ */
+
+/*
+ * Colors are derived from `currentColor` (the text color of the surrounding slide)
+ * rather than `--r-main-color`, so they adapt to Reveal.js's per-slide contrast
+ * adjustment when a slide overrides its background. Override any of the
+ * --slide-table-* custom properties in your own CSS to customise.
+ */
+table.slide-table {
+    /* Stripe colors: -a is the tinted stripe, -b is the base (usually transparent). */
+    --slide-table-stripe-row-a: color-mix(in srgb, currentColor 18%, transparent);
+    --slide-table-stripe-row-b: transparent;
+    --slide-table-stripe-col-a: color-mix(in srgb, currentColor 14%, transparent);
+    --slide-table-stripe-col-b: transparent;
+    /* Checkerboard colors — two values, strict A/B alternation. */
+    --slide-table-checker-a: color-mix(in srgb, currentColor 18%, transparent);
+    --slide-table-checker-b: transparent;
+    /* Separator lines. */
+    --slide-table-sep: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+    --slide-table-header-sep: 2px solid color-mix(in srgb, currentColor 70%, transparent);
+    --slide-table-border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+    /* Cell padding — override via inline style or a descendant rule. */
+    --slide-table-cell-padding: 0.3em 0.55em;
+}
+
+table.slide-table {
+    border-collapse: collapse;
+    margin: auto;
+}
+
+/* Reset reveal.js theme defaults so separators appear only when flags enable them. */
+table.slide-table,
+table.slide-table td,
+table.slide-table th {
+    border: none;
+}
+table.slide-table td,
+table.slide-table th {
+    padding: var(--slide-table-cell-padding);
+    text-align: left;
+    vertical-align: top;
+}
+
+/* --- Striped rows (disabled when col stripes are also active — checkerboard handles it) --- */
+table.slide-table.striped-rows:not(.striped-cols) tbody tr:nth-child(odd) {
+    background: var(--slide-table-stripe-row-a);
+}
+table.slide-table.striped-rows:not(.striped-cols) tbody tr:nth-child(even) {
+    background: var(--slide-table-stripe-row-b);
+}
+
+/* --- Striped cols (disabled when row stripes are also active — checkerboard handles it) --- */
+table.slide-table.striped-cols:not(.striped-rows) td:nth-child(odd),
+table.slide-table.striped-cols:not(.striped-rows) th:nth-child(odd) {
+    background: var(--slide-table-stripe-col-a);
+}
+table.slide-table.striped-cols:not(.striped-rows) td:nth-child(even),
+table.slide-table.striped-cols:not(.striped-rows) th:nth-child(even) {
+    background: var(--slide-table-stripe-col-b);
+}
+
+/* --- Checkerboard: both stripedRows and stripedCols active --- */
+/* Strict two-colour alternation: a cell's colour is picked by whether its row
+   and column parities match (→ A) or differ (→ B). Thead counts as the first
+   row of the pattern, so rules further down shift tbody's parity by one when a
+   thead is present, keeping the 2D checker continuous across the boundary. */
+
+/* Baseline (no thead): row-parity and col-parity match → A, differ → B. */
+table.slide-table.striped-rows.striped-cols tbody tr:nth-child(odd) > *:nth-child(odd),
+table.slide-table.striped-rows.striped-cols tbody tr:nth-child(even) > *:nth-child(even) {
+    background: var(--slide-table-checker-a);
+}
+table.slide-table.striped-rows.striped-cols tbody tr:nth-child(odd) > *:nth-child(even),
+table.slide-table.striped-rows.striped-cols tbody tr:nth-child(even) > *:nth-child(odd) {
+    background: var(--slide-table-checker-b);
+}
+
+/* Thead, when present, is row 1 of the pattern. */
+table.slide-table.striped-rows.striped-cols thead th:nth-child(odd) {
+    background: var(--slide-table-checker-a);
+}
+table.slide-table.striped-rows.striped-cols thead th:nth-child(even) {
+    background: var(--slide-table-checker-b);
+}
+
+/* Shift tbody by one row when thead is present, so tbody's first row is row 2
+   of the pattern rather than row 1. */
+table.slide-table.striped-rows.striped-cols:has(thead) tbody tr:nth-child(odd) > *:nth-child(odd),
+table.slide-table.striped-rows.striped-cols:has(thead)
+    tbody
+    tr:nth-child(even)
+    > *:nth-child(even) {
+    background: var(--slide-table-checker-b);
+}
+table.slide-table.striped-rows.striped-cols:has(thead) tbody tr:nth-child(odd) > *:nth-child(even),
+table.slide-table.striped-rows.striped-cols:has(thead) tbody tr:nth-child(even) > *:nth-child(odd) {
+    background: var(--slide-table-checker-a);
+}
+
+/* --- Row separators between data rows --- */
+table.slide-table.row-seps tbody tr + tr > td,
+table.slide-table.row-seps tbody tr + tr > th {
+    border-top: var(--slide-table-sep);
+}
+/* Also separate thead from the first body row when rowSeps is on. When
+   header-sep is also on, its thicker border will win under border-collapse. */
+table.slide-table.row-seps thead + tbody tr:first-child > * {
+    border-top: var(--slide-table-sep);
+}
+
+/* --- Column separators between data columns --- */
+table.slide-table.col-seps tr > *:not(:first-child) {
+    border-left: var(--slide-table-sep);
+}
+
+/* --- Thicker separator after header row --- */
+table.slide-table.header-sep thead th {
+    border-bottom: var(--slide-table-header-sep);
+}
+
+/* --- Thicker separator after row-header column --- */
+table.slide-table.header-sep th[scope="row"] {
+    border-right: var(--slide-table-header-sep);
+}
+
+/* When BOTH col and row headers are active, the top-left thead cell is a
+   corner. The header seps should frame the DATA area — they meet at that
+   corner from the outside without extending across or through it. */
+table.slide-table.header-sep:has(tbody th[scope="row"]) thead th:first-child {
+    border-bottom: none;
+}
+
+/* --- Outer border on all four edges --- */
+table.slide-table.with-border {
+    border: var(--slide-table-border);
+}
+table.slide-table.with-border tr > td:first-child,
+table.slide-table.with-border tr > th:first-child {
+    border-left: var(--slide-table-border);
+}
+table.slide-table.with-border tr > td:last-child,
+table.slide-table.with-border tr > th:last-child {
+    border-right: var(--slide-table-border);
+}
+table.slide-table.with-border thead tr:first-child > th {
+    border-top: var(--slide-table-border);
+}
+table.slide-table.with-border tbody tr:last-child > td,
+table.slide-table.with-border tbody tr:last-child > th {
+    border-bottom: var(--slide-table-border);
+}

@@ -9,7 +9,7 @@ class TestSlideStructure:
         slides_div = markup_doc.select_one("div.slides")
         assert slides_div is not None
         top_sections = slides_div.find_all("section", recursive=False)
-        assert len(top_sections) == 9
+        assert len(top_sections) == 10
 
     def test_slide_titles(self, markup_doc: BeautifulSoup):
         """Each top-level slide should have the expected heading."""
@@ -25,6 +25,7 @@ class TestSlideStructure:
             "Auto-Animate Two",
             "Image Test",
             "CSS Test",
+            "Tables",
             "Last Slide",
         ]
 

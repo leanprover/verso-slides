@@ -36,10 +36,13 @@ jobs:
             - uses: actions/checkout@v6
 
             - name: Install TypeScript
-              run: |
-                  sudo apt-get update && sudo apt-get install -y node-typescript
+              run: npm install --no-save typescript@5.7.2
+
+            - name: Verify every .js under web-lib/ is in some jsconfig.json
+              run: scripts/check-jsconfig-coverage.sh
 
             - name: Type check panel JavaScript
-              run: |
-                  cd panel
-                  tsc --noEmit -p jsconfig.json
+              run: npx tsc --noEmit -p web-lib/panel/jsconfig.json
+
+            - name: Type check widget JavaScript
+              run: npx tsc --noEmit -p web-lib/widget/jsconfig.json

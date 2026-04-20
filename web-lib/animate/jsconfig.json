@@ -5,5 +5,5 @@
         "noEmit": true,
         "strict": true
     },
-    "include": ["pretty.js", "panel.js", "lightbox.js", "globals.d.ts"]
+    "include": ["illuminate-reveal-init.js"]
 }

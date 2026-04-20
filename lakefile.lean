@@ -19,14 +19,11 @@ input_dir vendorAssets where
 lean_lib VersoSlidesVendored where
   needs := #[vendorAssets]
 
-input_dir panelAssets where
-  path := "panel"
-
-input_dir animateAssets where
-  path := "animate"
+input_dir webLibAssets where
+  path := "web-lib"
 
 lean_lib VersoSlides where
-  needs := #[panelAssets, animateAssets]
+  needs := #[webLibAssets]
 
 lean_lib Demo
 

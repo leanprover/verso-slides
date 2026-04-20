@@ -568,6 +568,179 @@ let morph2 : Morph SVG :=
 
 :::::::::
 
+# Tables
+%%%
+vertical := true
+%%%
+
+Navigate *down* through five table examples.
+
+## Striped Rows
+%%%
+backgroundColor := some "#f5f5f5"
+%%%
+
+Column headers and striped rows on a light background.
+
+:::table +colHeaders +stripedRows
+*
+  * Type
+  * Size
+  * Signed
+  * Example
+*
+  * {lean}`Nat`
+  * Unbounded
+  * No
+  * {lean}`0`, {lean}`42`
+*
+  * {lean}`Int`
+  * Unbounded
+  * Yes
+  * {lean (type := "Int")}`-5`, {lean (type := "Int")}`100`
+*
+  * {lean}`Float`
+  * 64-bit
+  * Yes
+  * {lean}`3.14`
+:::
+
+## Striped Columns
+%%%
+backgroundColor := some "#0d1b2a"
+%%%
+
+Striped columns and row headers on a dark background.
+
+:::table +colHeaders +rowHeaders +stripedCols +headerSep
+*
+  * Tactic
+  * Closes?
+  * Rewrites?
+  * New goals?
+*
+  * `exact`
+  * ✓
+  * —
+  * —
+*
+  * `apply`
+  * —
+  * —
+  * ✓
+*
+  * `intro`
+  * —
+  * ✓
+  * —
+*
+  * `simp`
+  * partial
+  * ✓
+  * —
+*
+  * `omega`
+  * ✓
+  * —
+  * —
+:::
+
+## Row Separators
+
+Column headers and row separators, no stripes or border.
+
+:::table +colHeaders +rowSeps
+*
+  * Transition
+  * Effect
+*
+  * `slide`
+  * Default horizontal motion
+*
+  * `fade`
+  * Cross-fade between slides
+*
+  * `convex`
+  * Angled away from viewer
+*
+  * `concave`
+  * Angled toward viewer
+*
+  * `zoom`
+  * Zoom in from center
+*
+  * `none`
+  * Instant cut
+:::
+
+## Bordered Table
+
+Row separators and an outer border.
+
+:::table +colHeaders +rowSeps +border
+*
+  * Directive
+  * Arguments
+  * Effect
+*
+  * `notes`
+  * —
+  * Speaker notes
+*
+  * `fragment`
+  * style, index
+  * Progressive reveal
+*
+  * `fitText`
+  * —
+  * Auto-sizes text to fit
+*
+  * `stretch`
+  * —
+  * Fills remaining slide height
+*
+  * `hstack`
+  * —
+  * Horizontal side-by-side layout
+:::
+
+## Propositional Connectives
+
+Striped
+
+:::table +colHeaders +rowHeaders +stripedRows +stripedCols +border +headerSep
+*
+  * (A, B)
+  * A ∧ B
+  * A ∨ B
+  * A → B
+  * A ↔ B
+*
+  * (T, T)
+  * T
+  * T
+  * T
+  * T
+*
+  * (T, F)
+  * F
+  * T
+  * F
+  * F
+*
+  * (F, T)
+  * F
+  * T
+  * T
+  * F
+*
+  * (F, F)
+  * F
+  * F
+  * T
+  * T
+:::
+
 # Thank You
 
 That concludes the *VersoSlides* demo.

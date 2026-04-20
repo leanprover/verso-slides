@@ -124,6 +124,50 @@ instance [Monad m] : GenreHtml Slides m where
       pure (wrapWithPanel codeHtml panel)
     | .otherLanguage language code =>
       pure {{ <pre><code class=s!"language-{language}">{{code}}</code></pre> }}
+    | .table columns style =>
+      let #[.ul items] := contents | pure .empty
+      -- Re-chunk the flat cell list back into rows
+      let mut flatItems := items
+      let mut rows : Array (Array (Array (Block Slides))) := #[]
+      while flatItems.size > 0 do
+        rows := rows.push (flatItems.take columns |>.map (·.contents))
+        flatItems := flatItems.extract columns flatItems.size
+      -- Build CSS class string from style flags
+      let flagClasses : List String :=
+        (if style.stripedRows then ["striped-rows"] else []) ++
+        (if style.stripedCols then ["striped-cols"] else []) ++
+        (if style.rowSeps     then ["row-seps"]     else []) ++
+        (if style.colSeps     then ["col-seps"]     else []) ++
+        (if style.headerSep   then ["header-sep"]   else []) ++
+        (if style.border      then ["with-border"]  else [])
+      let classes := " ".intercalate (["slide-table"] ++ flagClasses)
+      -- cellGap overrides --slide-table-cell-padding via an inline CSS variable
+      let tableAttrs : Array (String × String) :=
+        match style.cellGap with
+        | none     => #[("class", classes)]
+        | some gap => #[("class", classes), ("style", s!"--slide-table-cell-padding: {gap}")]
+      let headerRow := if style.colHeaders && rows.size > 0 then some rows[0]! else none
+      let bodyRows  := if style.colHeaders && rows.size > 0 then rows.extract 1 rows.size else rows
+      let mkCell (isColHdr : Bool) (colIdx : Nat) (cellBlocks : Array (Block Slides)) :
+          HtmlT Slides m Html := do
+        let inner : Html := .seq (← cellBlocks.mapM blockHtml)
+        if isColHdr then
+          pure {{ <th scope="col">{{inner}}</th> }}
+        else if style.rowHeaders && colIdx == 0 then
+          pure {{ <th scope="row">{{inner}}</th> }}
+        else
+          pure {{ <td>{{inner}}</td> }}
+      let theadHtml : Html ← match headerRow with
+        | none     => pure .empty
+        | some row =>
+          let cells := .seq (← row.mapIdxM (mkCell true ·))
+          pure {{ <thead><tr>{{cells}}</tr></thead> }}
+      let tbodyHtml : Html ← do
+        let trs ← bodyRows.mapM fun row => do
+          let cells := .seq (← row.mapIdxM (mkCell false ·))
+          pure {{ <tr>{{cells}}</tr> }}
+        pure {{ <tbody>{{.seq trs}}</tbody> }}
+      pure (.tag "table" tableAttrs (.seq #[theadHtml, tbodyHtml]))
     | .css _ =>
       pure .empty
     | .diagram svgStr cssWidth background =>
@@ -299,37 +343,40 @@ def renderDocument (config : Config) (doc : Part Slides) [Monad m] [GenreHtml Sl
 private def jsBool (b : Bool) : String := if b then "true" else "false"
 
 /-- CSS for the interactive info panel layout. -/
-private def slideCodePanelCss : String := include_str "../panel/panel.css"
+private def slideCodePanelCss : String := include_str "../web-lib/panel/panel.css"
 
 /-- JS for the pretty-printer (reflowable format rendering). -/
-private def prettyJs : String := include_str "../panel/pretty.js"
+private def prettyJs : String := include_str "../web-lib/panel/pretty.js"
 
 /-- JS for the interactive info panel. -/
-private def slideCodePanelJs : String := include_str "../panel/panel.js"
+private def slideCodePanelJs : String := include_str "../web-lib/panel/panel.js"
 
 /-- Wraps the global {lit}`tippy` function to skip elements inside {lit}`.code-with-panel`.
     Must be injected after the Tippy library but before {name}`highlightingJs`. -/
-private def tippyPanelFilterJs : String := include_str "../panel/tippy-panel-filter.js"
+private def tippyPanelFilterJs : String := include_str "../web-lib/panel/tippy-panel-filter.js"
 
 /-- CSS for the inline Lean term lightbox overlay. -/
-private def lightboxCss : String := include_str "../panel/lightbox.css"
+private def lightboxCss : String := include_str "../web-lib/panel/lightbox.css"
 
 /-- JS for the inline Lean term lightbox overlay. -/
-private def lightboxJs : String := include_str "../panel/lightbox.js"
+private def lightboxJs : String := include_str "../web-lib/panel/lightbox.js"
 
 /-- CSS for Illuminate diagrams. -/
-private def diagramCss : String := include_str "../diagrams/diagram.css"
+private def diagramCss : String := include_str "../web-lib/diagrams/diagram.css"
 
 /-- CSS for Illuminate animation containers. -/
-private def illuminateAnimCss : String := include_str "../animate/illuminate-anim.css"
+private def illuminateAnimCss : String := include_str "../web-lib/animate/illuminate-anim.css"
 
 /-- JS for Illuminate reveal.js animation integration.
     Combines the shared {lit}`anim_core.js` helpers with the multi-animation init script. -/
 private def illuminateRevealJs : String :=
-  Illuminate.animCoreJs ++ "\n" ++ include_str "../animate/illuminate-reveal-init.js"
+  Illuminate.animCoreJs ++ "\n" ++ include_str "../web-lib/animate/illuminate-reveal-init.js"
+
+/-- CSS for the {lit}`:::table` directive. -/
+private def tableCss : String := include_str "../web-lib/table/table.css"
 
 /-- CSS overrides for Verso highlighted code within reveal.js slides. -/
-private def slidesHighlightCss : String := include_str "../panel/slides-highlight.css"
+private def slidesHighlightCss : String := include_str "../web-lib/panel/slides-highlight.css"
 
 /--
 JS that adapts code block styling based on the computed background luminance of each slide. Sets
@@ -339,9 +386,9 @@ block / panel background overlays.
 -- TODO(verso#274): remove leanCommentsJs, its <script> tag in renderFullHtml,
 -- its writeFileWithDirs call in writeVendoredAssets, and the .lean-comment CSS
 -- rules in slides-highlight.css when SubVerso tokenizes comments natively.
-private def leanCommentsJs : String := include_str "../panel/lean-comments.js"
+private def leanCommentsJs : String := include_str "../web-lib/panel/lean-comments.js"
 
-private def codeBlockBgJs : String := include_str "../panel/code-block-bg.js"
+private def codeBlockBgJs : String := include_str "../web-lib/panel/code-block-bg.js"
 
 /-- Relative path prefix for vendored libraries in the output directory. -/
 private def libPrefix : String := "lib"
@@ -386,6 +433,7 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
       <link rel="stylesheet" href={{s!"{libPrefix}/lightbox.css"}} />
       <link rel="stylesheet" href={{s!"{libPrefix}/diagram.css"}} />
       <link rel="stylesheet" href={{s!"{libPrefix}/illuminate-anim.css"}} />
+      <link rel="stylesheet" href={{s!"{libPrefix}/table.css"}} />
       {{ customCss.map fun css => {{ <style>{{Html.text false css}}</style> }} }}
     </head>
     <body>
@@ -474,6 +522,7 @@ def writeVendoredAssets (outputDir : System.FilePath) (theme : String) : IO Unit
   writeFileWithDirs (libDir / "diagram.css") diagramCss
   writeFileWithDirs (libDir / "illuminate-anim.css") illuminateAnimCss
   writeFileWithDirs (libDir / "illuminate-reveal.js") illuminateRevealJs
+  writeFileWithDirs (libDir / "table.css") tableCss
 
 /-- Generates a reveal.js slide presentation from a Verso document. -/
 def slidesMain (config : Config := {}) (doc : Part Slides) (args : List String := []) : IO UInt32 := do

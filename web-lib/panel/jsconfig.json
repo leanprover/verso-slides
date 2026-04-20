@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "lib": ["ES2024", "DOM", "DOM.Iterable"],
+        "target": "ES2024",
+        "noEmit": true,
+        "strict": true
+    },
+    "include": [
+        "pretty.js",
+        "panel.js",
+        "lightbox.js",
+        "code-block-bg.js",
+        "lean-comments.js",
+        "tippy-panel-filter.js",
+        "globals.d.ts"
+    ]
+}
