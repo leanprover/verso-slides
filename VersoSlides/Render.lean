@@ -124,6 +124,50 @@ instance [Monad m] : GenreHtml Slides m where
       pure (wrapWithPanel codeHtml panel)
     | .otherLanguage language code =>
       pure {{ <pre><code class=s!"language-{language}">{{code}}</code></pre> }}
+    | .table columns style =>
+      let #[.ul items] := contents | pure .empty
+      -- Re-chunk the flat cell list back into rows
+      let mut flatItems := items
+      let mut rows : Array (Array (Array (Block Slides))) := #[]
+      while flatItems.size > 0 do
+        rows := rows.push (flatItems.take columns |>.map (·.contents))
+        flatItems := flatItems.extract columns flatItems.size
+      -- Build CSS class string from style flags
+      let flagClasses : List String :=
+        (if style.stripedRows then ["striped-rows"] else []) ++
+        (if style.stripedCols then ["striped-cols"] else []) ++
+        (if style.rowSeps     then ["row-seps"]     else []) ++
+        (if style.colSeps     then ["col-seps"]     else []) ++
+        (if style.headerSep   then ["header-sep"]   else []) ++
+        (if style.border      then ["with-border"]  else [])
+      let classes := " ".intercalate (["slide-table"] ++ flagClasses)
+      -- cellGap overrides --slide-table-cell-padding via an inline CSS variable
+      let tableAttrs : Array (String × String) :=
+        match style.cellGap with
+        | none     => #[("class", classes)]
+        | some gap => #[("class", classes), ("style", s!"--slide-table-cell-padding: {gap}")]
+      let headerRow := if style.colHeaders && rows.size > 0 then some rows[0]! else none
+      let bodyRows  := if style.colHeaders && rows.size > 0 then rows.extract 1 rows.size else rows
+      let mkCell (isColHdr : Bool) (colIdx : Nat) (cellBlocks : Array (Block Slides)) :
+          HtmlT Slides m Html := do
+        let inner : Html := .seq (← cellBlocks.mapM blockHtml)
+        if isColHdr then
+          pure {{ <th scope="col">{{inner}}</th> }}
+        else if style.rowHeaders && colIdx == 0 then
+          pure {{ <th scope="row">{{inner}}</th> }}
+        else
+          pure {{ <td>{{inner}}</td> }}
+      let theadHtml : Html ← match headerRow with
+        | none     => pure .empty
+        | some row =>
+          let cells := .seq (← row.mapIdxM (mkCell true ·))
+          pure {{ <thead><tr>{{cells}}</tr></thead> }}
+      let tbodyHtml : Html ← do
+        let trs ← bodyRows.mapM fun row => do
+          let cells := .seq (← row.mapIdxM (mkCell false ·))
+          pure {{ <tr>{{cells}}</tr> }}
+        pure {{ <tbody>{{.seq trs}}</tbody> }}
+      pure (.tag "table" tableAttrs (.seq #[theadHtml, tbodyHtml]))
     | .css _ =>
       pure .empty
     | .diagram svgStr cssWidth background =>
@@ -328,6 +372,9 @@ private def illuminateAnimCss : String := include_str "../animate/illuminate-ani
 private def illuminateRevealJs : String :=
   Illuminate.animCoreJs ++ "\n" ++ include_str "../animate/illuminate-reveal-init.js"
 
+/-- CSS for the {lit}`:::table` directive. -/
+private def tableCss : String := include_str "../panel/table.css"
+
 /-- CSS overrides for Verso highlighted code within reveal.js slides. -/
 private def slidesHighlightCss : String := include_str "../panel/slides-highlight.css"
 
@@ -386,6 +433,7 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
       <link rel="stylesheet" href={{s!"{libPrefix}/lightbox.css"}} />
       <link rel="stylesheet" href={{s!"{libPrefix}/diagram.css"}} />
       <link rel="stylesheet" href={{s!"{libPrefix}/illuminate-anim.css"}} />
+      <link rel="stylesheet" href={{s!"{libPrefix}/table.css"}} />
       {{ customCss.map fun css => {{ <style>{{Html.text false css}}</style> }} }}
     </head>
     <body>
@@ -474,6 +522,7 @@ def writeVendoredAssets (outputDir : System.FilePath) (theme : String) : IO Unit
   writeFileWithDirs (libDir / "diagram.css") diagramCss
   writeFileWithDirs (libDir / "illuminate-anim.css") illuminateAnimCss
   writeFileWithDirs (libDir / "illuminate-reveal.js") illuminateRevealJs
+  writeFileWithDirs (libDir / "table.css") tableCss
 
 /-- Generates a reveal.js slide presentation from a Verso document. -/
 def slidesMain (config : Config := {}) (doc : Part Slides) (args : List String := []) : IO UInt32 := do

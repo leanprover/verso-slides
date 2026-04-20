@@ -83,6 +83,68 @@ Second.
 .css-target { border: 3px solid red; opacity: 0.5; }
 ```
 
+# Tables
+
+:::table +colHeaders +rowHeaders +stripedRows +colSeps +headerSep +border
+*
+  * Header A
+  * Header B
+  * Header C
+*
+  * Row 1
+  * Cell A1
+  * Cell A2
+*
+  * Row 2
+  * Cell B1
+  * Cell B2
+:::
+
+:::table +stripedCols +rowSeps
+*
+  * A
+  * B
+*
+  * C
+  * D
+*
+  * E
+  * F
+:::
+
+:::table +stripedRows +stripedCols
+*
+  * A
+  * B
+*
+  * C
+  * D
+:::
+
+:::table +colHeaders (cellGap := "0.6em 1.2em")
+*
+  * Name
+  * Value
+*
+  * x
+  * 42
+:::
+
+:::table +colHeaders +rowHeaders +rowSeps +colSeps
+*
+  * Key
+  * A
+  * B
+*
+  * row1
+  * 1
+  * 2
+*
+  * row2
+  * 3
+  * 4
+:::
+
 # Last Slide
 :::fragment
 A fragment paragraph.

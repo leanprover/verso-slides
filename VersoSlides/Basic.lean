@@ -102,6 +102,35 @@ public def Config.fromMetadata (md : SlideMetadata) (base : Config := {}) : Conf
   extraJs := base.extraJs
   outputDir := base.outputDir
 
+/-- Style options for the {lit}`:::table` directive. All features are off by default. -/
+public structure TableStyle where
+  /-- If true, the first row is rendered as {lit}`<thead>` with {lit}`<th scope="col">` cells. -/
+  colHeaders  : Bool          := false
+  /-- If true, the first cell of each body row is rendered as {lit}`<th scope="row">`. -/
+  rowHeaders  : Bool          := false
+  /-- If true, alternating body rows get distinct background colors. -/
+  stripedRows : Bool          := false
+  /-- If true, alternating columns get distinct background colors. -/
+  stripedCols : Bool          := false
+  /-- If true, horizontal separator lines are drawn between data rows. -/
+  rowSeps     : Bool          := false
+  /-- If true, vertical separator lines are drawn between data columns. -/
+  colSeps     : Bool          := false
+  /-- If true, a thicker separator is drawn after the header row and/or column. -/
+  headerSep   : Bool          := false
+  /-- If true, separator lines are added to the outer edges of the table. -/
+  border      : Bool          := false
+  /-- If set, overrides the cell padding, e.g. {lit}`"0.4em 0.6em"`. -/
+  cellGap     : Option String := none
+deriving BEq, Repr, ToJson, FromJson, Inhabited
+
+public instance : Quote TableStyle where
+  quote s := Syntax.mkApp (mkCIdent ``TableStyle.mk) #[
+    quote s.colHeaders,  quote s.rowHeaders,  quote s.stripedRows, quote s.stripedCols,
+    quote s.rowSeps,     quote s.colSeps,     quote s.headerSep,   quote s.border,
+    quote s.cellGap
+  ]
+
 /-- Custom block-level elements for the Slides genre -/
 public inductive BlockExt where
   /-- Speaker notes: wraps children in `<aside class="notes">`. -/
@@ -124,6 +153,8 @@ public inductive BlockExt where
   | diagram (svg : String) (cssWidth : String) (background : Option String)
   /-- Illuminate animation compiled to JSON for reveal.js fragment-driven playback. -/
   | animate (containerId : String) (animDataJson : String) (cssWidth : String) (background : Option String) (fragmentIndices : Array (Option Nat)) (autoplay : Bool)
+  /-- Table rendered from a nested list of lists. -/
+  | table (columns : Nat) (style : TableStyle)
 deriving BEq, Repr, ToJson, FromJson
 
 

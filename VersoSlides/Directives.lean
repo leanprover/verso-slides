@@ -5,6 +5,7 @@ Author: David Thrane Christiansen
 -/
 module
 import VersoSlides.Basic
+public meta import VersoSlides.Basic
 import VersoSlides.ImageWidget
 public meta import VersoSlides.ImageWidget
 public meta import VersoSlides.ImgSrc
@@ -464,6 +465,98 @@ public meta def warnOnMarkdownImage : InlineExpander
       logWarningAt alt (msg ++ h)
     throwUnsupportedSyntax
   | _ => throwUnsupportedSyntax
+
+/-- Arguments for the `:::table` directive. All features are off by default. -/
+public meta structure TableArgs where
+  colHeaders  : Bool          := false
+  rowHeaders  : Bool          := false
+  stripedRows : Bool          := false
+  stripedCols : Bool          := false
+  rowSeps     : Bool          := false
+  colSeps     : Bool          := false
+  headerSep   : Bool          := false
+  border      : Bool          := false
+  cellGap     : Option String := none
+
+section
+variable [Monad m] [MonadInfoTree m] [MonadResolveName m] [MonadEnv m] [MonadError m] [MonadLiftT CoreM m] [MonadLog m] [AddMessageContext m] [MonadOptions m]
+
+-- The second argument to `.flag` is the default value when the flag is absent.
+public meta instance : FromArgs TableArgs m where
+  fromArgs :=
+    TableArgs.mk
+      <$> .flag `colHeaders  false
+      <*> .flag `rowHeaders  false
+      <*> .flag `stripedRows false
+      <*> .flag `stripedCols false
+      <*> .flag `rowSeps     false
+      <*> .flag `colSeps     false
+      <*> .flag `headerSep   false
+      <*> .flag `border      false
+      <*> .named `cellGap .string true
+end
+
+/--
+Table directive. Input is a nested list of lists: each outer item is a row,
+each inner item is a cell. All rows must have the same number of columns.
+
+Flags (all off by default):
+- `colHeaders` — first row becomes `<thead>` with `<th scope="col">` cells
+- `rowHeaders` — first cell of each body row becomes `<th scope="row">`
+- `stripedRows` — alternating row background colors
+- `stripedCols` — alternating column background colors (checkerboard when combined with `stripedRows`)
+- `rowSeps` — horizontal separator lines between data rows
+- `colSeps` — vertical separator lines between data columns
+- `headerSep` — thicker separator after the header row/column
+- `border` — separator lines on all outer edges
+- `cellGap` — cell padding override, e.g. `(cellGap := "0.5em 1em")`
+
+Usage:
+```
+:::table (colHeaders) (stripedRows) (border)
+* * Header A  * Header B
+* * Cell A1   * Cell A2
+* * Cell B1   * Cell B2
+:::
+```
+-/
+@[directive]
+public meta def table : DirectiveExpanderOf TableArgs
+  | args, contents => do
+    let #[oneBlock] := contents
+      | throwError "Expected a single unordered list"
+    let `(block|ul{$items*}) := oneBlock
+      | throwErrorAt oneBlock "Expected a single unordered list"
+    let preRows ← items.mapM getLi
+    let rows ← preRows.mapM fun blks => do
+      let #[oneInRow] := blks.filter (·.raw.isOfKind ``Lean.Doc.Syntax.ul)
+        | throwError "Each row should have exactly one list in it"
+      let `(block|ul{ $cellItems*}) := oneInRow
+        | throwErrorAt oneInRow "Each row should have exactly one list in it"
+      cellItems.mapM getLi
+    if h : rows.size = 0 then
+      throwErrorAt oneBlock "Expected at least one row"
+    else
+      let columns := rows[0].size
+      if columns = 0 then
+        throwErrorAt oneBlock "Expected at least one column"
+      if rows.any (·.size != columns) then
+        throwErrorAt oneBlock s!"Expected all rows to have same number of columns, but got {rows.map (·.size)}"
+      let flattened := rows.flatten
+      let blocks : Array (Syntax.TSepArray `term ",") ← flattened.mapM (·.mapM elabBlock)
+      let style : TableStyle := {
+        colHeaders  := args.colHeaders,  rowHeaders  := args.rowHeaders,
+        stripedRows := args.stripedRows, stripedCols := args.stripedCols,
+        rowSeps     := args.rowSeps,     colSeps     := args.colSeps,
+        headerSep   := args.headerSep,   border      := args.border,
+        cellGap     := args.cellGap }
+      ``(Block.other
+          (VersoSlides.BlockExt.table $(quote columns) $(quote style))
+          #[Block.ul #[$[Verso.Doc.ListItem.mk #[$blocks,*]],*]])
+where
+  getLi : Syntax → DocElabM (TSyntaxArray `block)
+    | `(list_item| * $content*) => pure content
+    | other => throwErrorAt other "Expected list item"
 
 /--
 Custom CSS block. The content is collected during traversal and injected
