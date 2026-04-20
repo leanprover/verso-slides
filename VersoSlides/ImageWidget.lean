@@ -43,7 +43,7 @@ public def base64Encode (data : ByteArray) : String := Id.run do
 
 @[widget_module]
 def imagePreviewWidget : Widget.Module where
-  javascript := include_str "../widget/image-preview.js"
+  javascript := include_str "../web-lib/widget/image-preview.js"
 
 /-- Returns a MIME type for common image extensions, or {name}`none` for unknown types. -/
 public def mimeType (path : System.FilePath) : Option String :=

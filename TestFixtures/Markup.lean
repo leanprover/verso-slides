@@ -145,6 +145,21 @@ Second.
   * 4
 :::
 
+:::table +colHeaders +stripedRows +stripedCols
+*
+  * H1
+  * H2
+  * H3
+*
+  * a1
+  * a2
+  * a3
+*
+  * b1
+  * b2
+  * b3
+:::
+
 # Last Slide
 :::fragment
 A fragment paragraph.

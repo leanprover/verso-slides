@@ -7,9 +7,9 @@ from conftest import goto_slide_by_title
 
 class TestTableStructure:
     def test_tables_present(self, markup_doc):
-        """Five slide-table elements should be present in the markup fixture."""
+        """Six slide-table elements should be present in the markup fixture."""
         tables = markup_doc.select("table.slide-table")
-        assert len(tables) == 5
+        assert len(tables) == 6
 
     def test_col_headers_thead(self, markup_doc):
         """First table (colHeaders): should have a <thead> element."""
@@ -269,22 +269,41 @@ class TestTableComputedStyles:
             f"+rowSeps should add top border to row 1 cells, got {second_row_cell['bt']}"
 
     def test_checkerboard_thead_striped(self, page, markup_url):
-        """In checkerboard mode, thead should also show a column-stripe pattern
-        (not a uniform background band). Table 2 is the smallest checkerboard but
-        has no thead; use the markup fixture's 3rd table which has no thead either,
-        so we test with an explicitly inline case via the demo's truth table? Skip:
-        the markup fixture's checkerboard table has no colHeaders. Instead verify
-        via CSS rule presence: thead th:nth-child(odd/even) gets a col-stripe bg
-        whenever both striped-rows and striped-cols classes are active.
+        """Table 5 (+colHeaders +stripedRows +stripedCols): the 2D checker must
+        continue through the thead row.
+
+        Two behaviours are verified in-browser:
+
+        - Adjacent thead cells have different backgrounds (header row follows
+          the column-stripe, not a uniform band).
+        - The thead's parity shifts tbody by one row — so the cell directly
+          below a thead cell has the *other* checker colour, not the same one.
+          This is the ``:has(thead)`` rule at
+          ``web-lib/table/table.css`` that keeps the 2D pattern continuous
+          across the thead/tbody boundary.
+
+        Only the two ``--slide-table-checker-*`` colours should appear.
         """
-        # The markup fixture's checkerboard table (index 2) has no thead, so the
-        # assertion is structural: the CSS file must contain a rule targeting
-        # thead cells when both stripe classes are active.
-        from pathlib import Path
-        css_path = Path(__file__).parent / ".." / "_test" / "markup" / "lib" / "table.css"
-        css = css_path.read_text()
-        assert ".striped-rows.striped-cols thead th" in css, \
-            "checkerboard mode should stripe thead cells by column"
+        goto_slide_by_title(page, markup_url, "Tables")
+        data = _table_style_data(page, 5)
+        cells = {(c["row"], c["col"]): c["bg"] for c in data["cells"]}
+        # Row 0 is the thead: adjacent thead cells must alternate.
+        assert cells[(0, 0)] != cells[(0, 1)], \
+            f"thead cells should alternate under +stripedCols, got {cells[(0,0)]} == {cells[(0,1)]}"
+        # Parity shift: cell directly below a thead cell carries the OPPOSITE
+        # checker colour (otherwise the header would be row-1 of the pattern
+        # AND the first tbody row would also be row-1, breaking the checker).
+        assert cells[(0, 0)] != cells[(1, 0)], \
+            f"first tbody cell should differ from thead cell above it (parity shift), got {cells[(0,0)]} == {cells[(1,0)]}"
+        # Diagonals within the full 3×3 grid should match in a strict 2-colour checker.
+        assert cells[(0, 0)] == cells[(1, 1)], \
+            f"(0,0) and diagonal (1,1) should match, got {cells[(0,0)]} vs {cells[(1,1)]}"
+        assert cells[(1, 0)] == cells[(2, 1)], \
+            f"(1,0) and diagonal (2,1) should match, got {cells[(1,0)]} vs {cells[(2,1)]}"
+        # Only two distinct colours across the whole table.
+        unique = set(cells.values())
+        assert len(unique) == 2, \
+            f"checker with thead should use exactly 2 colours, got {len(unique)}: {unique}"
 
     def test_table3_checkerboard(self, page, markup_url):
         """Table 2 (+stripedRows +stripedCols): strict 2-colour checker.

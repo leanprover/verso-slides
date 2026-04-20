@@ -343,40 +343,40 @@ def renderDocument (config : Config) (doc : Part Slides) [Monad m] [GenreHtml Sl
 private def jsBool (b : Bool) : String := if b then "true" else "false"
 
 /-- CSS for the interactive info panel layout. -/
-private def slideCodePanelCss : String := include_str "../panel/panel.css"
+private def slideCodePanelCss : String := include_str "../web-lib/panel/panel.css"
 
 /-- JS for the pretty-printer (reflowable format rendering). -/
-private def prettyJs : String := include_str "../panel/pretty.js"
+private def prettyJs : String := include_str "../web-lib/panel/pretty.js"
 
 /-- JS for the interactive info panel. -/
-private def slideCodePanelJs : String := include_str "../panel/panel.js"
+private def slideCodePanelJs : String := include_str "../web-lib/panel/panel.js"
 
 /-- Wraps the global {lit}`tippy` function to skip elements inside {lit}`.code-with-panel`.
     Must be injected after the Tippy library but before {name}`highlightingJs`. -/
-private def tippyPanelFilterJs : String := include_str "../panel/tippy-panel-filter.js"
+private def tippyPanelFilterJs : String := include_str "../web-lib/panel/tippy-panel-filter.js"
 
 /-- CSS for the inline Lean term lightbox overlay. -/
-private def lightboxCss : String := include_str "../panel/lightbox.css"
+private def lightboxCss : String := include_str "../web-lib/panel/lightbox.css"
 
 /-- JS for the inline Lean term lightbox overlay. -/
-private def lightboxJs : String := include_str "../panel/lightbox.js"
+private def lightboxJs : String := include_str "../web-lib/panel/lightbox.js"
 
 /-- CSS for Illuminate diagrams. -/
-private def diagramCss : String := include_str "../diagrams/diagram.css"
+private def diagramCss : String := include_str "../web-lib/diagrams/diagram.css"
 
 /-- CSS for Illuminate animation containers. -/
-private def illuminateAnimCss : String := include_str "../animate/illuminate-anim.css"
+private def illuminateAnimCss : String := include_str "../web-lib/animate/illuminate-anim.css"
 
 /-- JS for Illuminate reveal.js animation integration.
     Combines the shared {lit}`anim_core.js` helpers with the multi-animation init script. -/
 private def illuminateRevealJs : String :=
-  Illuminate.animCoreJs ++ "\n" ++ include_str "../animate/illuminate-reveal-init.js"
+  Illuminate.animCoreJs ++ "\n" ++ include_str "../web-lib/animate/illuminate-reveal-init.js"
 
 /-- CSS for the {lit}`:::table` directive. -/
-private def tableCss : String := include_str "../panel/table.css"
+private def tableCss : String := include_str "../web-lib/table/table.css"
 
 /-- CSS overrides for Verso highlighted code within reveal.js slides. -/
-private def slidesHighlightCss : String := include_str "../panel/slides-highlight.css"
+private def slidesHighlightCss : String := include_str "../web-lib/panel/slides-highlight.css"
 
 /--
 JS that adapts code block styling based on the computed background luminance of each slide. Sets
@@ -386,9 +386,9 @@ block / panel background overlays.
 -- TODO(verso#274): remove leanCommentsJs, its <script> tag in renderFullHtml,
 -- its writeFileWithDirs call in writeVendoredAssets, and the .lean-comment CSS
 -- rules in slides-highlight.css when SubVerso tokenizes comments natively.
-private def leanCommentsJs : String := include_str "../panel/lean-comments.js"
+private def leanCommentsJs : String := include_str "../web-lib/panel/lean-comments.js"
 
-private def codeBlockBgJs : String := include_str "../panel/code-block-bg.js"
+private def codeBlockBgJs : String := include_str "../web-lib/panel/code-block-bg.js"
 
 /-- Relative path prefix for vendored libraries in the output directory. -/
 private def libPrefix : String := "lib"

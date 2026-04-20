@@ -500,23 +500,31 @@ end
 Table directive. Input is a nested list of lists: each outer item is a row,
 each inner item is a cell. All rows must have the same number of columns.
 
-Flags (all off by default):
-- `colHeaders` — first row becomes `<thead>` with `<th scope="col">` cells
-- `rowHeaders` — first cell of each body row becomes `<th scope="row">`
-- `stripedRows` — alternating row background colors
-- `stripedCols` — alternating column background colors (checkerboard when combined with `stripedRows`)
-- `rowSeps` — horizontal separator lines between data rows
-- `colSeps` — vertical separator lines between data columns
-- `headerSep` — thicker separator after the header row/column
-- `border` — separator lines on all outer edges
-- `cellGap` — cell padding override, e.g. `(cellGap := "0.5em 1em")`
+Boolean flags are written as `+name` (all off by default):
+- `+colHeaders` — first row becomes `<thead>` with `<th scope="col">` cells
+- `+rowHeaders` — first cell of each body row becomes `<th scope="row">`
+- `+stripedRows` — alternating row background colors
+- `+stripedCols` — alternating column background colors (checkerboard when combined with `+stripedRows`)
+- `+rowSeps` — horizontal separator lines between data rows
+- `+colSeps` — vertical separator lines between data columns
+- `+headerSep` — thicker separator after the header row/column
+- `+border` — separator lines on all outer edges
+
+`cellGap` takes a named string passed through as a CSS `padding` shorthand
+(one, two, or four lengths), e.g. `(cellGap := "0.4em 0.6em")`.
 
 Usage:
 ```
-:::table (colHeaders) (stripedRows) (border)
-* * Header A  * Header B
-* * Cell A1   * Cell A2
-* * Cell B1   * Cell B2
+:::table +colHeaders +stripedRows +border
+*
+  * Header A
+  * Header B
+*
+  * Cell A1
+  * Cell B1
+*
+  * Cell A2
+  * Cell B2
 :::
 ```
 -/

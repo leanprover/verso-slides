@@ -255,6 +255,57 @@ This directive is particularly useful for auto-animate element
 matching, where paired elements across adjacent slides need matching
 `data-id` attributes.
 
+### Tables
+
+The `table` directive renders an HTML `<table>` from a nested list of
+lists: each outer list item is a row, and each inner list item is a
+cell. All rows must have the same number of cells.
+
+```
+:::table +colHeaders +stripedRows +border
+*
+  * Header A
+  * Header B
+*
+  * Cell A1
+  * Cell B1
+*
+  * Cell A2
+  * Cell B2
+:::
+```
+
+Cell contents are parsed as block content, so inline markup, Lean
+code, images, and other directives are allowed inside cells.
+
+All style options are off by default. Boolean flags are written as
+`+name` (or `-name` to explicitly disable); `cellGap` takes a named
+string argument:
+
+- `+colHeaders` — the first row becomes a `<thead>` whose cells are
+  `<th scope="col">`.
+- `+rowHeaders` — the first cell of each body row becomes
+  `<th scope="row">`.
+- `+stripedRows` — alternating body rows receive a tinted background.
+- `+stripedCols` — alternating columns receive a tinted background.
+  Combined with `+stripedRows` it produces a checkerboard pattern.
+- `+rowSeps` — draws horizontal separators between data rows (and
+  between a header row and the first body row).
+- `+colSeps` — draws vertical separators between data columns (and
+  between a row-header column and the first data column).
+- `+headerSep` — draws a thicker separator after the header row and/or
+  header column.
+- `+border` — draws separator lines along the four outer edges.
+- `(cellGap := "0.4em 0.6em")` — overrides cell padding. The value is
+  passed through unchanged as a CSS `padding` shorthand (one, two, or
+  four lengths).
+
+Colors derive from the current slide's text colour via `color-mix()`,
+so tables automatically adapt to both light and dark themes. The
+underlying custom properties (`--slide-table-stripe-row-a`,
+`--slide-table-sep`, `--slide-table-cell-padding`, etc.) can be
+overridden in your own CSS for per-presentation restyling.
+
 ### Nesting Directives
 
 Directives can be nested by using a longer fence for the outer
