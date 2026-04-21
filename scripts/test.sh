@@ -25,4 +25,7 @@ npx --no-install tsc --noEmit -p web-lib/widget/jsconfig.json
 git ls-files -z | xargs -0 npx --no-install prettier --check --ignore-unknown
 
 cd "$root/browser-tests"
-uv run pytest "$@"
+# `-n auto` hits Chromium timeouts on machines with many cores because of
+# browser-process contention. Four workers is a reliable default that still
+# gives a 3–4× speedup; override with `PYTEST_WORKERS=... scripts/test.sh`.
+uv run pytest -n "${PYTEST_WORKERS:-4}" "$@"
