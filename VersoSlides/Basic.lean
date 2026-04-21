@@ -6,23 +6,123 @@ Author: David Thrane Christiansen
 module
 public import Verso.Doc
 public import VersoSlides.ImgSrc
+public import VersoManual.Html.CssFile
 import Std.Data.HashMap
 
 open Lean
 
 set_option doc.verso true
 /-!
-A Verso genre for reveal.js slide presentations
+A Verso genre for `reveal.js` slide presentations
 -/
 
 --open Verso Doc
 
 namespace VersoSlides
 
+/--
+Extra CSS file to bundle alongside the slideshow.
+
+The {lit}`filename` is used both as the output path (relative to the slideshow
+output directory) and as the {lit}`href` of the emitted {lit}`<link>` tag, and
+{lit}`contents` is written verbatim to that path.
+-/
+public abbrev CssFile := Verso.Genre.Manual.CssFile
+
+/--
+A single binary file bundled with a custom theme.
+
+The {lit}`filename` is the output path relative to the slideshow output
+directory (subdirectories are created on demand). Use {lit}`include_bin` or
+{lit}`include_bin_dir` from {lit}`VersoUtil.BinFiles` to embed assets at
+compile time.
+-/
+public structure ThemeAsset where
+  filename : String
+  contents : ByteArray
+deriving Inhabited
+
+/--
+Convert the output of {lit}`include_bin_dir` into a {name}`ThemeAsset` array.
+
+{lit}`include_bin_dir "dir"` returns an array of {lit}`(path, contents)`
+pairs whose paths begin with {lit}`"dir/"`. Passing the array through this
+helper writes every file under that same prefix in the slideshow output
+directory.
+-/
+public def ThemeAsset.fromDir (files : Array (String × ByteArray)) : Array ThemeAsset :=
+  files.map fun (path, contents) => { filename := path, contents }
+
+/--
+A user-supplied `reveal.js` theme: a stylesheet plus any companion assets
+(fonts, background images, logos, …) that the stylesheet references.
+
+The {lit}`stylesheet` is written and linked in place of the bundled
+reveal.js theme. Each entry in {lit}`assets` is written verbatim to its
+{lit}`filename` under the output directory. All filenames (the stylesheet's
+and every asset's) must be distinct from each other and from every
+{lit}`extraCss` entry; {lit}`slidesMain` raises an error otherwise.
+-/
+public structure CustomTheme where
+  stylesheet : CssFile
+  assets : Array ThemeAsset := #[]
+
+public instance : Inhabited CustomTheme where
+  default := { stylesheet := { filename := "theme.css", contents := ⟨""⟩ } }
+
+/--
+Selects the `reveal.js` theme for a slideshow.
+
+Either a string naming one of the vendored `reveal.js` themes (such as
+{lit}`"black"` or {lit}`"white"`), or a user-supplied {name}`CustomTheme`
+that replaces the theme stylesheet entirely and may bundle companion
+assets. A string coerces to {name}`Theme.builtin` automatically, so
+existing callers using {lit}`theme := "black"` continue to work, and a
+{name}`CssFile` coerces to a bare {name}`CustomTheme` so
+{lit}`theme := .custom myCss` also continues to work when no asset bundle
+is needed.
+-/
+public inductive Theme where
+  /-- One of the `reveal.js` themes bundled with VersoSlides, selected by name. -/
+  | builtin (name : String)
+  /--
+  A user-supplied theme that fully replaces the bundled theme. The
+  stylesheet and every asset file are written alongside {lit}`index.html`
+  in the output directory.
+  -/
+  | custom (theme : CustomTheme)
+deriving Inhabited
+
+public instance : Coe String Theme := ⟨.builtin⟩
+public instance : Coe CssFile CustomTheme := ⟨fun css => { stylesheet := css }⟩
+
+/--
+Which `reveal.js` navigation method to call when auto-sliding advances the
+deck. Corresponds to the `reveal.js` {lit}`autoSlideMethod` config option,
+which it accepts as a JavaScript function. We expose the handful of
+navigation methods that make sense for auto-advancing, each mapped to the
+matching `reveal.js` call at render time.
+-/
+public inductive AutoSlideMethod where
+  /-- The `reveal.js` default: {lit}`Reveal.navigateNext()` — advances through fragments, then horizontal and vertical slides in order. -/
+  | next
+  /-- {lit}`Reveal.navigateRight()` — advance only along the horizontal axis. -/
+  | right
+  /-- {lit}`Reveal.navigateDown()` — advance only through vertical sub-slides of the current stack. -/
+  | down
+  /--
+  Escape hatch for an arbitrary JavaScript expression. The string is emitted
+  verbatim as the value of the {lit}`autoSlideMethod` config option, so it
+  must evaluate to a function — for example
+  {lit}`"() => Reveal.left()"` or {lit}`"() => Reveal.slide(0)"`.
+  -/
+  | js (code : String)
+deriving Inhabited, BEq, Repr, ToJson, FromJson
+
 /-- Document-level presentation configuration -/
 public structure Config where
   vertical : Bool := false
-  theme : String := "black"
+  theme : Theme := "black"
   navigationMode : String := "default"
   transition : String := "slide"
   width : Nat := 960
@@ -33,19 +133,44 @@ public structure Config where
   slideNumber : Bool := false
   hash : Bool := true
   center : Bool := true
-  extraCss : Array String := #[]
+  /--
+  Auto-advance interval in milliseconds. {lit}`0` (the `reveal.js` default)
+  disables the feature; any positive value advances slides every N ms and
+  exposes a play/pause control. Individual slides can override this through
+  the per-slide {lit}`autoSlide` field on {lit}`SlideMetadata`.
+  -/
+  autoSlide : Nat := 0
+  /--
+  When {lit}`true` (the `reveal.js` default), auto-sliding pauses as soon as
+  the audience interacts with the deck (click, key press, etc.). Set to
+  {lit}`false` for unattended kiosk-style playback that keeps advancing
+  through user input. This is a global option only — `reveal.js` has no
+  per-slide override.
+  -/
+  autoSlideStoppable : Bool := true
+  /--
+  Which navigation method `reveal.js` uses when auto-sliding advances. See
+  {name}`AutoSlideMethod`. Global only.
+  -/
+  autoSlideMethod : AutoSlideMethod := .next
+  extraCss : Array CssFile := #[]
   extraJs : Array String := #[]
   outputDir : System.FilePath := "_slides"
 deriving Inhabited
 
 /--
-Per-slide metadata for reveal.js presentations, used in {lit}`%%%` blocks
+Per-slide metadata for `reveal.js` presentations, used in {lit}`%%%` blocks.
+
+Every field maps to a per-slide `reveal.js` feature — either a {lit}`data-*`
+attribute on the slide's {lit}`<section>` or a structural flag like
+{lit}`vertical`. Global {lit}`Reveal.initialize` options live on
+{name}`Config` instead and are passed to {lit}`slidesMain` in Lean, not via
+{lit}`%%%` blocks.
 
 All fields are optional so unspecified values fall back to document-level
-defaults or reveal.js defaults.
+defaults or `reveal.js` defaults.
 -/
 public structure SlideMetadata where
-  /- Per-slide metadata (used on individual slides) -/
   vertical : Option Bool := none
   transition : Option String := none
   transitionSpeed : Option String := none
@@ -71,36 +196,9 @@ public structure SlideMetadata where
   timing : Option Nat := none
   visibility : Option String := none
   state : Option String := none
-  /- Document-level configuration (only meaningful on the top-level Part's metadata block) -/
-  theme : Option String := none
-  slideNumber : Option Bool := none
-  controls : Option Bool := none
-  progress : Option Bool := none
-  hash : Option Bool := none
-  center : Option Bool := none
-  width : Option Nat := none
-  height : Option Nat := none
-  margin : Option Float := none
-  navigationMode : Option String := none
+  /-- Per-slide override of the auto-advance interval in milliseconds (`reveal.js` {lit}`data-autoslide`). -/
+  autoSlide : Option Nat := none
 deriving Inhabited, BEq, Repr, ToJson, FromJson
-
-/-- Extracts document-level {name}`Config` from the top-level {name}`SlideMetadata`. -/
-public def Config.fromMetadata (md : SlideMetadata) (base : Config := {}) : Config where
-  vertical := md.vertical.getD base.vertical
-  theme := md.theme.getD base.theme
-  navigationMode := md.navigationMode.getD base.navigationMode
-  transition := md.transition.getD base.transition
-  width := md.width.getD base.width
-  height := md.height.getD base.height
-  margin := md.margin.getD base.margin
-  controls := md.controls.getD base.controls
-  progress := md.progress.getD base.progress
-  slideNumber := md.slideNumber.getD base.slideNumber
-  hash := md.hash.getD base.hash
-  center := md.center.getD base.center
-  extraCss := base.extraCss
-  extraJs := base.extraJs
-  outputDir := base.outputDir
 
 /-- Style options for the {lit}`:::table` directive. All features are off by default. -/
 public structure TableStyle where
@@ -151,7 +249,7 @@ public inductive BlockExt where
   | css (content : String)
   /-- Illuminate diagram rendered to SVG. -/
   | diagram (svg : String) (cssWidth : String) (background : Option String)
-  /-- Illuminate animation compiled to JSON for reveal.js fragment-driven playback. -/
+  /-- Illuminate animation compiled to JSON for `reveal.js` fragment-driven playback. -/
   | animate (containerId : String) (animDataJson : String) (cssWidth : String) (background : Option String) (fragmentIndices : Array (Option Nat)) (autoplay : Bool)
   /-- Table rendered from a nested list of lists. -/
   | table (columns : Nat) (style : TableStyle)
@@ -184,7 +282,7 @@ public structure TraverseState where
   imageOutputNames : Std.HashSet String := {}
 deriving Inhabited
 
-/-- The Slides genre for reveal.js presentations -/
+/-- The Slides genre for `reveal.js` presentations -/
 @[expose]
 public def Slides : Verso.Doc.Genre where
   PartMetadata := SlideMetadata

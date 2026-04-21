@@ -12,16 +12,11 @@ open VersoSlides
 set_option verso.code.warnLineLength 500
 
 #doc (Slides) "VersoSlides Demo" =>
-%%%
-theme := "black"
-slideNumber := true
-transition := "slide"
-%%%
 
 # Introduction
 
 Welcome to *VersoSlides* — a Verso genre for building
-[reveal.js](https://revealjs.com) slide presentations from Lean.
+[`reveal.js`](https://revealjs.com) slide presentations from Lean.
 
 This demo exercises all the major features.
 
@@ -450,9 +445,6 @@ This text is styled with custom CSS injected via a `css` code block.
 :::
 
 # Image Role
-%%%
-theme := "white"
-%%%
 
 The `{image}` role renders an `<img>` tag with configurable width and height. The path to the image is relative to the source file.
 

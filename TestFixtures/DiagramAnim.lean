@@ -10,9 +10,6 @@ import Illuminate
 open VersoSlides
 
 #doc (Slides) "Diagram & Animation Fixture" =>
-%%%
-theme := "black"
-%%%
 
 # Simple Diagram
 

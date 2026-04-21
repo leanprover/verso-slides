@@ -11,7 +11,7 @@ import Verso.Doc.Elab.Monad
 Code block handler for other (non-Lean) languages.
 
 Produces `BlockExt.otherLanguage` blocks whose HTML rendering includes
-a `language-*` class so that the bundled reveal.js highlight.js plugin
+a `language-*` class so that the bundled `reveal.js` highlight.js plugin
 applies syntax highlighting at presentation time.
 
 Usage:

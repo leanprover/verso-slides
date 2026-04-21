@@ -65,6 +65,8 @@ public def SlideMetadata.toAttrs (m : SlideMetadata) : Array (String × String) 
     attrs := attrs.push ("data-visibility", v)
   if let some v := m.state then
     attrs := attrs.push ("data-state", v)
+  if let some v := m.autoSlide then
+    attrs := attrs.push ("data-autoslide", toString v)
   attrs
 
 /-- Returns the `data-*` attributes for a section, given optional metadata. -/

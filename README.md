@@ -1,10 +1,10 @@
 # VersoSlides
 
-VersoSlides is a Verso genre that generates reveal.js slide
+VersoSlides is a Verso genre that generates `reveal.js` slide
 presentations from Lean 4 documents. All third-party dependencies
-(reveal.js, KaTeX, marked) are vendored and embedded at compile time,
-so the generated output works fully offline. The output includes full
-support for Verso's elaborated Lean code blocks, including syntax
+(`reveal.js`, KaTeX, marked) are vendored and embedded at compile
+time, so the generated output works fully offline. The output includes
+full support for Verso's elaborated Lean code blocks, including syntax
 highlighting and hover-based documentation tooltips.
 
 The [demo slides](./Demo.lean) can be seen at
@@ -26,18 +26,12 @@ lake exe demo-slides
 ```
 
 The output is written to `_slides/` by default, containing
-`index.html` and a `lib/` directory with the vendored reveal.js,
+`index.html` and a `lib/` directory with the vendored `reveal.js`,
 KaTeX, and marked assets. To view the presentation, serve the output
 directory over HTTP:
 
 ```
 python3 -m http.server -d _slides
-```
-
-You can override the output directory and theme from the command line:
-
-```
-lake exe demo-slides --output path/to/dir --theme white
 ```
 
 ## Writing a Presentation
@@ -67,8 +61,8 @@ Content of the second slide.
 The document module must be imported in `Main.lean`, where the
 `slidesMain` function generates the output. Document-level
 configuration (theme, transition style, slide numbering, etc.) is set
-in a `%%%` metadata block at the top of the document rather than in
-`Main.lean`.
+on the `Config` passed to `slidesMain` — see
+[Document-Level Configuration](#document-level-configuration).
 
 ### Vertical Slides
 
@@ -96,7 +90,7 @@ This appears below the first when navigating down.
 
 Each slide can carry per-slide metadata in a `%%%` block immediately
 after its heading. All fields are optional and fall back to
-document-level defaults or reveal.js defaults when omitted. The
+document-level defaults or `reveal.js` defaults when omitted. The
 metadata is written as Lean structure field syntax.
 
 ```
@@ -112,7 +106,7 @@ autoAnimate := some true
 The available metadata fields are listed below. Each one maps directly
 to a `data-*` attribute on the slide's `<section>` element.
 
-| Field                   | Type            | reveal.js attribute                                                 |
+| Field                   | Type            | `reveal.js` attribute                                               |
 | ----------------------- | --------------- | ------------------------------------------------------------------- |
 | `vertical`              | `Option Bool`   | Controls vertical sub-slide grouping (not rendered as an attribute) |
 | `transition`            | `Option String` | `data-transition`                                                   |
@@ -139,17 +133,18 @@ to a `data-*` attribute on the slide's `<section>` element.
 | `timing`                | `Option Nat`    | `data-timing`                                                       |
 | `visibility`            | `Option String` | `data-visibility`                                                   |
 | `state`                 | `Option String` | `data-state`                                                        |
+| `autoSlide`             | `Option Nat`    | `data-autoslide`                                                    |
 
 ## Directives
 
 Directives are block-level constructs delimited by `:::` fences. They
-apply reveal.js features to their content.
+apply `reveal.js` features to their content.
 
 ### Speaker Notes
 
 The `notes` directive wraps its content in an `<aside class="notes">`
-element, which reveal.js displays in the speaker view (opened with the
-S key).
+element, which `reveal.js` displays in the speaker view (opened with
+the S key).
 
 ```
 :::notes
@@ -178,17 +173,17 @@ This paragraph fades up at step 2.
 The built-in animation styles include `fadeUp`, `fadeDown`,
 `fadeLeft`, `fadeRight`, `fadeIn`, `fadeOut`, `currentVisible`,
 `highlightRed`, `highlightGreen`, `highlightBlue`, and others defined
-by reveal.js.
+by `reveal.js`.
 
 ### Fit Text, Stretch, and Frame
 
-Three named directives apply common reveal.js utility classes to their
-content.
+Three named directives apply common `reveal.js` utility classes to
+their content.
 
-The `fitText` directive causes reveal.js to scale the text to fill the
-slide width. The `stretch` directive causes an element to expand to
-fill the remaining vertical space on the slide. The `frame` directive
-adds a default styled border around the content.
+The `fitText` directive causes `reveal.js` to scale the text to fill
+the slide width. The `stretch` directive causes an element to expand
+to fill the remaining vertical space on the slide. The `frame`
+directive adds a default styled border around the content.
 
 ```
 :::fitText
@@ -199,7 +194,7 @@ Large heading text
 ### Layout: `stack`, `hstack`, `vstack`
 
 The `stack`, `hstack`, and `vstack` directives wrap their children in
-a container `<div>` with the corresponding reveal.js layout class.
+a container `<div>` with the corresponding `reveal.js` layout class.
 Unlike the push-down directives described above, these create a
 wrapper element around all the content rather than applying attributes
 to each child individually.
@@ -483,30 +478,207 @@ def f := /- !fragment -/42/- !end fragment -/
 
 ## Document-Level Configuration
 
-Document-level `reveal.js` settings are specified in a `%%%` metadata
-block at the top of the document (before the first `#` heading). These
-serve as defaults that individual slides can override through their
-own metadata blocks.
+Document-level `reveal.js` settings live on the `Config` value passed
+to `slidesMain` from your `Main.lean`. They correspond to `reveal.js`
+[`Reveal.initialize`](https://revealjs.com/config/) options and apply
+to the whole presentation. `%%%` blocks on individual slides only
+carry per-slide attributes (the table above); doc-level config does
+not appear in `%%%` blocks at all.
 
 ```
-#doc (Slides) "My Presentation" =>
+import VersoSlides
+import MyPresentation
 
-%%%
-theme := some "black"
-slideNumber := some true
-transition := some "slide"
-%%%
+open VersoSlides
 
-# First Slide
-...
+def main : IO UInt32 :=
+  slidesMain
+    (config := { theme := "white", slideNumber := true,
+                 transition := "fade", autoSlide := 5000 })
+    (doc := %doc MyPresentation)
 ```
 
-The available document-level fields are `theme`, `transition`,
-`width`, `height`, `margin`, `controls`, `progress`, `slideNumber`,
-`hash`, `center`, and `navigationMode`. The `--output` and `--theme`
-command-line flags can further override the output directory and
-theme.
+The available `Config` fields that map to `Reveal.initialize` options
+are `theme`, `transition`, `width`, `height`, `margin`, `controls`,
+`progress`, `slideNumber`, `hash`, `center`, `navigationMode`,
+`autoSlide`, `autoSlideStoppable`, and `autoSlideMethod`. Each one
+sets the document-wide default; some have a matching per-slide
+override on the slide's `<section>` (see the table above) — for
+example, `Config.transition` is the global default but a slide can
+override it with `transition := some "zoom"` in its `%%%` block, which
+becomes `data-transition="zoom"`.
+
+`Config` also has presentation-level knobs that don't go through
+`Reveal.initialize`:
+
+- `extraCss : Array CssFile` — overlay stylesheets, see
+  [Custom CSS](#custom-css).
+- `extraJs : Array String` — extra `<script src=…>` tags appended to
+  the page.
+- `outputDir : System.FilePath` — where to write `index.html` and the
+  vendored assets. Defaults to `_slides`.
+
+### Auto-Advance
+
+`autoSlide`, `autoSlideStoppable`, and `autoSlideMethod` together
+expose the
+[`reveal.js` auto-slide feature](https://revealjs.com/auto-slide/).
+
+- `autoSlide : Nat` — auto-advance interval in milliseconds. `0` (the
+  default) disables auto-advancing; any positive value advances slides
+  every N ms and adds a play/pause control. The matching per-slide
+  `autoSlide : Option Nat` field on `SlideMetadata` emits
+  `data-autoslide="N"` and overrides the global default for that slide
+  only.
+- `autoSlideStoppable : Bool` — when `true` (the default),
+  auto-sliding pauses as soon as the audience interacts with the deck.
+  Set `false` for unattended kiosk-style playback. No per-slide
+  override.
+- `autoSlideMethod : AutoSlideMethod` — which navigation method
+  `reveal.js` calls when auto-sliding advances. `.next` (the default)
+  calls `Reveal.navigateNext()` (advance through fragments, then
+  horizontal/vertical slides in order); `.right` calls
+  `Reveal.right()`; `.down` calls `Reveal.down()`. For anything more
+  exotic, `.js "<expr>"` emits the given JavaScript expression
+  verbatim — it must evaluate to a function, e.g.
+  `() => Reveal.left()`. No per-slide override.
 
 The generated HTML loads the Notes, Highlight, and KaTeX Math plugins
 automatically. All plugin assets are vendored and written to the
 output directory, so no internet connection is required.
+
+## Themes
+
+The built-in `reveal.js` themes are the ones listed in the
+[`reveal.js` themes documentation](https://revealjs.com/themes/), plus
+the high-contrast `black-contrast` and `white-contrast` variants.
+Select one by setting `theme := "white"` (or any of the other theme
+names) on the `Config` you pass to `slidesMain`.
+
+The `theme` field of `Config` is a `Theme` sum type: either
+`.builtin name` (one of the bundled themes, selected by name) or
+`.custom theme` (a user-supplied `CustomTheme` that fully replaces the
+bundled theme). A bare string coerces to `.builtin` automatically, so
+`theme := "black"` continues to work, and a bare `CssFile` coerces to
+a `CustomTheme` with no bundled assets, so simple cases stay short.
+
+### Writing a Custom Theme
+
+A `reveal.js` theme is just a stylesheet that sets the theme variables
+and base rules documented at
+[revealjs.com/themes/#creating-a-theme](https://revealjs.com/themes/#creating-a-theme).
+To replace the bundled theme, wrap your stylesheet in a `CustomTheme`
+and pass it to `Config.theme`:
+
+```
+def customRevealTheme : CssFile where
+  filename := "theme/my-reveal-theme.css"
+  contents := ⟨include_str "my-reveal-theme.css"⟩
+
+def main : IO UInt32 :=
+  slidesMain
+    (config := { theme := .custom customRevealTheme })
+    (doc := %doc MyPresentation)
+```
+
+When `theme` is `.custom`, the bundled theme CSS is not written or
+linked; the custom file stands on its own. The `filename` may contain
+subdirectories (nested directories are created on demand) and is used
+verbatim as the `href` of the emitted `<link>` tag.
+
+#### Bundling Theme Assets (Images, Fonts, …)
+
+A `CustomTheme` can carry any number of companion files — typically
+anything the stylesheet references by URL — via its `assets` field:
+
+```
+structure CustomTheme where
+  stylesheet : CssFile
+  assets     : Array ThemeAsset := #[]
+
+structure ThemeAsset where
+  filename : String
+  contents : ByteArray
+```
+
+The simplest way to populate `assets` is to drop every file the theme
+needs into a single directory and pull the whole tree in at compile
+time with Verso's `include_bin_dir`:
+
+```
+import VersoUtil.BinFiles
+
+open VersoSlides
+open Verso.BinFiles
+
+def customReveal : CustomTheme where
+  stylesheet := { filename := "my-theme/theme.css"
+                  contents := ⟨include_str "my-theme-source.css"⟩ }
+  -- `include_bin_dir "my-theme-assets"` returns an `Array (String ×
+  -- ByteArray)` whose strings all start with "my-theme-assets/" — we
+  -- feed it straight into `ThemeAsset.fromDir`, so the files land at
+  -- the matching paths under the output directory.
+  assets := ThemeAsset.fromDir (include_bin_dir "my-theme-assets")
+```
+
+Because the stylesheet URL at runtime is `my-theme/theme.css` and the
+assets sit at `my-theme-assets/...`, the stylesheet should reference
+them as `url("../my-theme-assets/foo.png")` (standard CSS relative-URL
+resolution). For a single file, use `include_bin` directly:
+
+```
+{ filename := "my-theme/logo.png", contents := include_bin "logo.png" }
+```
+
+## Custom CSS
+
+To layer additional CSS on top of a theme — tweaking colors, adding
+per-slide utility classes, or overriding individual rules — pass the
+`extraCss` field to `slidesMain` via the `config` argument. Each entry
+is a `CssFile` carrying a `filename` and the CSS source to write at
+that filename. The file is written alongside `index.html` in the
+output directory and loaded by a `<link rel="stylesheet">` tag emitted
+_after_ the theme, so its rules override the theme's.
+
+Use `include_str` to embed the stylesheet at compile time so the
+compiled executable stays self-contained:
+
+```
+import VersoSlides
+import MyPresentation
+
+open VersoSlides
+
+def myExtraCss : CssFile where
+  filename := "custom.css"
+  contents := ⟨include_str "custom.css"⟩
+
+def main : IO UInt32 :=
+  slidesMain
+    (config := { extraCss := #[myExtraCss] })
+    (doc := %doc MyPresentation)
+```
+
+The `filename` is interpreted relative to the output directory (it may
+contain subdirectories, which are created on demand) and is also used
+verbatim as the `href` of the emitted link tag. Unlike a custom theme,
+`extraCss` is additive: the bundled `reveal.js` theme is still loaded,
+and each entry layers on top of it (and on top of each earlier
+`extraCss` entry) in declaration order.
+
+## Filename Collisions
+
+`slidesMain` compiles the custom theme's stylesheet, every bundled
+asset, and every `extraCss` entry into a single deduplicated write
+plan before touching the filesystem:
+
+- If two entries share a filename **and** have identical contents,
+  they are merged: the file is written once and linked once. This is
+  the expected case when two `include_bin_dir` bundles share a common
+  font or logo, or when the same stylesheet is wired in twice from
+  different paths.
+- If two entries share a filename with **different contents**
+  (including a text/binary mismatch, e.g. a stylesheet and a binary
+  asset both claiming `theme.css`), `slidesMain` raises an
+  `IO.userError` and writes nothing. The error names the offending
+  filename and both sources so the conflict is easy to fix.

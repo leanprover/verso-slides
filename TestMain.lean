@@ -17,6 +17,11 @@ def runCmd (cmd : String) (args : Array String) (desc : String) : IO UInt32 := d
   return result.exitCode
 
 def main : IO UInt32 := do
+  -- Step 0: Lean-side unit tests that don't require browsers
+  let rc ← runCmd "lake" #["exe", "test-config-validation"]
+    "Running Config.validateFilenames unit tests"
+  if rc != 0 then return rc
+
   -- Step 1: generate test fixture slides
   let rc ← runCmd "lake" #["exe", "test-fixtures-build"] "Generating test fixtures"
   if rc != 0 then return rc

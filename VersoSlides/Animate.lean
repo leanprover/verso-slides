@@ -21,7 +21,7 @@ open Lean.Doc.Syntax
 namespace VersoSlides
 
 /-- A step in a slide animation. Extends {name}`Illuminate.Step` with an optional
-    reveal.js fragment index for interleaving with other slide fragments. -/
+    `reveal.js` fragment index for interleaving with other slide fragments. -/
 public structure SlideStep extends Illuminate.Step where
   /-- When set, the hidden fragment created for this pause step gets an explicit
       {lit}`data-fragment-index`, allowing it to interleave with other slide fragments. -/

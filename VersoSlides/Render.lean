@@ -59,7 +59,7 @@ partial def pushAttrsOntoHtml (newAttrs : Array (String × String)) : Html → H
   | .seq elts => .seq (elts.map (pushAttrsOntoHtml newAttrs))
   | other => other
 
-/-- Converts camelCase to kebab-case for reveal.js class names. -/
+/-- Converts camelCase to kebab-case for {lit}`reveal.js` class names. -/
 def camelToKebab (s : String) : String := Id.run do
   let mut result := ""
   for c in s.toList do
@@ -328,7 +328,7 @@ def inlinesToPlainText (inlines : Array (Inline Slides)) : String :=
   inlines.foldl (· ++ Inline.toPlainText ·) ""
 
 
-/-- Generates the complete reveal.js HTML document. -/
+/-- Generates the complete {lit}`reveal.js` HTML document. -/
 def renderDocument (config : Config) (doc : Part Slides) [Monad m] [GenreHtml Slides m] :
     HtmlT Slides m Html := do
   -- Render all top-level sections as slides
@@ -367,7 +367,7 @@ private def diagramCss : String := include_str "../web-lib/diagrams/diagram.css"
 /-- CSS for Illuminate animation containers. -/
 private def illuminateAnimCss : String := include_str "../web-lib/animate/illuminate-anim.css"
 
-/-- JS for Illuminate reveal.js animation integration.
+/-- JS for Illuminate {lit}`reveal.js` animation integration.
     Combines the shared {lit}`anim_core.js` helpers with the multi-animation init script. -/
 private def illuminateRevealJs : String :=
   Illuminate.animCoreJs ++ "\n" ++ include_str "../web-lib/animate/illuminate-reveal-init.js"
@@ -375,7 +375,7 @@ private def illuminateRevealJs : String :=
 /-- CSS for the {lit}`:::table` directive. -/
 private def tableCss : String := include_str "../web-lib/table/table.css"
 
-/-- CSS overrides for Verso highlighted code within reveal.js slides. -/
+/-- CSS overrides for Verso highlighted code within {lit}`reveal.js` slides. -/
 private def slidesHighlightCss : String := include_str "../web-lib/panel/slides-highlight.css"
 
 /--
@@ -395,11 +395,20 @@ private def libPrefix : String := "lib"
 
 /-- Renders the full standalone HTML page. -/
 def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (customCss : Array String := #[]) : Html :=
-  let extraCssLinks := config.extraCss.map fun url =>
-    {{ <link rel="stylesheet" href={{url}} /> }}
+  let extraCssLinks := config.extraCss.map fun css =>
+    {{ <link rel="stylesheet" href={{css.filename}} /> }}
   let extraJsScripts := config.extraJs.map fun url =>
     {{ <script src={{url}}></script> }}
+  let themeHref := match config.theme with
+    | .builtin name => s!"{libPrefix}/reveal.js/dist/theme/{name}.css"
+    | .custom theme => theme.stylesheet.filename
   let revealBase := s!"{libPrefix}/reveal.js"
+  let autoSlideMethodJs : String :=
+    match config.autoSlideMethod with
+    | .next     => "null"
+    | .right    => "() => Reveal.right()"
+    | .down     => "() => Reveal.down()"
+    | .js code  => code
   let initScript := s!"
       Reveal.initialize(\{
         hash: {jsBool config.hash},
@@ -412,6 +421,9 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
         height: {config.height},
         margin: {config.margin},
         navigationMode: '{config.navigationMode}',
+        autoSlide: {config.autoSlide},
+        autoSlideStoppable: {jsBool config.autoSlideStoppable},
+        autoSlideMethod: {autoSlideMethodJs},
         math: \{ local: '{libPrefix}/katex' },
         plugins: [ RevealNotes, RevealHighlight, RevealMath.KaTeX ]
       });
@@ -423,7 +435,7 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
       <title>{{title}}</title>
       <link rel="stylesheet" href={{s!"{revealBase}/dist/reset.css"}} />
       <link rel="stylesheet" href={{s!"{revealBase}/dist/reveal.css"}} />
-      <link rel="stylesheet" href={{s!"{revealBase}/dist/theme/{config.theme}.css"}} />
+      <link rel="stylesheet" href={{themeHref}} />
       <link rel="stylesheet" href={{s!"{revealBase}/plugin/highlight/monokai.css"}} />
       {{extraCssLinks}}
       <link rel="stylesheet" href={{s!"{libPrefix}/highlighting.css"}} />
@@ -477,16 +489,18 @@ private def writeBinFileWithDirs (path : System.FilePath) (content : ByteArray) 
   IO.FS.writeBinFile path content
 
 /-- Writes all vendored library assets to the output directory. -/
-def writeVendoredAssets (outputDir : System.FilePath) (theme : String) : IO Unit := do
+def writeVendoredAssets (outputDir : System.FilePath) (theme : Theme) : IO Unit := do
   let libDir := outputDir / libPrefix
   let revealDir := libDir / "reveal.js"
   -- Reveal.js core
   writeFileWithDirs (revealDir / "dist" / "reset.css") Vendor.resetCss
   writeFileWithDirs (revealDir / "dist" / "reveal.css") Vendor.revealCss
   writeFileWithDirs (revealDir / "dist" / "reveal.js") Vendor.revealJs
-  -- Selected theme
-  let themeCss := Vendor.themeCSS theme |>.getD Vendor.themeBlack
-  writeFileWithDirs (revealDir / "dist" / "theme" / s!"{theme}.css") themeCss
+  -- Selected theme: write the vendored stylesheet only when a built-in theme is
+  -- selected. Custom themes are written separately alongside index.html.
+  if let .builtin name := theme then
+    let themeCss := Vendor.themeCSS name |>.getD Vendor.themeBlack
+    writeFileWithDirs (revealDir / "dist" / "theme" / s!"{name}.css") themeCss
   -- Plugins
   writeFileWithDirs (revealDir / "plugin" / "notes" / "notes.js") Vendor.notesJs
   writeFileWithDirs (revealDir / "plugin" / "highlight" / "highlight.js") Vendor.highlightJs
@@ -524,13 +538,87 @@ def writeVendoredAssets (outputDir : System.FilePath) (theme : String) : IO Unit
   writeFileWithDirs (libDir / "illuminate-reveal.js") illuminateRevealJs
   writeFileWithDirs (libDir / "table.css") tableCss
 
-/-- Generates a reveal.js slide presentation from a Verso document. -/
-def slidesMain (config : Config := {}) (doc : Part Slides) (args : List String := []) : IO UInt32 := do
-  let config ← parseArgs config args
-  -- Override config from document-level metadata block
-  let config := match doc.metadata with
-    | some md => Config.fromMetadata md config
-    | none => config
+/--
+An entry in the asset plan assembled from a {name}`Config`, keyed by the
+output filename relative to the slideshow output directory.
+
+Entries tagged {lit}`.text` come from a {name}`CssFile` (custom theme
+stylesheet or an {lit}`extraCss` entry). Entries tagged {lit}`.binary` come
+from a {name}`ThemeAsset`. The distinction matters because two payloads at
+the same filename are only compatible if they share both tag and contents.
+-/
+private inductive AssetPayload
+  | text (body : String)
+  | binary (bytes : ByteArray)
+
+private def AssetPayload.equal : AssetPayload → AssetPayload → Bool
+  | .text a, .text b => a == b
+  | .binary a, .binary b => a == b
+  | _, _ => false
+
+private def AssetPayload.kind : AssetPayload → String
+  | .text _ => "text"
+  | .binary _ => "binary"
+
+/--
+Records a file entry at {lit}`filename`, treating it as already-present
+when the previous entry at the same filename has identical contents (so
+the same asset included twice — e.g. a font shared between overlapping
+{lit}`include_bin_dir` bundles — is accepted and written only once).
+Raises {name}`IO.userError` when the contents diverge, naming both
+sources and their content kinds.
+-/
+private def recordAsset (seen : Std.HashMap String (String × AssetPayload))
+    (filename source : String) (payload : AssetPayload) :
+    IO (Std.HashMap String (String × AssetPayload)) := do
+  match seen.get? filename with
+  | none => return seen.insert filename (source, payload)
+  | some (prevSource, prev) =>
+    if prev.equal payload then
+      return seen
+    else
+      throw <| IO.userError
+        s!"Filename collision in config: \"{filename}\" is claimed by {prevSource} ({prev.kind}) and {source} ({payload.kind}) with different contents."
+
+/--
+Builds the deduplicated asset plan for a {name}`Config`: the custom
+theme's stylesheet (if any), every bundled theme asset, and every
+{lit}`extraCss` entry. When two entries share a filename their contents
+must match; otherwise {name}`IO.userError` is raised.
+
+Returns the map of filenames to (source, payload) pairs so
+{lit}`slidesMain` can write each file exactly once without
+re-deduplicating.
+-/
+def Config.collectAssets (config : Config) :
+    IO (Std.HashMap String (String × AssetPayload)) := do
+  let mut seen : Std.HashMap String (String × AssetPayload) := {}
+  if let .custom theme := config.theme then
+    seen ← recordAsset seen theme.stylesheet.filename
+      "theme stylesheet" (.text theme.stylesheet.contents.css)
+    for asset in theme.assets do
+      seen ← recordAsset seen asset.filename
+        "theme asset" (.binary asset.contents)
+  for css in config.extraCss do
+    seen ← recordAsset seen css.filename
+      "extraCss" (.text css.contents.css)
+  return seen
+
+/--
+Checks that every filename supplied through {lit}`Config.theme` (when
+{lit}`.custom`), its bundled assets, and {lit}`extraCss` either is unique
+or is repeated with identical contents. Raises {name}`IO.userError` on
+divergent-contents clashes; duplicates with identical contents are
+silently deduplicated.
+-/
+def Config.validateFilenames (config : Config) : IO Unit := do
+  let _ ← config.collectAssets
+
+/-- Generates a {lit}`reveal.js` slide presentation from a Verso document. -/
+def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := do
+  -- Validate the config and build the deduplicated asset plan up-front so
+  -- any filename collision fails before we start writing files.
+  let assetPlan ← config.collectAssets
   let hasError ← IO.mkRef false
   let logError (msg : String) : IO Unit := do hasError.set true; IO.eprintln msg
 
@@ -568,6 +656,14 @@ def slidesMain (config : Config := {}) (doc : Part Slides) (args : List String :
   -- Write vendored library assets to the output directory
   writeVendoredAssets dir config.theme
 
+  -- Write the user-supplied custom-theme stylesheet, theme assets, and
+  -- extraCss entries. The plan has already been deduplicated by filename
+  -- (with matching-content duplicates collapsed into a single write).
+  for (filename, _source, payload) in assetPlan.toList do
+    match payload with
+    | .text body => writeFileWithDirs (dir / filename) body
+    | .binary bytes => writeBinFileWithDirs (dir / filename) bytes
+
   -- Copy local images to the output directory
   if !traverseState.imageFiles.isEmpty then
     let imagesDir := dir / "images"
@@ -582,11 +678,5 @@ def slidesMain (config : Config := {}) (doc : Part Slides) (args : List String :
     IO.eprintln "Errors were encountered!"
     return 1
   return 0
-where
-  parseArgs (cfg : Config) : List String → IO Config
-    | "--output" :: path :: rest => parseArgs { cfg with outputDir := path } rest
-    | "--theme" :: theme :: rest => parseArgs { cfg with theme := theme } rest
-    | other :: _ => throw (IO.userError s!"Unknown option: {other}")
-    | [] => pure cfg
 
 end VersoSlides

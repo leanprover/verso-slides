@@ -11,6 +11,9 @@ open VersoSlides
 #doc (Slides) "Markup Fixture" =>
 
 # Slide One
+%%%
+autoSlide := some 5000
+%%%
 A simple slide.
 :::notes
 Speaker notes here.
@@ -82,6 +85,10 @@ Second.
 ```css
 .css-target { border: 3px solid red; opacity: 0.5; }
 ```
+
+:::class "extra-banner"
+This paragraph is styled via extraCss config.
+:::
 
 # Tables
 
