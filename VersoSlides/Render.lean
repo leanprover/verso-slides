@@ -390,6 +390,13 @@ private def leanCommentsJs : String := include_str "../web-lib/panel/lean-commen
 
 private def codeBlockBgJs : String := include_str "../web-lib/panel/code-block-bg.js"
 
+/--
+JS that renders Verso's {lit}`.math.inline` / {lit}`.math.display` elements with KaTeX.
+{lit}`reveal.js`'s KaTeX plugin uses auto-render, which skips {lit}`<code>` tags — so these
+Verso-emitted elements go unrendered without this script.
+-/
+private def mathJs : String := include_str "../web-lib/math/math.js"
+
 /-- Relative path prefix for vendored libraries in the output directory. -/
 private def libPrefix : String := "lib"
 
@@ -424,8 +431,7 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
         autoSlide: {config.autoSlide},
         autoSlideStoppable: {jsBool config.autoSlideStoppable},
         autoSlideMethod: {autoSlideMethodJs},
-        math: \{ local: '{libPrefix}/katex' },
-        plugins: [ RevealNotes, RevealHighlight, RevealMath.KaTeX ]
+        plugins: [ RevealNotes, RevealHighlight ]
       });
     "
   {{ <html>
@@ -446,6 +452,7 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
       <link rel="stylesheet" href={{s!"{libPrefix}/diagram.css"}} />
       <link rel="stylesheet" href={{s!"{libPrefix}/illuminate-anim.css"}} />
       <link rel="stylesheet" href={{s!"{libPrefix}/table.css"}} />
+      <link rel="stylesheet" href={{s!"{libPrefix}/katex/dist/katex.min.css"}} />
       {{ customCss.map fun css => {{ <style>{{Html.text false css}}</style> }} }}
     </head>
     <body>
@@ -457,7 +464,8 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
       <script src={{s!"{revealBase}/dist/reveal.js"}}></script>
       <script src={{s!"{revealBase}/plugin/notes/notes.js"}}></script>
       <script src={{s!"{revealBase}/plugin/highlight/highlight.js"}}></script>
-      <script src={{s!"{revealBase}/plugin/math/math.js"}}></script>
+      <script src={{s!"{libPrefix}/katex/dist/katex.min.js"}}></script>
+      <script src={{s!"{libPrefix}/math.js"}}></script>
       {{extraJsScripts}}
       <script>{{Html.text false initScript}}</script>
       <script src={{s!"{libPrefix}/marked.min.js"}}></script>
@@ -505,7 +513,6 @@ def writeVendoredAssets (outputDir : System.FilePath) (theme : Theme) : IO Unit 
   writeFileWithDirs (revealDir / "plugin" / "notes" / "notes.js") Vendor.notesJs
   writeFileWithDirs (revealDir / "plugin" / "highlight" / "highlight.js") Vendor.highlightJs
   writeFileWithDirs (revealDir / "plugin" / "highlight" / "monokai.css") Vendor.monokaiCss
-  writeFileWithDirs (revealDir / "plugin" / "math" / "math.js") Vendor.mathJs
   -- Marked
   writeFileWithDirs (libDir / "marked.min.js") Vendor.markedJs
   -- KaTeX
@@ -537,6 +544,7 @@ def writeVendoredAssets (outputDir : System.FilePath) (theme : Theme) : IO Unit 
   writeFileWithDirs (libDir / "illuminate-anim.css") illuminateAnimCss
   writeFileWithDirs (libDir / "illuminate-reveal.js") illuminateRevealJs
   writeFileWithDirs (libDir / "table.css") tableCss
+  writeFileWithDirs (libDir / "math.js") mathJs
 
 /--
 An entry in the asset plan assembled from a {name}`Config`, keyed by the
