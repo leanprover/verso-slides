@@ -5,11 +5,11 @@
 // auto-render, which explicitly skips <code> tags, so we render them here.
 
 document.addEventListener("DOMContentLoaded", () => {
-  if (typeof katex === "undefined") return;
-  for (const m of document.querySelectorAll("code.math.inline")) {
-    katex.render(m.textContent, m, { throwOnError: false, displayMode: false });
-  }
-  for (const m of document.querySelectorAll("code.math.display")) {
-    katex.render(m.textContent, m, { throwOnError: false, displayMode: true });
-  }
+    if (typeof katex === "undefined") return;
+    for (const m of document.querySelectorAll("code.math.inline")) {
+        katex.render(m.textContent, m, { throwOnError: false, displayMode: false });
+    }
+    for (const m of document.querySelectorAll("code.math.display")) {
+        katex.render(m.textContent, m, { throwOnError: false, displayMode: true });
+    }
 });
