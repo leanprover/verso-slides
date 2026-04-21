@@ -1,14 +1,14 @@
 """Browser tests for the inline Lean term lightbox overlay."""
 
 from playwright.sync_api import expect, Page
+from conftest import wait_for_reveal_ready
 
 
 class TestLightboxOpen:
     def test_click_inline_token_opens_lightbox(self, code_url: str, page: Page):
         """Clicking a data-verso-hover token in inline code should open a lightbox."""
         page.goto(f"{code_url}/index.html#/3")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        wait_for_reveal_ready(page)
 
         # Find an inline lean code element
         inline = page.locator("code.hl.lean.inline").first
@@ -27,8 +27,7 @@ class TestLightboxOpen:
     def test_lightbox_has_content(self, code_url: str, page: Page):
         """The lightbox should contain hover information."""
         page.goto(f"{code_url}/index.html#/3")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        wait_for_reveal_ready(page)
 
         token = page.locator("code.hl.lean.inline [data-verso-hover]").first
         token.click()
@@ -41,8 +40,7 @@ class TestLightboxOpen:
     def test_lightbox_monospace_font(self, code_url: str, page: Page):
         """Lightbox content should use a monospace font."""
         page.goto(f"{code_url}/index.html#/3")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        wait_for_reveal_ready(page)
 
         token = page.locator("code.hl.lean.inline [data-verso-hover]").first
         token.click()
@@ -57,8 +55,7 @@ class TestLightboxClose:
     def _open_lightbox(self, page: Page, code_url: str):
         """Helper to navigate and open a lightbox."""
         page.goto(f"{code_url}/index.html#/3")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        wait_for_reveal_ready(page)
         token = page.locator("code.hl.lean.inline [data-verso-hover]").first
         token.click()
         page.wait_for_timeout(500)
@@ -106,8 +103,7 @@ class TestLightboxSizing:
     def test_lightbox_width(self, code_url: str, page: Page):
         """Lightbox should be 75% of the slide width."""
         page.goto(f"{code_url}/index.html#/3")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        wait_for_reveal_ready(page)
 
         token = page.locator("code.hl.lean.inline [data-verso-hover]").first
         token.click()
@@ -124,8 +120,7 @@ class TestLightboxSizing:
     def test_lightbox_scrollable_when_tall(self, code_url: str, page: Page):
         """Lightbox with overflow-y: auto should allow scrolling if content is tall."""
         page.goto(f"{code_url}/index.html#/3")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        wait_for_reveal_ready(page)
 
         token = page.locator("code.hl.lean.inline [data-verso-hover]").first
         token.click()
@@ -140,8 +135,7 @@ class TestTippySuppression:
     def test_no_tippy_on_inline_code(self, code_url: str, page: Page):
         """Hovering an inline Lean token should not create a Tippy tooltip."""
         page.goto(f"{code_url}/index.html#/3")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        wait_for_reveal_ready(page)
 
         token = page.locator("code.hl.lean.inline [data-verso-hover]").first
         expect(token).to_be_visible()

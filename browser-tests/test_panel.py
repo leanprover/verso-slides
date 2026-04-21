@@ -1,14 +1,14 @@
 """Browser tests for the interactive info panel."""
 
 from playwright.sync_api import expect, Page
+from conftest import wait_for_reveal_ready
 
 
 class TestPanelStructure:
     def test_panel_wrapper_exists(self, code_url: str, page: Page):
         """.code-with-panel wrapper should exist around lean code blocks."""
         page.goto(f"{code_url}/index.html#/0")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        wait_for_reveal_ready(page)
 
         panels = page.locator(".code-with-panel")
         assert panels.count() >= 1
@@ -23,8 +23,7 @@ class TestPanelStructure:
         """lean -panel should render a code block without the panel wrapper."""
         # "No Panel" is slide index 5
         page.goto(f"{code_url}/index.html#/5")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        wait_for_reveal_ready(page)
 
         slide = page.locator(".slides > section").nth(5)
         # Should have a Lean code block
@@ -41,8 +40,7 @@ class TestPanelStructure:
     def test_panel_starts_empty(self, code_url: str, page: Page):
         """.info-panel should start with no content."""
         page.goto(f"{code_url}/index.html#/0")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        wait_for_reveal_ready(page)
 
         panel = page.locator(".code-with-panel .info-panel").first
         expect(panel).to_be_visible()
@@ -53,8 +51,7 @@ class TestTacticReflow:
     def test_tactic_goals_reflow_on_resize(self, code_url: str, page: Page):
         """Clicking a tactic should show reflowed goals that re-render when the panel resizes."""
         page.goto(f"{code_url}/index.html#/2")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        wait_for_reveal_ready(page)
 
         # Scope to the active slide (index 2 = Proof slide)
         slide = page.locator(".slides > section").nth(2)
@@ -100,8 +97,7 @@ class TestPanelInteraction:
     def test_click_populates_panel(self, code_url: str, page: Page):
         """Clicking a [data-verso-hover] token should populate the panel."""
         page.goto(f"{code_url}/index.html#/0")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        wait_for_reveal_ready(page)
 
         block = page.locator(".code-with-panel").first
         panel = block.locator(".info-panel")
@@ -115,8 +111,7 @@ class TestPanelInteraction:
     def test_click_adds_panel_focus(self, code_url: str, page: Page):
         """Clicking a token should add .panel-focus class to it."""
         page.goto(f"{code_url}/index.html#/0")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        wait_for_reveal_ready(page)
 
         block = page.locator(".code-with-panel").first
         token = block.locator("[data-verso-hover]").first
@@ -130,8 +125,7 @@ class TestPanelInteraction:
     def test_binding_highlight(self, code_url: str, page: Page):
         """Hovering a token with data-binding should toggle .binding-hl on matching tokens."""
         page.goto(f"{code_url}/index.html#/0")
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1000)
+        wait_for_reveal_ready(page)
 
         block = page.locator(".code-with-panel").first
         code = block.locator("code.hl.lean.block")

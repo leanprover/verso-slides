@@ -1,4 +1,6 @@
+import os
 import pytest
+import random
 import socket
 import subprocess
 import time
@@ -7,6 +9,10 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 DEFAULT_SITE_DIR = "../_test"
+ALL_BROWSERS = ("chromium", "firefox")
+# Env var used to share a --browser=random choice between the xdist master
+# and its worker processes (workers inherit the env, so they agree).
+RANDOM_BROWSER_ENV = "VERSO_TESTS_RANDOM_BROWSER"
 
 
 def find_free_port():
@@ -35,6 +41,56 @@ def pytest_addoption(parser):
         default=None,
         help="Use an existing server instead of starting one (e.g., http://localhost:3000)"
     )
+    parser.addoption(
+        "--browser",
+        action="store",
+        default="all",
+        choices=("all", "chromium", "firefox", "random"),
+        help=(
+            "Which browser(s) to run page-using tests against. "
+            "'all' (default) runs every test in both Chromium and Firefox. "
+            "'chromium' or 'firefox' picks one. "
+            "'random' flips a coin once per session to pick one browser."
+        ),
+    )
+
+
+def _resolve_browsers(config):
+    """Translate the --browser option into the list of browsers to parametrize over.
+
+    For --browser=random we need every pytest-xdist worker to agree on the
+    same coin-flip; otherwise workers collect different parametrized test
+    sets and xdist aborts. We stash the pick in an env var so worker
+    subprocesses inherit it from the master.
+    """
+    cached = getattr(config, "_resolved_browsers", None)
+    if cached is not None:
+        return cached
+    opt = config.getoption("--browser")
+    if opt == "all":
+        browsers = list(ALL_BROWSERS)
+    elif opt == "random":
+        chosen = os.environ.get(RANDOM_BROWSER_ENV)
+        if chosen not in ALL_BROWSERS:
+            chosen = random.choice(ALL_BROWSERS)
+            os.environ[RANDOM_BROWSER_ENV] = chosen
+        browsers = [chosen]
+    else:
+        browsers = [opt]
+    config._resolved_browsers = browsers
+    return browsers
+
+
+def pytest_report_header(config):
+    browsers = _resolve_browsers(config)
+    mode = config.getoption("--browser")
+    return f"browsers: {', '.join(browsers)} (--browser={mode})"
+
+
+def pytest_generate_tests(metafunc):
+    if "browser" in metafunc.fixturenames:
+        browsers = _resolve_browsers(metafunc.config)
+        metafunc.parametrize("browser", browsers, indirect=True, ids=browsers, scope="session")
 
 
 @pytest.fixture(scope="session")
@@ -138,9 +194,9 @@ def playwright_instance():
         yield p
 
 
-@pytest.fixture(scope="session", params=["chromium", "firefox"])
+@pytest.fixture(scope="session")
 def browser(request, playwright_instance):
-    """Parameterized fixture to run tests in multiple browsers."""
+    """Browser fixture parametrized by pytest_generate_tests from --browser."""
     browser_type = request.param
     browser = getattr(playwright_instance, browser_type).launch()
     yield browser
@@ -154,6 +210,19 @@ def page(browser):
     page.close()
 
 
+_REVEAL_READY_EXPR = "() => !!(window.Reveal && window.Reveal.isReady && window.Reveal.isReady())"
+
+
+def wait_for_reveal_ready(page, timeout=10000):
+    """Wait until reveal.js has finished initialising on the current page.
+
+    Replaces the old `wait_for_load_state("networkidle") + wait_for_timeout(1000)`
+    combo — polls Reveal.isReady() instead, which resolves as soon as the
+    presentation is interactive (usually well under a second).
+    """
+    page.wait_for_function(_REVEAL_READY_EXPR, timeout=timeout)
+
+
 def goto_slide_by_title(page, base_url, title):
     """Navigate to a slide by its heading text.
 
@@ -162,7 +231,7 @@ def goto_slide_by_title(page, base_url, title):
     ``#/<index>``.
     """
     page.goto(f"{base_url}/index.html")
-    page.wait_for_load_state("networkidle")
+    wait_for_reveal_ready(page)
     index = page.evaluate("""(title) => {
         const sections = document.querySelectorAll('.slides > section');
         for (let i = 0; i < sections.length; i++) {
@@ -173,6 +242,10 @@ def goto_slide_by_title(page, base_url, title):
     }""", title)
     assert index >= 0, f"Slide with title '{title}' not found"
     page.goto(f"{base_url}/index.html#/{index}")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(1000)
+    # Reveal is already ready from the first goto; wait briefly for the
+    # slide transition to settle before returning.
+    page.wait_for_function(
+        "(i) => window.Reveal && window.Reveal.getIndices().h === i",
+        arg=index,
+    )
     return page.locator(".slides > section").nth(index)
