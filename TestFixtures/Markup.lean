@@ -167,6 +167,16 @@ This paragraph is styled via extraCss config.
   * b3
 :::
 
+# Math
+
+Inline math: $`e^{i\pi} + 1 = 0`.
+
+Display math:
+
+$$`\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}`
+
+The fundamental theorem: $`\sum_{k=1}^n k = \frac{n(n+1)}{2}`.
+
 # Last Slide
 :::fragment
 A fragment paragraph.

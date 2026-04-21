@@ -278,6 +278,17 @@ within a sentence.
 And another {fragment (style := highlightBlue) (index := 3)}[inline blue highlight]
 with an explicit index.
 
+# Math
+
+$$`\frac{dV(t)}{dt} = \delta_t\, V(t) + \pi_t - b_t
+    - \mu_{x+t}\bigl(S_t - V(t)\bigr)`
+
+* $`\delta_t` is the force of interest at time $`t`
+* $`\pi_t` is the premium payment rate
+* $`b_t` is the continuous benefit payment rate
+* $`\mu_{x+t}` is the force of mortality for a life aged $`x + t`
+* $`S_t` is the sum payable on death at time $`t`
+
 # Vertical Slides
 %%%
 vertical := true
@@ -732,6 +743,7 @@ Striped
   * T
   * T
 :::
+
 
 # Thank You
 

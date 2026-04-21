@@ -55,7 +55,6 @@ def themeCSS (name : String) : Option String :=
 def notesJs     := include_str "vendor/reveal.js/plugin/notes/notes.js"
 def highlightJs := include_str "vendor/reveal.js/plugin/highlight/highlight.js"
 def monokaiCss  := include_str "vendor/reveal.js/plugin/highlight/monokai.css"
-def mathJs      := include_str "vendor/reveal.js/plugin/math/math.js"
 
 def markedJs := include_str "vendor/marked/marked.min.js"
 

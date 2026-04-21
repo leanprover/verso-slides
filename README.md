@@ -346,6 +346,21 @@ This has an {id "target"}[identified span].
 This is {attr («data-id» := "word")}[tracked] across slides.
 ```
 
+## Math
+
+Inline and display math are written with Verso's built-in math syntax
+and rendered by KaTeX at page load:
+
+```
+Euler's identity: $`e^{i\pi} + 1 = 0`.
+
+$$`\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}`
+```
+
+`$`…`$` is inline math and `$$`…`$$` is display math; both bodies are
+wrapped in backticks and parsed as LaTeX. KaTeX is vendored, so math
+renders fully offline.
+
 ## Lean Code Blocks
 
 Fenced code blocks tagged with `lean` are elaborated by the Lean
