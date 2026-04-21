@@ -72,6 +72,28 @@ class TestNotes:
         assert len(notes) == 3  # Slide One, Sub B, Last Slide
 
 
+class TestAutoSlide:
+    def test_per_slide_auto_slide(self, markup_doc: BeautifulSoup):
+        """Per-slide `autoSlide := some N` should emit `data-autoslide=N`."""
+        slides_div = markup_doc.select_one("div.slides")
+        assert slides_div is not None
+        first = slides_div.find("section", recursive=False)
+        assert first is not None
+        # Slide One carries `autoSlide := some 5000`.
+        assert first.get("data-autoslide") == "5000"
+
+    def test_doc_level_default_in_init(self, markup_doc: BeautifulSoup):
+        """The doc-level Reveal.initialize call must include the autoSlide default."""
+        scripts = [s.string for s in markup_doc.find_all("script") if s.string]
+        init_scripts = [s for s in scripts if "Reveal.initialize" in s]
+        assert init_scripts, "Reveal.initialize script not found"
+        init = init_scripts[0]
+        # Default config.autoSlide is 0, autoSlideStoppable true, autoSlideMethod null.
+        assert "autoSlide: 0" in init
+        assert "autoSlideStoppable: true" in init
+        assert "autoSlideMethod: null" in init
+
+
 class TestFragments:
     def test_block_fragment(self, markup_doc: BeautifulSoup):
         """Block-level fragments should exist."""

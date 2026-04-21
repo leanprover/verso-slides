@@ -1,0 +1,39 @@
+:root {
+    --r-background-color: rgb(10, 20, 30);
+    --r-main-color: rgb(220, 220, 220);
+    --r-link-color: rgb(100, 180, 255);
+    --r-heading-color: rgb(220, 220, 220);
+    --r-main-font-size: 32px;
+    --r-main-font-family: sans-serif;
+    --r-heading-font-family: sans-serif;
+}
+html,
+body {
+    background-color: var(--r-background-color);
+    color: var(--r-main-color);
+}
+.reveal {
+    font-family: var(--r-main-font-family);
+    font-size: var(--r-main-font-size);
+    color: var(--r-main-color);
+}
+.reveal h1,
+.reveal h2,
+.reveal h3 {
+    color: var(--r-heading-color);
+    font-family: var(--r-heading-font-family);
+}
+.reveal a {
+    color: var(--r-link-color);
+}
+.reveal .theme-marker {
+    color: rgb(255, 200, 0);
+}
+.reveal .asset-marker {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    background-image: url("../theme-assets/marker.png");
+    background-size: contain;
+    background-repeat: no-repeat;
+}

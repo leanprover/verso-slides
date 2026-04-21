@@ -11,7 +11,7 @@ import Verso.Output.Html
 set_option doc.verso true
 
 /-!
-Renders SlideCode trees to HTML for reveal.js.
+Renders SlideCode trees to HTML for `reveal.js`.
 -/
 
 

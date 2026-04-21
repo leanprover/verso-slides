@@ -51,3 +51,6 @@ lean_exe «test-render» where
 
 lean_exe «test-comment-parsers» where
   root := `Tests.CommentParsers
+
+lean_exe «test-config-validation» where
+  root := `Tests.ConfigValidation

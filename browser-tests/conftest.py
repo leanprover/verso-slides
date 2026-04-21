@@ -72,6 +72,15 @@ def diagramanim_doc(site_dir):
 
 
 @pytest.fixture(scope="session")
+def theme_doc(site_dir):
+    """Parse _test/theme/index.html with BeautifulSoup (custom-theme fixture)."""
+    html_path = site_dir / "theme" / "index.html"
+    assert html_path.exists(), f"Theme fixture not found at {html_path}. Run 'lake exe test-fixtures-build' first."
+    with open(html_path) as f:
+        return BeautifulSoup(f.read(), "html.parser")
+
+
+@pytest.fixture(scope="session")
 def server(request, site_dir):
     """Start a local HTTP server for the built site, or use an existing one."""
     external_url = request.config.getoption("--server-url")
@@ -115,6 +124,12 @@ def code_url(server):
 def diagramanim_url(server):
     """Base URL for the diagram/animation fixture."""
     return f"{server}/diagramanim"
+
+
+@pytest.fixture(scope="session")
+def theme_url(server):
+    """Base URL for the custom-theme fixture."""
+    return f"{server}/theme"
 
 
 @pytest.fixture(scope="session")

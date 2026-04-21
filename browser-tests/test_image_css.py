@@ -163,3 +163,35 @@ class TestCustomCss:
         # The CSS sets border: 3px solid red
         border = img.evaluate("el => getComputedStyle(el).borderStyle")
         assert border == "solid"
+
+
+class TestExtraCss:
+    """Exercises the extraCss config field with a subdirectory in the filename."""
+
+    SUBDIR_HREF = "themes/custom-banner.css"
+
+    def test_extra_css_file_copied_to_subdir(self, site_dir):
+        """A CSS file whose filename contains '/' is written to the nested path."""
+        assert (site_dir / "markup" / "themes" / "custom-banner.css").exists()
+        # The subdirectory must have been created.
+        assert (site_dir / "markup" / "themes").is_dir()
+
+    def test_extra_css_link_in_head(self, markup_doc: BeautifulSoup):
+        """config.extraCss should emit a <link rel='stylesheet'> with the full subdir href."""
+        selector = f'head link[rel="stylesheet"][href="{self.SUBDIR_HREF}"]'
+        links = markup_doc.select(selector)
+        assert len(links) == 1
+
+    def test_extra_css_applied(self, page, markup_url):
+        """The rules from the extraCss file should be visible via computed style.
+
+        This also confirms the browser successfully fetched the CSS at the
+        subdirectory path — if the file were missing the rule wouldn't apply.
+        """
+        slide = goto_slide_by_title(page, markup_url, "CSS Test")
+        banner = slide.locator("p.extra-banner")
+        assert banner.count() == 1
+        color = banner.evaluate("el => getComputedStyle(el).color")
+        assert color == "rgb(0, 170, 85)"
+        background = banner.evaluate("el => getComputedStyle(el).backgroundColor")
+        assert background == "rgb(255, 240, 220)"
