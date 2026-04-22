@@ -177,6 +177,8 @@ $$`\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}`
 
 The fundamental theorem: $`\sum_{k=1}^n k = \frac{n(n+1)}{2}`.
 
+Prelude macro: $`\RR` and display $$`\Hom(A, B) \subseteq \RR`.
+
 # Last Slide
 :::fragment
 A fragment paragraph.

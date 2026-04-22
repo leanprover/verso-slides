@@ -400,12 +400,49 @@ private def mathJs : String := include_str "../web-lib/math/math.js"
 /-- Relative path prefix for vendored libraries in the output directory. -/
 private def libPrefix : String := "lib"
 
+/--
+Encode a string as a JavaScript double-quoted string literal safe to embed in
+an HTML {lit}`<script>` element. Escapes the usual JS metacharacters, plus
+{lit}`<` / {lit}`>` / {lit}`&` (so a payload containing {lit}`</script>` can't
+break out of the tag) and the line-separator codepoints U+2028 / U+2029 (which
+terminate string literals in older JS engines).
+-/
+private def jsString (s : String) : String := Id.run do
+  let mut out := "\""
+  for c in s.toList do
+    out :=
+      out ++
+      match c with
+      | '\\' => "\\\\"
+      | '"'  => "\\\""
+      | '\n' => "\\n"
+      | '\r' => "\\r"
+      | '\t' => "\\t"
+      | '\x08' => "\\b"
+      | '\x0c' => "\\f"
+      | '<' => "\\x3C"
+      | '>' => "\\x3E"
+      | '&' => "\\x26"
+      | '\u2028' => "\\u2028"
+      | '\u2029' => "\\u2029"
+      | c =>
+        if c.val < 0x20 then
+          let hex := String.ofList (Nat.toDigits 16 c.val.toNat)
+          if hex.length = 1 then s!"\\u000{hex}" else s!"\\u00{hex}"
+        else c.toString
+  return out ++ "\""
+
 /-- Renders the full standalone HTML page. -/
 def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (customCss : Array String := #[]) : Html :=
   let extraCssLinks := config.extraCss.map fun css =>
     {{ <link rel="stylesheet" href={{css.filename}} /> }}
   let extraJsScripts := config.extraJs.map fun url =>
     {{ <script src={{url}}></script> }}
+  let mathPreludeScripts : Array Html :=
+    if config.mathPrelude.isEmpty then #[]
+    else
+      let js := s!"window.__versoMathPrelude = {jsString config.mathPrelude};"
+      #[{{ <script>{{Html.text false js}}</script> }}]
   let themeHref := match config.theme with
     | .builtin name => s!"{libPrefix}/reveal.js/dist/theme/{name}.css"
     | .custom theme => theme.stylesheet.filename
@@ -465,6 +502,7 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
       <script src={{s!"{revealBase}/plugin/notes/notes.js"}}></script>
       <script src={{s!"{revealBase}/plugin/highlight/highlight.js"}}></script>
       <script src={{s!"{libPrefix}/katex/dist/katex.min.js"}}></script>
+      {{mathPreludeScripts}}
       <script src={{s!"{libPrefix}/math.js"}}></script>
       {{extraJsScripts}}
       <script>{{Html.text false initScript}}</script>

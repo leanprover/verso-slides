@@ -81,7 +81,7 @@ vertical := some true
 
 Content on the first vertical sub-slide.
 
-## Second Sub-slide
+## Second Sub-Slide
 
 This appears below the first when navigating down.
 ```
@@ -360,6 +360,23 @@ $$`\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}`
 `$`…`$` is inline math and `$$`…`$$` is display math; both bodies are
 wrapped in backticks and parsed as LaTeX. KaTeX is vendored, so math
 renders fully offline.
+
+### Prelude of Math Macros
+
+Recurring notation can be declared once at the document level by
+setting `Config.mathPrelude` to a string of prelude commands in the
+math renderer's syntax (KaTeX).
+
+```lean
+slidesMain
+  { mathPrelude :=
+      "\\def\\RR{\\mathbb{R}}\n\\newcommand{\\Hom}[2]{\\mathrm{Hom}(#1, #2)}\n" }
+  (%doc MyTalk)
+```
+
+After that, `$`…`\RR`…`$` and `$`…`\Hom{A}{B}`…`$` resolve on every
+slide. Parse errors in the prelude are logged to the browser console
+and do not abort rendering.
 
 ## Lean Code Blocks
 

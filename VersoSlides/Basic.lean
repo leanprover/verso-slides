@@ -153,8 +153,22 @@ public structure Config where
   {name}`AutoSlideMethod`. Global only.
   -/
   autoSlideMethod : AutoSlideMethod := .next
+  /--
+  Additional CSS files that are added to the output and linked from the slide HTML.
+  -/
   extraCss : Array CssFile := #[]
   extraJs : Array String := #[]
+  /--
+  Math prelude evaluated once before any math on the page is rendered.
+  Typical contents are {lit}`\def` / {lit}`\newcommand` / {lit}`\gdef`
+  definitions that introduce notation used throughout the slideshow
+  (e.g. {lit}`\def\RR{\mathbb{R}}`). The current renderer is KaTeX, and
+  the string is rendered with {lit}`globalGroup: true` so plain
+  {lit}`\def` and {lit}`\newcommand` definitions persist to subsequent
+  renders on the page. Parse errors are logged to the browser console
+  and do not abort rendering.
+  -/
+  mathPrelude : String := ""
   outputDir : System.FilePath := "_slides"
 deriving Inhabited
 

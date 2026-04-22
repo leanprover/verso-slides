@@ -1,3 +1,7 @@
+/**
+ * @param {string | null | undefined} str
+ * @returns {[number, number, number] | null}
+ */
 function parseColor(str) {
     if (!str) return null;
     var h = str.match(/^#([0-9a-f]{3,8})$/i);
@@ -20,6 +24,10 @@ function parseColor(str) {
     if (m && m.length >= 3) return [parseFloat(m[0]), parseFloat(m[1]), parseFloat(m[2])];
     return null;
 }
+/**
+ * @param {Element} section
+ * @returns {[number, number, number] | null}
+ */
 function slideBgColor(section) {
     var attr = section && section.getAttribute("data-background-color");
     if (attr) {
@@ -32,7 +40,9 @@ function slideBgColor(section) {
         var c = parseColor(bg);
         if (c && (c[0] !== 0 || c[1] !== 0 || c[2] !== 0 || bg.indexOf("0)") === -1)) return c;
     }
-    var revealBg = getComputedStyle(document.querySelector(".reveal")).backgroundColor;
+    var revealRoot = document.querySelector(".reveal");
+    if (!revealRoot) return null;
+    var revealBg = getComputedStyle(revealRoot).backgroundColor;
     return parseColor(revealBg);
 }
 function updateSlides() {
@@ -44,11 +54,17 @@ function updateSlides() {
         section.classList.toggle("slide-light-bg", isLight);
         var codeBg = isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.08)";
         section.querySelectorAll("code.hl.lean.block").forEach(function (el) {
-            el.style.background = codeBg;
-            el.style.setProperty("--verso-info-indicator-color", isLight ? "#2255cc" : "#6a9fff");
-            var panel = el.closest(".code-with-panel");
+            var codeEl = /** @type {HTMLElement} */ (el);
+            codeEl.style.background = codeBg;
+            codeEl.style.setProperty(
+                "--verso-info-indicator-color",
+                isLight ? "#2255cc" : "#6a9fff",
+            );
+            var panel = codeEl.closest(".code-with-panel");
             if (panel) {
-                var panelCell = panel.querySelector(".panel-cell");
+                var panelCell = /** @type {HTMLElement | null} */ (
+                    panel.querySelector(".panel-cell")
+                );
                 if (panelCell) panelCell.style.background = codeBg;
             }
         });
