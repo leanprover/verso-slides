@@ -34,7 +34,8 @@ def themeFixtureExtra : CssFile where
 
 def main : IO UInt32 := do
   let rc ← slidesMain
-    { theme := "black", outputDir := "_test/markup", extraCss := #[markupBannerCss] }
+    { theme := "black", outputDir := "_test/markup", extraCss := #[markupBannerCss]
+      mathPrelude := "\\def\\RR{\\mathbb{R}}\n\\newcommand{\\Hom}[2]{\\mathrm{Hom}(#1, #2)}\n" }
     (%doc TestFixtures.Markup)
   if rc != 0 then return rc
   let rc ← slidesMain

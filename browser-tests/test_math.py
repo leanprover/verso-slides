@@ -33,6 +33,16 @@ class TestMathMarkup:
         assert any(s.endswith("lib/math.js") for s in scripts), \
             f"math.js not loaded, scripts: {scripts}"
 
+    def test_math_prelude_script_emitted(self, markup_doc: BeautifulSoup):
+        """When Config.mathPrelude is non-empty, a <script> sets window.__versoMathPrelude."""
+        inline_scripts = [s.get_text() for s in markup_doc.select("script") if not s.get("src")]
+        prelude_scripts = [s for s in inline_scripts if "__versoMathPrelude" in s]
+        assert len(prelude_scripts) == 1, \
+            f"expected one prelude <script>, got {len(prelude_scripts)}"
+        body = prelude_scripts[0]
+        assert "\\\\def\\\\RR" in body or "\\def\\RR" in body, \
+            f"prelude script missing \\RR definition, got: {body!r}"
+
     def test_old_reveal_math_plugin_not_wired(self, markup_doc: BeautifulSoup):
         """The reveal.js math plugin's auto-render skips <code> tags, so it's unused.
 
@@ -90,6 +100,26 @@ class TestMathRendering:
         page.wait_for_function(
             "() => document.querySelector('code.math.display .katex-display') !== null",
             timeout=5000,
+        )
+
+    def test_math_prelude_macros_expand(self, page, markup_url):
+        """Macros defined in Config.mathPrelude are available to all math on the page.
+
+        The markup fixture's Config sets `\\def\\RR{\\mathbb{R}}`. After render, the
+        math slide should contain a KaTeX `.mathbb` span, which only appears when
+        `\\RR` successfully expanded — an unexpanded control sequence would render
+        as error text.
+        """
+        goto_slide_by_title(page, markup_url, "Math")
+        page.wait_for_function(
+            "() => document.querySelectorAll('code.math.inline .katex').length > 0",
+            timeout=5000,
+        )
+        has_blackboard = page.evaluate(
+            "() => document.querySelector('code.math .mathbb') !== null"
+        )
+        assert has_blackboard, (
+            "no .mathbb span found — prelude macro \\RR did not expand"
         )
 
     def test_math_tex_source_not_visible(self, page, markup_url):
