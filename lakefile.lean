@@ -23,9 +23,10 @@ input_dir webLibAssets where
   path := "web-lib"
 
 lean_lib VersoSlides where
-  needs := #[webLibAssets]
+  needs := #[webLibAssets, `@subverso/«subverso-extract-mod»]
 
-lean_lib Demo
+lean_lib Demo where
+  needs := #[`@verso/+Verso.Code.External:highlighted]
 
 @[default_target] lean_exe «demo-slides» where root := `Main
 
@@ -39,7 +40,8 @@ lean_lib TestFixtures
 lean_exe «test-fixtures-build» where
   root := `TestFixtures.Build
 
-lean_lib TestElab
+lean_lib TestElab where
+  needs := #[`@verso/+Verso.Code.External:highlighted]
 
 lean_lib Tests
 

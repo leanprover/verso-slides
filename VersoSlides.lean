@@ -18,3 +18,4 @@ import VersoSlides.SlideCode
 import VersoSlides.SlideCode.Export
 import VersoSlides.SlideCode.Render
 import VersoSlides.ModuleExample
+import VersoSlides.LibModule

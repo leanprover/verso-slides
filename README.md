@@ -508,6 +508,85 @@ def f := /- !fragment -/42/- !end fragment -/
 ```
 ````
 
+### Library Code
+
+The `leanLibCode` code block shows the current source of a
+declaration, or a line range, from a library the presentation depends
+on. The block body contains the code from the library, and it is an error if it 
+does not match. If the library changes, the block stops matching and Lean
+offers a quickfix suggestion with the updated source.
+
+````
+```leanLibCode MyLib.Foo (decl := MyLib.Foo.bar)
+def bar : Nat := 42
+```
+````
+
+````
+```leanLibCode MyLib.Foo (startLine := 10) (endLine := 30)
+-- lines 10..30 of MyLib.Foo
+```
+````
+
+Arguments:
+
+- The first positional argument is the module name.
+- `package` — optional. Disambiguates when several packages may
+  contain a module with the same name, or when the module is only
+  resolvable with a package qualifier.
+- `decl` — optional declaration name; extracts the item whose
+  declarations include this name.
+- `startLine` / `endLine`: optional 1-based inclusive line range;
+  must be provided together and cannot combine with `decl`.
+- `panel`: a flag that determines whether to show the interactive info panel under the slide
+  (default `true`).
+
+Omitting `decl` and the line range shows the entire module.
+
+#### Wiring up the Lake build
+
+For this to work, the highlighted source code of the library must
+be available for the slides to read. The highlighted code can be
+built using the `highlighted` facet in Lake. To arrange for Lake
+to build this automatically, the slides must declare a `needs`
+dependency so Lake builds the facet before elaborating the slides.
+
+In `lakefile.toml`:
+
+```toml
+[[lean_lib]]
+name = "MySlides"
+needs = ["@mypkg/+MyLib.Foo:highlighted"]
+```
+
+Or a whole package at once:
+
+```toml
+needs = ["@mypkg:highlighted"]
+```
+
+In `lakefile.lean`:
+
+```lean
+lean_lib MySlides where
+  needs := #[`@mypkg/+MyLib.Foo:highlighted]
+```
+
+Or for an entire package:
+
+```lean
+lean_lib MySlides where
+  needs := #[`@mypkg:highlighted]
+```
+
+With this declaration, `lake build` on the slides project produces
+the highlighted JSON before Lean elaborates `leanLibCode` blocks. If
+the facet isn't available, elaboration fails fast with a reminder to
+add the `needs` entry. It won't silently trigger a large build while
+elaborating the slides.
+
+Lean's own prelude and `Std` modules don't need the `needs` configuration.
+
 ## Document-Level Configuration
 
 Document-level `reveal.js` settings live on the `Config` value passed
