@@ -512,9 +512,17 @@ def f := /- !fragment -/42/- !end fragment -/
 
 The `leanLibCode` code block shows the current source of a
 declaration, or a line range, from a library the presentation depends
-on. The block body contains the code from the library, and it is an error if it 
-does not match. If the library changes, the block stops matching and Lean
-offers a quickfix suggestion with the updated source.
+on. The block body contains the expected code from the library, and it
+is an error if it does not match.
+
+If the library changes, the block stops matching and Lean offers a
+clickable quickfix that replaces the block with the current source. In
+line-range mode, when the body still appears in the library at a
+different range (because lines were inserted or removed earlier in the
+file), Lean additionally offers a quickfix that updates
+`(startLine := …) (endLine := …)` to where the body is now. Small
+character-level edits within lines (renames, typos) are tolerated when
+locating the new range.
 
 ````
 ```leanLibCode MyLib.Foo (decl := MyLib.Foo.bar)
