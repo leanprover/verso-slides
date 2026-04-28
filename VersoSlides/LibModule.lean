@@ -277,9 +277,7 @@ def findBodyLineRange (body : String) (items : Array ModuleItem) :
   let bArr := body.toList.toArray
   let bLen := bArr.size
   let infty : Nat := body.length + modText.length + 1
-  let mut prev : Vector (Nat × String.Pos.Raw) (bLen + 1) := .replicate _ (0, 0)
-  for h : j in 0...(bLen + 1) do
-    prev := prev.set j (j, 0)
+  let mut prev : Vector (Nat × String.Pos.Raw) (bLen + 1) := .ofFn fun j => (j.val, 0)
   let mut curr : Vector (Nat × String.Pos.Raw) (bLen + 1) := .replicate _ (0, 0)
   let mut bestDist : Nat := infty
   let mut bestStart : String.Pos.Raw := 0
@@ -334,7 +332,7 @@ def findBodyLineRange (body : String) (items : Array ModuleItem) :
 
 /--
 Picks the highlighted code to include based on the user's config (decl, line range, or all). For
-line ranges, slices each overlapping item to the requested lines via `takeLines`.
+line ranges, slices each overlapping item to the requested lines via `sliceItem`.
 -/
 private def selectCode (items : Array ModuleItem) (cfg : LibModuleConfig)
     : Except String Highlighted := do
@@ -352,7 +350,7 @@ private def selectCode (items : Array ModuleItem) (cfg : LibModuleConfig)
       let threshold (name : String) : Nat :=
         if input.length < 5 then 1
         else if input.length < 10 then 2
-        else 3 |>.max (max input.length name.length / 5)
+        else max 3 (max input.length name.length / 5)
       let scored := candidates.filterMap fun c =>
         Lean.EditDistance.levenshtein c input (threshold c) |>.map (c, ·)
       let sorted := scored.qsort fun x y =>
@@ -374,6 +372,21 @@ private def selectCode (items : Array ModuleItem) (cfg : LibModuleConfig)
   | none, none, none =>
     return items.foldl (init := Highlighted.empty) fun acc item => acc ++ item.code
 
+/--
+Builds a quickfix replacement string for the code block at `stx`. Returns the entire
+code block as a single string, with leading whitespace from the opening line preserved as
+indentation on every line of the new body.
+
+If `newArgs?` is `some args`, the directive's arguments are replaced with `args` (the directive
+name is kept); if `none`, the original argument list is left intact and only the body is rewritten
+to `newContents`.
+
+The opening and closing delimiters are sized to be longer than any run of backticks in
+`newContents`, so a body containing nested code blocks still produces a valid block.
+
+Returns `none` when the syntax has no source range, or when the opening line at that range does
+not start with a backtick.
+-/
 private meta def editCodeBlock [Monad m] [MonadFileMap m] (stx : Syntax) (newArgs? : Option String) (newContents : String) : m (Option String) := do
   let txt ← getFileMap
   let some rng := stx.getRange?
@@ -405,10 +418,10 @@ where
       if c == '`' then
         run := some (run.getD 0 + 1)
       else if let some k := run then
-        if k > n then n := k
+        if k ≥ n then n := k + 1
         run := none
     if let some k := run then
-      if k > n then n := k
+      if k ≥ n then n := k + 1
     n.fold (fun _ _ s => s.push '`') ""
 
 /--

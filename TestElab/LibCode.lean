@@ -94,10 +94,10 @@ error: Code block does not match the current library code:
 
 
 Hint: Update the line range or replace with the current library code
-  • ```leanLibCode Verso.Code.External (package := verso) (startLine := 5̵1̵7̲7̲) (endLine := 5̵1̵7̲7̲)
+  • Update line numbers:```leanLibCode Verso.Code.External (package := verso) (startLine := 5̵1̵7̲7̲) (endLine := 5̵1̵7̲7̲)
     public meta def withNl (s : String) : String := if s.endsWith "\n" then s else s ++ "\n"
     ```
-  • ```leanLibCode Verso.Code.External (package := verso) (startLine := 51) (endLine := 51)
+  • Update expected code:```leanLibCode Verso.Code.External (package := verso) (startLine := 51) (endLine := 51)
     public m̵e̵t̵a̵ ̵d̵e̵f̵ ̵w̵i̵t̵h̵N̵l̵ ̵(̵s̵c̲l̲a̲s̲s̲ ̲E̲x̲t̲e̲r̲n̲a̲l̲C̲o̲d̲e̲ ̲(̲g̲e̲n̲r̲e̲ : S̵t̵r̵i̵n̵g̵)̵ ̵:̵ ̵S̵t̵r̵i̵n̵g̵ ̵:̵=̵ ̵i̵f̵ ̵s̵.̵e̵n̵d̵s̵W̵i̵t̵h̵ ̵"̵\̵n̵"̵ ̵t̵h̵e̵n̵ ̵s̵ ̵e̵l̵s̵e̵ ̵s̵ ̵+̵+̵ ̵"̵\̵n̵"̵G̲e̲n̲r̲e̲)̲ ̲w̲h̲e̲r̲e̲
     ```
 -/
@@ -124,10 +124,10 @@ error: Code block does not match the current library code:
 
 
 Hint: Update the line range or replace with the current library code
-  • ```leanLibCode Verso.Code.External (package := verso) (startLine := 9̵9̵7̲7̲) (endLine := 9̵9̵7̲7̲)
+  • Update line numbers:```leanLibCode Verso.Code.External (package := verso) (startLine := 9̵9̵7̲7̲) (endLine := 9̵9̵7̲7̲)
     public meta def withNl (t̵s̲ : String) : String := if t̵s̲.endsWith "\n" then t̵s̲ e̵l̵e̲l̲se̵e̲ t̵ ̵s̲ ̲++ "\n"
     ```
-  • ```leanLibCode Verso.Code.External (package := verso) (startLine := 99) (endLine := 99)
+  • Update expected code:```leanLibCode Verso.Code.External (package := verso) (startLine := 99) (endLine := 99)
     p̵u̵b̵l̵i̵c̵ ̵m̵e̵t̵a̵ ̵d̵e̵f̵ ̵w̵i̵t̵h̵N̵l̵ ̵(̵t̵ ̵:̵ ̵S̵t̵r̵i̵n̵g̵)̵ ̵:̵ ̵S̵t̵r̵i̵n̵g̵ ̵:̵=̵ ̵i̵f̵ ̵t̵.̵e̵n̵d̵s̵W̵i̵t̵h̵ ̵"̵\̵n̵"̵ ̵t̵h̵e̵n̵ ̵t̵ ̵e̵l̵s̵e̵ ̵t̵ ̵+̵+̵ ̵"̵\̵n̵"̵-̲-̲ ̲T̲O̲D̲O̲ ̲t̲e̲s̲t̲ ̲t̲h̲r̲e̲s̲h̲o̲l̲d̲s̲/̲s̲o̲r̲t̲i̲n̲g̲
     ```
 -/
