@@ -69,19 +69,23 @@ private structure LoadedLibModule where
   fileHash : UInt64
   items : Array ModuleItem
 
-/-- Environment extension holding parsed external-library modules for the current Lean session.
-Keyed by module name; invalidated across sessions when the env resets, and
-invalidated within a session by a file-hash check in `loadLibModule`. -/
+/--
+Environment extension holding parsed external-library modules for the current Lean session. Keyed by
+module name; invalidated across sessions when the env resets, and invalidated within a session by a
+file-hash check in `loadLibModule`.
+-/
 private initialize loadedLibModulesExt :
     EnvExtension (Std.HashMap Name LoadedLibModule) ←
   registerEnvExtension (pure {})
 
-/-- Query Lake for the bytes of the `highlighted` facet for `modName`.
-Uses `--no-build`: if the facet hasn't been built, this fails fast instead of
-silently triggering a full dep build from inside elaboration.
+/--
+Queries Lake for the bytes of the `highlighted` facet for `modName`. Uses `--no-build`: if the facet
+hasn't been built, this fails fast instead of silently triggering a full dep build from inside
+elaboration.
 
-If `package?` is given, targets the module within that package (`@pkg/+mod:highlighted`);
-otherwise queries across the workspace (`+mod:highlighted`). -/
+If `package?` is given, targets the module within that package (`@pkg/+mod:highlighted`); otherwise
+queries across the workspace (`+mod:highlighted`).
+-/
 private def queryFacetBytes (modName : Name) (package? : Option Name) :
     IO (Option ByteArray) := do
   let tgt :=
@@ -97,14 +101,15 @@ private def queryFacetBytes (modName : Name) (package? : Option Name) :
   if path.isEmpty then return none
   some <$> IO.FS.readBinFile (System.FilePath.mk path)
 
-/-- Fallback for modules that aren't Lake modules (prelude, stdlib): invoke
-`subverso-extract-mod` directly on a temp-file output. Used only when
-`queryFacetBytes` fails. The temp file is auto-deleted by `withTempFile`.
+/--
+Fallback for modules that aren't Lake modules (prelude, stdlib): invoke `subverso-extract-mod`
+directly on a temp-file output. Used only when `queryFacetBytes` fails. The temp file is
+auto-deleted by `withTempFile`.
 
-`subverso-extract-mod`'s default source-search path is computed from its own
-binary location, which doesn't include the toolchain's `src/lean` directory.
-We override `LEAN_SRC_PATH` with the toolchain sysroot (via `Lean.findSysroot`)
-so prelude and stdlib modules are reachable. -/
+`subverso-extract-mod`'s default source-search path is computed from its own binary location, which
+doesn't include the toolchain's `src/lean` directory. We override `LEAN_SRC_PATH` with the toolchain
+sysroot (via `Lean.findSysroot`) so prelude and stdlib modules are reachable.
+-/
 private def fallbackExtractBytes (modName : Name) : IO (Option ByteArray) := do
   let exeOut ← IO.Process.output {
     cmd := "lake",
@@ -142,9 +147,11 @@ private def noModuleError (modName : Name) (package? : Option Name) : MessageDat
     s!"      needs := #[`{qual}]"
   m!"Couldn't locate highlighted JSON for module `{modName}`.\n\n{tomlHint}\n\n{leanHint}"
 
-/-- Load the parsed `ModuleItem`s for `modName`, hitting the env-extension cache when possible.
-If the cache has a stale entry (file hash changed mid-session), asks the user to restart
-rather than silently handing out a mix of old and new data. -/
+/--
+Loads the parsed `ModuleItem`s for `modName`, hitting the env-extension cache when possible. If the
+cache has a stale entry (file hash changed mid-session), asks the user to restart rather than
+silently handing out a mix of old and new data.
+-/
 private def loadLibModule [Monad m] [MonadEnv m] [MonadError m] [MonadLiftT IO m]
     (modName : Name) (package? : Option Name) (blame : Syntax) : m (Array ModuleItem) := do
   let bytes ←
@@ -171,9 +178,166 @@ private def loadLibModule [Monad m] [MonadEnv m] [MonadError m] [MonadLiftT IO m
     m.insert modName { fileHash := currentHash, items := mod.items }
   return mod.items
 
-/-- Pick the `ModuleItem`s to include based on the user's config (decl, line range, or all). -/
-private def selectItems (items : Array ModuleItem) (cfg : LibModuleConfig)
-    : Except String (Array ModuleItem) := do
+private inductive Ctx where
+  | tactics (goals : Array (Highlighted.Goal Highlighted)) (s e : Nat)
+  | span (info : Array (Highlighted.Span.Kind × Highlighted.MessageContents Highlighted))
+
+/--
+Gets the indicated line range, on the assumption that the code in question starts at line `line`.
+-/
+def getLines (line : Nat) (startLine endLine : Nat) (hl : Highlighted) : Highlighted := Id.run do
+  let mut line := line
+  let mut ctx : List (Highlighted × Ctx × List Highlighted) := []
+  let mut doc : List Highlighted := [hl]
+  let mut out : Highlighted := .empty
+  repeat
+    if line > endLine then break
+    match doc with
+    | [] =>
+      match ctx with
+      | [] => break
+      | (o', .tactics goals s e, next) :: ctx' =>
+        out := o' ++ .tactics goals s e out
+        doc := next
+        ctx := ctx'
+      | (o', .span info, next) :: ctx' =>
+        out := o' ++ .span info out
+        doc := next
+        ctx := ctx'
+    | .text s :: next =>
+      for l in s.splitInclusive '\n' do
+        if line ≥ startLine then out := out ++ .text l.copy
+        if l.endsWith '\n' then line := line + 1
+        if line > endLine then break
+      doc := next
+    | .unparsed s :: next =>
+      for l in s.splitInclusive '\n' do
+        if line ≥ startLine then out := out ++ .unparsed l.copy
+        if l.endsWith '\n' then line := line + 1
+        if line > endLine then break
+      doc := next
+    | .seq xs :: next =>
+      doc := xs.toList ++ next
+    | .token tok :: next =>
+      let mut keep := ""
+      for l in tok.content.splitInclusive '\n' do
+        if line ≥ startLine then keep := keep ++ l.copy
+        if l.endsWith '\n' then line := line + 1
+        if line > endLine then break
+      unless keep.isEmpty do
+        out := out ++ .token { tok with content := keep }
+      doc := next
+    | .tactics goals s e hl :: next =>
+      ctx := (out, .tactics goals s e, next) :: ctx
+      out := .empty
+      doc := [hl]
+    | .span info hl :: next =>
+      ctx := (out, .span info, next) :: ctx
+      out := .empty
+      doc := [hl]
+    | .point kind info :: next =>
+      if line ≥ startLine then
+        out := out ++ .point kind info
+      doc := next
+  return ctx.foldl (init := out) fun
+    | o, (o', .tactics goals s e, _) => o' ++ .tactics goals s e o
+    | o, (o', .span info, _) => o' ++ .span info o
+
+/--
+Extracts the content of a `ModuleItem` clipped to source lines `[sl, el]`,
+or `none` if the item lies entirely outside the range. Items entirely inside
+the range pass through without traversal; only items straddling a boundary
+are walked.
+-/
+private def sliceItem (sl el : Nat) (item : ModuleItem) : Option Highlighted := do
+  let (s, e) ← item.range
+  if e.line < sl ∨ s.line > el then none
+  else if sl ≤ s.line ∧ e.line ≤ el then some item.code
+  else
+    -- Straddles a boundary. The item's `code` begins with whitespace from
+    -- the gap before `s.line`, so trim leading blanks before slicing so the
+    -- line counter starts at `s.line` of the first real character.
+    some (getLines s.line sl el (dropBlanks item.code))
+
+/--
+Searches the source of `items` for the closest substring to `body`, anchored at line boundaries.
+Returns the matched source line range and the matched text, or `none` when no candidate is close
+enough — concretely, when the Levenshtein distance exceeds
+`max(body.length, matchedText.length) / 2`. An exact match returns its location with distance 0.
+
+The returned text contains complete source lines, snapped at both ends and suitable for use directly
+as the body of a quickfix replacement.
+-/
+def findBodyLineRange (body : String) (items : Array ModuleItem) :
+    Option (Nat × Nat × String) := Id.run do
+  if body.isEmpty then return none
+  let modText : String := items.foldl (init := "") fun s i => s ++ i.code.toString
+  if modText.isEmpty then return none
+  let fm := FileMap.ofString modText
+  let bArr := body.toList.toArray
+  let bLen := bArr.size
+  let infty : Nat := body.length + modText.length + 1
+  let mut prev : Vector (Nat × String.Pos.Raw) (bLen + 1) := .replicate _ (0, 0)
+  for h : j in 0...(bLen + 1) do
+    prev := prev.set j (j, 0)
+  let mut curr : Vector (Nat × String.Pos.Raw) (bLen + 1) := .replicate _ (0, 0)
+  let mut bestDist : Nat := infty
+  let mut bestStart : String.Pos.Raw := 0
+  let mut bestEnd : String.Pos.Raw := 0
+  -- Initial `prev[0] = (0, 0)` covers the line-1 free start at byte 0.
+  -- Within the loop, we set `curr[0] = (0, nextPos)` only when `m == '\n'`, so
+  -- `DP[i+1][0]` (which has notional `start = i+1 = nextPos`) is only available
+  -- as a free-start cell when `nextPos` is a line boundary.
+  let mut iPos : String.Pos.Raw := 0
+  while h : !iPos.atEnd modText do
+    let m := iPos.get' modText (by grind)
+    let nextPos := iPos.next' modText (by grind)
+    if m == '\n' then
+      curr := curr.set 0 (0, nextPos)
+    else
+      curr := curr.set 0 (infty, 0)
+    for h : j in 0...bLen do
+      let b := bArr[j]
+      let cost := if m == b then 0 else 1
+      let (dSub, sSub) := prev[j]
+      let (dDel, sDel) := prev[j + 1]
+      let (dIns, sIns) := curr[j]
+      let sub := (dSub + cost, sSub)
+      let del := (dDel + 1, sDel)
+      let ins := (dIns + 1, sIns)
+      let pick :=
+        if sub.1 ≤ del.1 ∧ sub.1 ≤ ins.1 then sub
+        else if del.1 ≤ ins.1 then del else ins
+      curr := curr.set (j + 1) pick
+    let (d, s) := curr[bLen]
+    if d < bestDist then
+      bestDist := d
+      bestStart := s
+      bestEnd := nextPos
+    let tmp := prev
+    prev := curr
+    curr := tmp
+    iPos := nextPos
+  -- Cutoff scales with the larger of body and candidate length so that noise-line
+  -- insertions in the library (which inflate candidate length) don't exclude an
+  -- otherwise-good match. Lengths are in bytes; close enough to chars for ASCII.
+  let candidateLen := bestEnd.byteIdx - bestStart.byteIdx
+  let cutoff := max body.length candidateLen / 2
+  if bestDist > cutoff then return none
+  let endLast := bestEnd.prev modText
+  let startLine := (fm.toPosition bestStart).line
+  let endLine := (fm.toPosition endLast).line
+  let found :=
+    modText.splitInclusive '\n' |>.drop (startLine - 1) |>.take (endLine - startLine + 1)
+      |>.joinString
+  return some (startLine, endLine, found)
+
+/--
+Picks the highlighted code to include based on the user's config (decl, line range, or all). For
+line ranges, slices each overlapping item to the requested lines via `takeLines`.
+-/
+private def selectCode (items : Array ModuleItem) (cfg : LibModuleConfig)
+    : Except String Highlighted := do
   match cfg.decl, cfg.startLine, cfg.endLine with
   | some _, some _, _ | some _, _, some _ =>
     throw "Cannot combine `decl` with `startLine`/`endLine`."
@@ -181,7 +345,7 @@ private def selectItems (items : Array ModuleItem) (cfg : LibModuleConfig)
     throw "Both `startLine` and `endLine` must be provided together."
   | some declName, none, none =>
     match items.find? (·.defines.contains declName.getId) with
-    | some item => return #[item]
+    | some item => return item.code
     | none =>
       let input := declName.getId.toString
       let candidates := items.flatMap (·.defines) |>.map toString
@@ -201,16 +365,51 @@ private def selectItems (items : Array ModuleItem) (cfg : LibModuleConfig)
                 Did you mean: {suggestions.toList}?"
   | none, some sl, some el =>
     if sl > el then throw s!"startLine ({sl}) is greater than endLine ({el})."
-    let overlapping := items.filter fun item =>
-      match item.range with
-      | some (s, e) => s.line ≤ el && sl ≤ e.line
-      | none => false
-    if overlapping.isEmpty then
+    let combined := items.filterMap (sliceItem sl el)
+      |>.foldl (init := Highlighted.empty) (· ++ ·)
+    if combined.isEmpty then
       let total := items.filterMap (·.range.map (·.2.line)) |>.foldl max 0
       throw s!"No items in module overlap lines {sl}..{el} (module has {total} lines)."
-    return overlapping
+    return combined
   | none, none, none =>
-    return items
+    return items.foldl (init := Highlighted.empty) fun acc item => acc ++ item.code
+
+private meta def editCodeBlock [Monad m] [MonadFileMap m] (stx : Syntax) (newArgs? : Option String) (newContents : String) : m (Option String) := do
+  let txt ← getFileMap
+  let some rng := stx.getRange?
+    | pure none
+  let { start := {line := l1, ..}, .. } := txt.utf8RangeToLspRange rng
+  let line1 := (txt.lineStart (l1 + 1)).extract txt.source (txt.lineStart (l1 + 2))
+  let line1ws := line1.takeWhile (· == ' ') |>.copy
+  let line1rest := line1.drop line1ws.length
+  let newContents := line1ws ++ (withNl newContents).replace "\n" ("\n" ++ line1ws)
+  if line1rest.startsWith "```" then
+    match newArgs? with
+    | none =>
+      return some s!"{delims}{line1rest.dropWhile (· == '`') |>.trimAscii}\n{withNl newContents}{delims}"
+    | some newArgs =>
+      let name := line1rest.dropWhile (· == '`') |>.trimAscii |>.takeWhile (!·.isWhitespace) |>.copy
+      let newArgs := newArgs.trimAscii
+      let newArgs := if newArgs.isEmpty then "" else " " ++ newArgs.copy
+      return some s!"{delims}{name}{newArgs}\n{withNl newContents}{delims}"
+  else
+    return none
+where
+  delims : String := Id.run do
+    let mut n := 3
+    let mut run := none
+    let mut iter := newContents.startPos
+    while h : iter ≠ newContents.endPos do
+      let c := iter.get h
+      iter := iter.next h
+      if c == '`' then
+        run := some (run.getD 0 + 1)
+      else if let some k := run then
+        if k > n then n := k
+        run := none
+    if let some k := run then
+      if k > n then n := k
+    n.fold (fun _ _ s => s.push '`') ""
 
 /--
 A code block that shows syntax-highlighted source from an external library module.
@@ -239,20 +438,45 @@ def leanLibCode : CodeBlockExpanderOf LibModuleConfig
     let modName := cfg.«module».getId
     let pkgName? := cfg.«package».map (·.getId)
     let items ← loadLibModule modName pkgName? cfg.«module».raw
-    let selected ←
-      match selectItems items cfg with
+    let hl ←
+      match selectCode items cfg with
       | .ok v => pure v
       | .error msg => throwErrorAt str.raw msg
-    let hl := selected.foldl (init := Highlighted.empty) fun acc item => acc ++ item.code
     let hl := dropBlanks hl
     let hlString := hl.toString
     let replacement := withNl hlString
     let useLine (l : String) : Bool := !l.trimAscii.isEmpty
     if let some diff ← Verso.ExpectString.expectStringOrDiff str replacement (useLine := useLine) then
-      let h : MessageData ←
-        MessageData.hint "Replace with the current library source"
-          #[{ suggestion := .string replacement }] (ref? := some str)
-      logErrorAt str m!"Code block does not match the current library source:\n{diff}{h}"
+      let ref ← getRef
+      let lineHint? : Option String ←
+        match cfg.startLine, cfg.endLine with
+        | some sl, some el =>
+          match findBodyLineRange str.getString items with
+          | some (newSl, newEl, newContents) =>
+            if newSl != sl || newEl != el then
+              let newArgs := [
+                some s!"{cfg.module.getId}",
+                cfg.package.map (s!"(package := {·.getId})"),
+                some s!"(startLine := {newSl})",
+                some s!"(endLine := {newEl})",
+                if !cfg.panel then some "-panel" else none
+              ]
+              editCodeBlock ref (some (" ".intercalate (newArgs.filterMap id))) newContents
+            else pure none
+          | none => pure none
+        | _, _ => pure none
+      if let some edit ← editCodeBlock ref none replacement then
+        let h ←
+          if let some lineHint := lineHint? then
+            m!"Update the line range or replace with the current library code".hint (ref? := some ref) #[
+              { suggestion := lineHint, preInfo? := some "Update line numbers:" },
+              { suggestion := edit, preInfo? := some "Update expected code:" }
+            ]
+          else
+            m!"Replace with the current library code".hint (ref? := some ref) #[edit]
+        logError m!"Code block does not match the current library code:\n{diff}{h}"
+      else
+        logError m!"Code block does not match the current library code:\n{diff}"
     match fragmentize hl.trim with
     | .ok sc =>
       let exported := scToExport sc
@@ -261,5 +485,3 @@ def leanLibCode : CodeBlockExpanderOf LibModuleConfig
            #[Verso.Doc.Block.code $(quote str.getString)])
     | .error msg =>
       throwErrorAt str.raw msg
-
-end VersoSlides

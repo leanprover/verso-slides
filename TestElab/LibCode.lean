@@ -58,24 +58,19 @@ public meta def withNl (s : String) : String := if s.endsWith "\n" then s else s
 ```
 :::::::
 
--- Drift detection: when the body doesn't match the library source, the block
--- emits a diff and a quickfix suggestion with the current source. The
--- expected docstring below contains `/--` and `-/` from the diff; Lean's
--- lexer balances them as nested block comments inside the outer docstring.
+-- When the body doesn't match the library code, the block emits a diff and a clickable quickfix
+-- that replaces the entire `leanLibCode` block (directive line + body) with the current library
+-- code. With line range `77..77` the slicer extracts only the def line, so the body diff is clean.
 /--
-error: Code block does not match the current library source:
+error: Code block does not match the current library code:
 - public meta def withNl (s : String) : String := if s.endsWith "wrong" then s else s ++ "wrong"
-+ /--
-+ Adds a newline to a string if it doesn't already end with one.
-+ -/
 + public meta def withNl (s : String) : String := if s.endsWith "\n" then s else s ++ "\n"
 
 
-Hint: Replace with the current library source
-  /̲-̲-̲
-  ̲A̲d̲d̲s̲ ̲a̲ ̲n̲e̲w̲l̲i̲n̲e̲ ̲t̲o̲ ̲a̲ ̲s̲t̲r̲i̲n̲g̲ ̲i̲f̲ ̲i̲t̲ ̲d̲o̲e̲s̲n̲'̲t̲ ̲a̲l̲r̲e̲a̲d̲y̲ ̲e̲n̲d̲ ̲w̲i̲t̲h̲ ̲o̲n̲e̲.̲
-  ̲-̲/̲
-  ̲public meta def withNl (s : String) : String := if s.endsWith "̵w̵r̵o̵n̵g̵"̵"̲\̲n̲"̲ then s else s ++ "̵w̵r̵o̵n̵g̵"̵"̲\̲n̲"̲
+Hint: Replace with the current library code
+  ```leanLibCode Verso.Code.External (package := verso) (startLine := 77) (endLine := 77)
+  public meta def withNl (s : String) : String := if s.endsWith "w̵r̵o̵\̲ng̵" then s else s ++ "w̵r̵o̵\̲ng̵"
+  ```
 -/
 #guard_msgs in
 #docs (Slides) libDrift "Lib Drift" :=
@@ -85,6 +80,65 @@ Hint: Replace with the current library source
 
 ```leanLibCode Verso.Code.External (package := verso) (startLine := 77) (endLine := 77)
 public meta def withNl (s : String) : String := if s.endsWith "wrong" then s else s ++ "wrong"
+```
+:::::::
+
+-- Stale line numbers: body matches the library, but at a different line range
+-- than the user wrote. Drift fires, and the hint offers TWO clickable fixes:
+-- update the line range to where the body actually appears (51 → 77), or
+-- replace the body with whatever line 51 currently contains.
+/--
+error: Code block does not match the current library code:
+- public meta def withNl (s : String) : String := if s.endsWith "\n" then s else s ++ "\n"
++ public class ExternalCode (genre : Genre) where
+
+
+Hint: Update the line range or replace with the current library code
+  • ```leanLibCode Verso.Code.External (package := verso) (startLine := 5̵1̵7̲7̲) (endLine := 5̵1̵7̲7̲)
+    public meta def withNl (s : String) : String := if s.endsWith "\n" then s else s ++ "\n"
+    ```
+  • ```leanLibCode Verso.Code.External (package := verso) (startLine := 51) (endLine := 51)
+    public m̵e̵t̵a̵ ̵d̵e̵f̵ ̵w̵i̵t̵h̵N̵l̵ ̵(̵s̵c̲l̲a̲s̲s̲ ̲E̲x̲t̲e̲r̲n̲a̲l̲C̲o̲d̲e̲ ̲(̲g̲e̲n̲r̲e̲ : S̵t̵r̵i̵n̵g̵)̵ ̵:̵ ̵S̵t̵r̵i̵n̵g̵ ̵:̵=̵ ̵i̵f̵ ̵s̵.̵e̵n̵d̵s̵W̵i̵t̵h̵ ̵"̵\̵n̵"̵ ̵t̵h̵e̵n̵ ̵s̵ ̵e̵l̵s̵e̵ ̵s̵ ̵+̵+̵ ̵"̵\̵n̵"̵G̲e̲n̲r̲e̲)̲ ̲w̲h̲e̲r̲e̲
+    ```
+-/
+#guard_msgs in
+#docs (Slides) libStaleLines "Lib Stale Lines" :=
+:::::::
+
+# Lib Stale Lines
+
+```leanLibCode Verso.Code.External (package := verso) (startLine := 51) (endLine := 51)
+public meta def withNl (s : String) : String := if s.endsWith "\n" then s else s ++ "\n"
+```
+:::::::
+
+-- Renamed variable: body differs from the library by character-level edits
+-- (here `s` → `t` throughout) AND the user wrote stale line numbers. The
+-- fuzzy fallback in `findBodyLineRange` still finds the right line via
+-- Levenshtein-bounded approximate substring match. The hint offers a
+-- clickable line-range fix and a body replace.
+/--
+error: Code block does not match the current library code:
+- public meta def withNl (t : String) : String := if t.endsWith "\n" then t else t ++ "\n"
++ -- TODO test thresholds/sorting
+
+
+Hint: Update the line range or replace with the current library code
+  • ```leanLibCode Verso.Code.External (package := verso) (startLine := 9̵9̵7̲7̲) (endLine := 9̵9̵7̲7̲)
+    public meta def withNl (t̵s̲ : String) : String := if t̵s̲.endsWith "\n" then t̵s̲ e̵l̵e̲l̲se̵e̲ t̵ ̵s̲ ̲++ "\n"
+    ```
+  • ```leanLibCode Verso.Code.External (package := verso) (startLine := 99) (endLine := 99)
+    p̵u̵b̵l̵i̵c̵ ̵m̵e̵t̵a̵ ̵d̵e̵f̵ ̵w̵i̵t̵h̵N̵l̵ ̵(̵t̵ ̵:̵ ̵S̵t̵r̵i̵n̵g̵)̵ ̵:̵ ̵S̵t̵r̵i̵n̵g̵ ̵:̵=̵ ̵i̵f̵ ̵t̵.̵e̵n̵d̵s̵W̵i̵t̵h̵ ̵"̵\̵n̵"̵ ̵t̵h̵e̵n̵ ̵t̵ ̵e̵l̵s̵e̵ ̵t̵ ̵+̵+̵ ̵"̵\̵n̵"̵-̲-̲ ̲T̲O̲D̲O̲ ̲t̲e̲s̲t̲ ̲t̲h̲r̲e̲s̲h̲o̲l̲d̲s̲/̲s̲o̲r̲t̲i̲n̲g̲
+    ```
+-/
+#guard_msgs in
+#docs (Slides) libRename "Lib Rename" :=
+:::::::
+
+# Lib Rename
+
+```leanLibCode Verso.Code.External (package := verso) (startLine := 99) (endLine := 99)
+public meta def withNl (t : String) : String := if t.endsWith "\n" then t else t ++ "\n"
 ```
 :::::::
 
@@ -167,5 +221,3 @@ error: No items in module overlap lines 99000..99100 (module has 854 lines).
 -- out of range
 ```
 :::::::
-
-
