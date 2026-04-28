@@ -539,7 +539,7 @@ Arguments:
 - `startLine` / `endLine`: optional 1-based inclusive line range;
   must be provided together and cannot combine with `decl`.
 - `panel`: a flag that determines whether to show the interactive info panel under the slide
-  (default `true`).
+  (default `true`). Disable with `-panel`; re-enable explicitly with `+panel`.
 
 Omitting `decl` and the line range shows the entire module.
 

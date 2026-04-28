@@ -160,7 +160,7 @@ private def loadLibModule [Monad m] [MonadEnv m] [MonadError m] [MonadLiftT IO m
       return entry.items
     else
       throwErrorAt blame
-        m!"The highlighted JSON for `{modName}` changed mid-session (cached hash `{entry.fileHash}`, new hash `{currentHash}`). Please restart the Lean server for this file."
+        m!"The highlighted JSON for `{modName}` changed mid-session. Please restart the current file to re-read the library."
   let text := String.fromUTF8! bytes
   let json ← IO.ofExcept (Json.parse text)
   let mod ←

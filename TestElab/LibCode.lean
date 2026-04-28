@@ -42,6 +42,22 @@ public meta def withNl (s : String) : String := if s.endsWith "\n" then s else s
 ```
 :::::::
 
+-- Panel toggle: `(panel := false)` suppresses the interactive info panel.
+-- This pins the only public-facing knob with no other coverage.
+#guard_msgs in
+#docs (Slides) libNoPanel "Lib No Panel" :=
+:::::::
+
+# Lib No Panel
+
+```leanLibCode Verso.Code.External (package := verso) (decl := Verso.Code.External.withNl) -panel
+/--
+Adds a newline to a string if it doesn't already end with one.
+-/
+public meta def withNl (s : String) : String := if s.endsWith "\n" then s else s ++ "\n"
+```
+:::::::
+
 -- Drift detection: when the body doesn't match the library source, the block
 -- emits a diff and a quickfix suggestion with the current source. The
 -- expected docstring below contains `/--` and `-/` from the diff; Lean's
