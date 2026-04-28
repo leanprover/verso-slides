@@ -36,8 +36,10 @@ namespace VersoSlides
 structure LibModuleConfig where
   /-- The external library module to pull code from. -/
   «module» : Ident
-  /-- Lake package name. Use this to disambiguate when multiple packages contain a module
-  with the same name, or when the module is not reachable without a package qualifier. -/
+  /--
+  Package name. Disambiguates when multiple packages contain a module with the same name, or
+  when the module is not reachable without a package qualifier.
+  -/
   «package» : Option Ident := none
   /-- A declaration name — extracts the `ModuleItem` whose `defines` contains this name. -/
   decl : Option Ident := none
@@ -102,13 +104,13 @@ private def queryFacetBytes (modName : Name) (package? : Option Name) :
   some <$> IO.FS.readBinFile (System.FilePath.mk path)
 
 /--
-Fallback for modules that aren't Lake modules (prelude, stdlib): invoke `subverso-extract-mod`
-directly on a temp-file output. Used only when `queryFacetBytes` fails. The temp file is
+Fallback for modules that aren't Lake modules (prelude, stdlib): invokes `subverso-extract-mod`
+directly on a temp-file output. Runs only when `queryFacetBytes` fails. The temp file is
 auto-deleted by `withTempFile`.
 
 `subverso-extract-mod`'s default source-search path is computed from its own binary location, which
-doesn't include the toolchain's `src/lean` directory. We override `LEAN_SRC_PATH` with the toolchain
-sysroot (via `Lean.findSysroot`) so prelude and stdlib modules are reachable.
+doesn't include the toolchain's `src/lean` directory. `LEAN_SRC_PATH` is overridden with the
+toolchain sysroot (via `Lean.findSysroot`) so prelude and stdlib modules are reachable.
 -/
 private def fallbackExtractBytes (modName : Name) : IO (Option ByteArray) := do
   let exeOut ← IO.Process.output {
@@ -427,9 +429,12 @@ where
 /--
 A code block that shows syntax-highlighted source from an external library module.
 
-Requires a Lake `needs` entry so the library's `highlighted` facet is built before the
-slides library. The block body is the expected text of the extracted code — if it drifts
-from the library, a quickfix suggestion offers the current source.
+Requires a Lake `needs` entry so the library's `highlighted` facet is built before the slides
+library. The block body is the expected text of the extracted code; if it differs from the library,
+a quickfix suggestion offers the current source.
+
+The code must have already been pre-processed for inclusion. Please refer to the README for
+`verso-slides` for instructions.
 
 Examples:
 

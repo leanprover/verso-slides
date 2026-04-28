@@ -73,10 +73,10 @@ Hint: Replace with the current library code
   ```
 -/
 #guard_msgs in
-#docs (Slides) libDrift "Lib Drift" :=
+#docs (Slides) keepUp "Keeping up with changes" :=
 :::::::
 
-# Lib Drift
+# Keeping Up
 
 ```leanLibCode Verso.Code.External (package := verso) (startLine := 77) (endLine := 77)
 public meta def withNl (s : String) : String := if s.endsWith "wrong" then s else s ++ "wrong"
@@ -84,7 +84,7 @@ public meta def withNl (s : String) : String := if s.endsWith "wrong" then s els
 :::::::
 
 -- Stale line numbers: body matches the library, but at a different line range
--- than the user wrote. Drift fires, and the hint offers TWO clickable fixes:
+-- than the user wrote. The hint offers TWO clickable fixes:
 -- update the line range to where the body actually appears (51 → 77), or
 -- replace the body with whatever line 51 currently contains.
 /--

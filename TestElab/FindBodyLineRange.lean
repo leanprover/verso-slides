@@ -5,11 +5,10 @@ Author: David Thrane Christiansen
 -/
 
 /-
-Unit tests for `VersoSlides.findBodyLineRange`. Each test wraps a chunk of fake
-"module source" in a single `ModuleItem` (range/kind/defines are irrelevant —
-the function only reads `item.code.toString`) and asserts that the returned
-1-based source line range matches expectation, or `none` when the body is too
-far from anything in the module.
+Unit tests for `VersoSlides.findBodyLineRange`. Each test wraps a chunk of fake "module source" in a
+single `ModuleItem` (range/kind/defines are irrelevant — the function only reads
+`item.code.toString`) and asserts that the returned 1-based source line range matches expectation,
+or `none` when the body is too far from anything in the module.
 -/
 import SubVerso.Module
 import SubVerso.Highlighting.Highlighted
@@ -19,12 +18,14 @@ open SubVerso.Module
 open SubVerso.Highlighting (Highlighted)
 open VersoSlides
 
-/-- Wrap a string as a single `ModuleItem`. The function under test only looks
-at `item.code.toString`, so the other fields are placeholders. -/
+/--
+Wraps a string as a single `ModuleItem`. The function under test only looks at `item.code.toString`,
+so the other fields are placeholders.
+-/
 private def mkItem (text : String) : ModuleItem :=
   { range := none, kind := `command, defines := #[], code := .text text }
 
-/-- Convenience: search `body` against a single-item array built from `modText`. -/
+/-- Convenience wrapper that searches `body` against a single-item array built from `modText`. -/
 private def find (body modText : String) : Option (Nat × Nat × String) :=
   findBodyLineRange body #[mkItem modText]
 
@@ -101,9 +102,9 @@ private def mod5 : String := "module Foo\n\nimport Bar\n\ndef hello := 42\n"
   find "def hello := 42"
     "def x := 1\ndef hello := 99\ndef hello := 42\n"
 
--- Module has a noise line between two body matches; line-level DP absorbs it
--- via delete-mod (cost = noise line length). The body needs to be long enough
--- relative to the noise line for the `body.length / 2` cutoff to admit it.
+-- Module has a noise line between two body matches; line-level DP absorbs it via delete-mod (cost =
+-- noise line length). The body needs to be long enough relative to the noise line for the
+-- `body.length / 2` cutoff to admit it.
 /--
 info: some (1, 3, "module Foo with a long-enough body to admit one inserted noise line\nx\nimport Bar")
 -/
@@ -118,16 +119,15 @@ info: some (1, 3, "module Foo with a long-enough body to admit one inserted nois
 #guard_msgs in
 #eval find "deff hello := 42" mod5
 
--- Whitespace-only lines in body are filtered before matching. (Use a tight
--- module so the only sensible alignment is the obvious one — `mod5` has an
--- intermediate `import Bar` line that the DP would otherwise prefer to
--- substitute against, since char-distance is cheaper than the line skip.)
+-- Whitespace-only lines in body are filtered before matching. (Use a tight module so the only
+-- sensible alignment is the obvious one — `mod5` has an intermediate `import Bar` line that the DP
+-- would otherwise prefer to substitute against, since char-distance is cheaper than the line skip.)
 /-- info: some (1, 2, "module Foo\ndef hello := 42\n") -/
 #guard_msgs in
 #eval find "module Foo\n\n\ndef hello := 42" "module Foo\ndef hello := 42\n"
 
--- Body longer than the module — body lines that can't be matched force the
--- cutoff to fail, so we report no match instead of a misleading partial.
+-- Body longer than the module — body lines that can't be matched force the cutoff to fail, so we
+-- report no match instead of a misleading partial.
 /-- info: none -/
 #guard_msgs in
 #eval
