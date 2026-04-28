@@ -487,8 +487,8 @@ def leanLibCode : CodeBlockExpanderOf LibModuleConfig
         let h ←
           if let some lineHint := lineHint? then
             m!"Update the line range or replace with the current library code".hint (ref? := some ref) #[
-              { suggestion := lineHint, preInfo? := some "Update line numbers:" },
-              { suggestion := edit, preInfo? := some "Update expected code:" }
+              { suggestion := lineHint, preInfo? := some "Update line numbers:\n" },
+              { suggestion := edit, preInfo? := some "Update expected code:\n" }
             ]
           else
             m!"Replace with the current library code".hint (ref? := some ref) #[edit]
