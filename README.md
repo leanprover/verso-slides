@@ -544,20 +544,21 @@ Arguments:
   resolvable with a package qualifier.
 - `decl` — optional declaration name; extracts the item whose
   declarations include this name.
-- `startLine` / `endLine`: optional 1-based inclusive line range;
-  must be provided together and cannot combine with `decl`.
-- `panel`: a flag that determines whether to show the interactive info panel under the slide
-  (default `true`). Disable with `-panel`; re-enable explicitly with `+panel`.
+- `startLine` / `endLine`: optional 1-based inclusive line range; must
+  be provided together and cannot combine with `decl`.
+- `panel`: a flag that determines whether to show the interactive info
+  panel under the slide (default `true`). Disable with `-panel`;
+  re-enable explicitly with `+panel`.
 
 Omitting `decl` and the line range shows the entire module.
 
 #### Wiring up the Lake build
 
-For this to work, the highlighted source code of the library must
-be available for the slides to read. The highlighted code can be
-built using the `highlighted` facet in Lake. To arrange for Lake
-to build this automatically, the slides must declare a `needs`
-dependency so Lake builds the facet before elaborating the slides.
+For this to work, the highlighted source code of the library must be
+available for the slides to read. The highlighted code can be built
+using the `highlighted` facet in Lake. To arrange for Lake to build
+this automatically, the slides must declare a `needs` dependency so
+Lake builds the facet before elaborating the slides.
 
 In `lakefile.toml`:
 
@@ -587,13 +588,14 @@ lean_lib MySlides where
   needs := #[`@mypkg:highlighted]
 ```
 
-With this declaration, `lake build` on the slides project produces
-the highlighted JSON before Lean elaborates `leanLibCode` blocks. If
-the facet isn't available, elaboration fails fast with a reminder to
-add the `needs` entry. It won't silently trigger a large build while
+With this declaration, `lake build` on the slides project produces the
+highlighted JSON before Lean elaborates `leanLibCode` blocks. If the
+facet isn't available, elaboration fails fast with a reminder to add
+the `needs` entry. It won't silently trigger a large build while
 elaborating the slides.
 
-Lean's own prelude and `Std` modules don't need the `needs` configuration.
+Lean's own prelude and `Std` modules don't need the `needs`
+configuration.
 
 ## Document-Level Configuration
 
