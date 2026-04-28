@@ -676,6 +676,14 @@ the high-contrast `black-contrast` and `white-contrast` variants.
 Select one by setting `theme := "white"` (or any of the other theme
 names) on the `Config` you pass to `slidesMain`.
 
+All fonts referenced by built-in themes are bundled (Source Sans Pro
+and League Gothic from upstream `reveal.js`, plus Lato, Ubuntu,
+Montserrat, Open Sans, News Cycle, and Quicksand from Google Fonts).
+The `@import` URLs in the upstream theme CSS are rewritten to local
+paths while building the slides, so presentations render with the
+intended typeface even with no network access. To refresh the vendored
+fonts after a `reveal.js` bump, re-run `scripts/vendor-fonts.sh`.
+
 The `theme` field of `Config` is a `Theme` sum type: either
 `.builtin name` (one of the bundled themes, selected by name) or
 `.custom theme` (a user-supplied `CustomTheme` that fully replaces the
