@@ -9,6 +9,7 @@ import TestFixtures.Markup
 import TestFixtures.Code
 import TestFixtures.DiagramAnim
 import TestFixtures.Theme
+import TestFixtures.MinimalThemed
 
 open VersoSlides
 open Verso.BinFiles
@@ -46,7 +47,20 @@ def main : IO UInt32 := do
     { theme := "black", outputDir := "_test/diagramanim" }
     (%doc TestFixtures.DiagramAnim)
   if rc != 0 then return rc
-  slidesMain
+  let rc ← slidesMain
     { theme := .custom themeFixtureTheme, outputDir := "_test/theme",
       extraCss := #[themeFixtureExtra] }
     (%doc TestFixtures.Theme)
+  if rc != 0 then return rc
+  -- One minimal deck per built-in theme: drives `test_offline_themes.py`,
+  -- which loads each of these with all non-local network blocked.
+  let builtinThemes : List String :=
+    ["black", "black-contrast", "white", "white-contrast",
+     "beige", "league", "moon", "solarized",
+     "blood", "night", "simple", "sky", "dracula", "serif"]
+  for name in builtinThemes do
+    let rc ← slidesMain
+      { theme := name, outputDir := s!"_test/themes/{name}" }
+      (%doc TestFixtures.MinimalThemed)
+    if rc != 0 then return rc
+  return 0

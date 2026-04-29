@@ -542,11 +542,15 @@ def writeVendoredAssets (outputDir : System.FilePath) (theme : Theme) : IO Unit 
   writeFileWithDirs (revealDir / "dist" / "reset.css") Vendor.resetCss
   writeFileWithDirs (revealDir / "dist" / "reveal.css") Vendor.revealCss
   writeFileWithDirs (revealDir / "dist" / "reveal.js") Vendor.revealJs
-  -- Selected theme: write the vendored stylesheet only when a built-in theme is
-  -- selected. Custom themes are written separately alongside index.html.
+  -- Selected theme: write the vendored stylesheet (with Google-Fonts `@import` lines rewritten to
+  -- local equivalents) and the font files it references, so slides render correctly without network
+  -- access. Custom themes are written separately alongside index.html.
   if let .builtin name := theme then
     let themeCss := Vendor.themeCSS name |>.getD Vendor.themeBlack
-    writeFileWithDirs (revealDir / "dist" / "theme" / s!"{name}.css") themeCss
+    let themeDir := revealDir / "dist" / "theme"
+    writeFileWithDirs (themeDir / s!"{name}.css") (Vendor.rewriteGoogleFontImports themeCss)
+    for (relPath, data) in Vendor.themeFonts name do
+      writeBinFileWithDirs (themeDir / relPath) data
   -- Plugins
   writeFileWithDirs (revealDir / "plugin" / "notes" / "notes.js") Vendor.notesJs
   writeFileWithDirs (revealDir / "plugin" / "highlight" / "highlight.js") Vendor.highlightJs
