@@ -7,6 +7,7 @@ module
 public import Verso.Doc
 public import VersoSlides.ImgSrc
 public import VersoManual.Html.CssFile
+public import VersoSlidesVendored
 import Std.Data.HashMap
 
 open Lean
@@ -66,6 +67,12 @@ and every asset's) must be distinct from each other and from every
 public structure CustomTheme where
   stylesheet : CssFile
   assets : Array ThemeAsset := #[]
+  /--
+  The `highlight.js` stylesheet to be used with this `reveal.js` theme. Used as the default
+  highlighting theme whenever a custom theme is selected. Defaults to
+  {name}`HighlightTheme.monokai`, which should be replaced for light themes.
+  -/
+  highlightTheme : HighlightTheme := .monokai
 
 public instance : Inhabited CustomTheme where
   default := { stylesheet := { filename := "theme.css", contents := ⟨""⟩ } }
@@ -123,6 +130,16 @@ deriving Inhabited, BEq, Repr, ToJson, FromJson
 public structure Config where
   vertical : Bool := false
   theme : Theme := "black"
+  /--
+  The highlight.js stylesheet used for non-Lean code blocks.
+
+  The default value is the `highlight.js` theme specified in
+  {name (full := Config.theme)}`theme`.
+  -/
+  highlightTheme : HighlightTheme :=
+    match theme with
+    | .builtin name => HighlightTheme.forRevealTheme name
+    | .custom ct => ct.highlightTheme
   navigationMode : String := "default"
   transition : String := "slide"
   width : Nat := 960

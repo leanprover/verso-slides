@@ -9,32 +9,35 @@ Author: David Thrane Christiansen
   This is a separate Lake library so that `input_dir` tracking in the lakefile
   triggers a rebuild when any file under `vendor/` changes.
 -/
-import Verso.Output.Html.KaTeX
-import VersoUtil.BinFiles
+module
+public import Verso.Output.Html.KaTeX
+public import VersoManual.Html.CssFile
+public meta import VersoUtil.BinFiles
+public import VersoUtil.BinFiles.Z85
 
 namespace VersoSlides.Vendor
 
-def resetCss := include_str "vendor/reveal.js/dist/reset.css"
-def revealCss := include_str "vendor/reveal.js/dist/reveal.css"
-def revealJs := include_str "vendor/reveal.js/dist/reveal.js"
+public def resetCss := include_str "vendor/reveal.js/dist/reset.css"
+public def revealCss := include_str "vendor/reveal.js/dist/reveal.css"
+public def revealJs := include_str "vendor/reveal.js/dist/reveal.js"
 
-def themeBlack := include_str "vendor/reveal.js/dist/theme/black.css"
-def themeWhite := include_str "vendor/reveal.js/dist/theme/white.css"
-def themeLeague := include_str "vendor/reveal.js/dist/theme/league.css"
-def themeBeige := include_str "vendor/reveal.js/dist/theme/beige.css"
-def themeNight := include_str "vendor/reveal.js/dist/theme/night.css"
-def themeMoon := include_str "vendor/reveal.js/dist/theme/moon.css"
-def themeSerif := include_str "vendor/reveal.js/dist/theme/serif.css"
-def themeSimple := include_str "vendor/reveal.js/dist/theme/simple.css"
-def themeSky := include_str "vendor/reveal.js/dist/theme/sky.css"
-def themeSolarized := include_str "vendor/reveal.js/dist/theme/solarized.css"
-def themeBlood := include_str "vendor/reveal.js/dist/theme/blood.css"
-def themeDracula := include_str "vendor/reveal.js/dist/theme/dracula.css"
-def themeBlackContrast := include_str "vendor/reveal.js/dist/theme/black-contrast.css"
-def themeWhiteContrast := include_str "vendor/reveal.js/dist/theme/white-contrast.css"
+public def themeBlack := include_str "vendor/reveal.js/dist/theme/black.css"
+public def themeWhite := include_str "vendor/reveal.js/dist/theme/white.css"
+public def themeLeague := include_str "vendor/reveal.js/dist/theme/league.css"
+public def themeBeige := include_str "vendor/reveal.js/dist/theme/beige.css"
+public def themeNight := include_str "vendor/reveal.js/dist/theme/night.css"
+public def themeMoon := include_str "vendor/reveal.js/dist/theme/moon.css"
+public def themeSerif := include_str "vendor/reveal.js/dist/theme/serif.css"
+public def themeSimple := include_str "vendor/reveal.js/dist/theme/simple.css"
+public def themeSky := include_str "vendor/reveal.js/dist/theme/sky.css"
+public def themeSolarized := include_str "vendor/reveal.js/dist/theme/solarized.css"
+public def themeBlood := include_str "vendor/reveal.js/dist/theme/blood.css"
+public def themeDracula := include_str "vendor/reveal.js/dist/theme/dracula.css"
+public def themeBlackContrast := include_str "vendor/reveal.js/dist/theme/black-contrast.css"
+public def themeWhiteContrast := include_str "vendor/reveal.js/dist/theme/white-contrast.css"
 
 /-- Looks up a theme CSS string by name. Returns `none` for unknown themes. -/
-def themeCSS (name : String) : Option String :=
+public def themeCSS (name : String) : Option String :=
   match name with
   | "black" => some themeBlack
   | "white" => some themeWhite
@@ -105,7 +108,7 @@ Unknown theme names yield an empty array.
 Custom themes added to this repo (`white_contrast_compact_verbatim_headers`)
 also map to the appropriate upstream fonts.
 -/
-def themeFonts (name : String) : Array (String × ByteArray) :=
+public def themeFonts (name : String) : Array (String × ByteArray) :=
   match name with
   | "black" | "black-contrast"
   | "white" | "white-contrast"
@@ -144,7 +147,7 @@ without network access.
 Handles both `@import "https://fonts.googleapis.com/...";` and the
 `@import url(https://fonts.googleapis.com/...);` form.
 -/
-def rewriteGoogleFontImports (css : String) : String := Id.run do
+public def rewriteGoogleFontImports (css : String) : String := Id.run do
   let mut out := css
   for (spec, slug) in googleFontReplacements do
     let dst := s!"@import url(./fonts/{slug}/{slug}.css);"
@@ -152,14 +155,59 @@ def rewriteGoogleFontImports (css : String) : String := Id.run do
     out := out.replace s!"@import url(https://fonts.googleapis.com/css?family={spec});" dst
   return out
 
-def notesJs := include_str "vendor/reveal.js/plugin/notes/notes.js"
-def highlightJs := include_str "vendor/reveal.js/plugin/highlight/highlight.js"
-def monokaiCss := include_str "vendor/reveal.js/plugin/highlight/monokai.css"
+public def notesJs := include_str "vendor/reveal.js/plugin/notes/notes.js"
+public def highlightJs := include_str "vendor/reveal.js/plugin/highlight/highlight.js"
+public def monokaiCss := include_str "vendor/reveal.js/plugin/highlight/monokai.css"
 
-def markedJs := include_str "vendor/marked/marked.min.js"
+public def markedJs := include_str "vendor/marked/marked.min.js"
 
-def katexCss := Verso.Output.Html.katex.css
-def katexJs := Verso.Output.Html.katex.js
-def katexFonts := Verso.Output.Html.katexFonts
+public def katexCss := Verso.Output.Html.katex.css
+public def katexJs := Verso.Output.Html.katex.js
+public def katexFonts := Verso.Output.Html.katexFonts
 
 end VersoSlides.Vendor
+
+namespace VersoSlides
+
+/--
+A highlight.js stylesheet for non-Lean code blocks. The `filename` is both
+the output path (relative to the slideshow output directory) and the
+`href` of the emitted `<link>` tag. Pick one of the bundled
+`HighlightTheme` values with dot notation (e.g. `.githubDark`) or build
+your own `Verso.Genre.Manual.CssFile`.
+-/
+public abbrev HighlightTheme := Verso.Genre.Manual.CssFile
+
+namespace HighlightTheme
+
+/-- Each bundled hl.js theme is written under `lib/{name}.css`. Only one
+resolves per build, so the named outputs don't collide. Keeping the name
+in the path makes the active theme obvious when inspecting the output
+directory. -/
+private def mk (name content : String) : HighlightTheme :=
+  { filename := s!"lib/{name}.css", contents := ⟨content⟩ }
+
+public def monokai := mk "monokai" (include_str "vendor/highlight.js/styles/monokai.css")
+public def github := mk "github" (include_str "vendor/highlight.js/styles/github.css")
+public def githubDark := mk "github-dark" (include_str "vendor/highlight.js/styles/github-dark.css")
+public def atomOneLight := mk "atom-one-light" (include_str "vendor/highlight.js/styles/atom-one-light.css")
+public def atomOneDark := mk "atom-one-dark" (include_str "vendor/highlight.js/styles/atom-one-dark.css")
+public def tomorrow := mk "tomorrow" (include_str "vendor/highlight.js/styles/tomorrow.css")
+public def solarizedLight := mk "solarized-light" (include_str "vendor/highlight.js/styles/solarized-light.css")
+public def solarizedDark := mk "solarized-dark" (include_str "vendor/highlight.js/styles/solarized-dark.css")
+
+/-- The default highlight.js theme paired with a built-in `reveal.js` theme. -/
+public def forRevealTheme (name : String) : HighlightTheme :=
+  match name with
+  | "black" | "black-contrast" | "blood" | "dracula"
+  | "league" | "moon" | "night" => monokai
+  | "solarized" => solarizedLight
+  | "white" | "white-contrast" | "beige"
+  | "serif" | "simple" | "sky" => github
+  | _ => monokai
+
+end HighlightTheme
+
+public instance : Inhabited HighlightTheme := ⟨.monokai⟩
+
+end VersoSlides

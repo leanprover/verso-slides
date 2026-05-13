@@ -759,6 +759,51 @@ resolution). For a single file, use `include_bin` directly:
 { filename := "my-theme/logo.png", contents := include_bin "logo.png" }
 ```
 
+## Syntax Highlighting Theme
+
+Non-Lean code blocks are highlighted at presentation time by the
+`reveal.js` plugin that uses `highlight.js` plugin. The `highlight.js`
+theme, which is a CSS file, is configurable via
+`Config.highlightTheme`.
+
+The following themes are bundled:
+
+- `monokai` (dark) — default for the dark `reveal.js` themes
+- `github` (light) — default for the light `reveal.js` themes
+- `githubDark`
+- `atomOneLight`, `.atomOneDark`
+- `tomorrow`
+- `solarizedLight` — default for the `solarized` `reveal.js` theme
+- `solarizedDark`
+
+The default is chosen automatically from the theme: dark `reveal.js`
+themes use `monokai`, light themes use `github`, and `solarized` uses
+`solarizedLight`. This default can be overridden:
+
+```
+def main : IO UInt32 :=
+  slidesMain
+    (config := { theme := "white", highlightTheme := .githubDark })
+    (doc := %doc MyPresentation)
+```
+
+Supply your own stylesheet by passing a `CssFile`:
+
+```
+def myHighlight : HighlightTheme where
+  filename := "lib/my-hl.css"
+  contents := ⟨include_str "my-hl.css"⟩
+
+def main : IO UInt32 :=
+  slidesMain
+    (config := { highlightTheme := myHighlight })
+    (doc := %doc MyPresentation)
+```
+
+A `CustomTheme` may also ship a `highlight.js` theme. An explicit
+`Config.highlightTheme` always wins over the highlighted theme
+specified by the `reveal.js` theme.
+
 ## Custom CSS
 
 To layer additional CSS on top of a theme — tweaking colors, adding
