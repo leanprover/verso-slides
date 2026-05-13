@@ -138,6 +138,13 @@
         var overlay = document.createElement("div");
         overlay.className = "r-overlay r-overlay-lean-hover";
 
+        // Propagate the active slide's light/dark tag to the overlay so the
+        // light-mode Lean token palette in slides-highlight.css applies here.
+        var currentSlide = Reveal.getCurrentSlide();
+        if (currentSlide && currentSlide.classList.contains("slide-light-bg")) {
+            overlay.classList.add("slide-light-bg");
+        }
+
         var viewport = document.createElement("div");
         viewport.className = "r-overlay-viewport";
 
