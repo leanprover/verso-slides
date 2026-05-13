@@ -479,7 +479,7 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
       <link rel="stylesheet" href={{s!"{revealBase}/dist/reset.css"}} />
       <link rel="stylesheet" href={{s!"{revealBase}/dist/reveal.css"}} />
       <link rel="stylesheet" href={{themeHref}} />
-      <link rel="stylesheet" href={{s!"{revealBase}/plugin/highlight/monokai.css"}} />
+      <link rel="stylesheet" href={{config.highlightTheme.filename}} />
       {{extraCssLinks}}
       <link rel="stylesheet" href={{s!"{libPrefix}/highlighting.css"}} />
       <link rel="stylesheet" href={{s!"{libPrefix}/tippy-border.css"}} />
@@ -554,7 +554,6 @@ def writeVendoredAssets (outputDir : System.FilePath) (theme : Theme) : IO Unit 
   -- Plugins
   writeFileWithDirs (revealDir / "plugin" / "notes" / "notes.js") Vendor.notesJs
   writeFileWithDirs (revealDir / "plugin" / "highlight" / "highlight.js") Vendor.highlightJs
-  writeFileWithDirs (revealDir / "plugin" / "highlight" / "monokai.css") Vendor.monokaiCss
   -- Marked
   writeFileWithDirs (libDir / "marked.min.js") Vendor.markedJs
   -- KaTeX
@@ -649,6 +648,8 @@ def Config.collectAssets (config : Config) :
     for asset in theme.assets do
       seen ← recordAsset seen asset.filename
         "theme asset" (.binary asset.contents)
+  seen ← recordAsset seen config.highlightTheme.filename
+    "highlight.js theme" (.text config.highlightTheme.contents.css)
   for css in config.extraCss do
     seen ← recordAsset seen css.filename
       "extraCss" (.text css.contents.css)

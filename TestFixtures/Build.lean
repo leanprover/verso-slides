@@ -33,6 +33,11 @@ def themeFixtureExtra : CssFile where
   filename := "css/extra.css"
   contents := ⟨include_str "theme-extra.css"⟩
 
+/-- A user-supplied highlight.js stylesheet written at a subpath. -/
+def hlCustomCss : HighlightTheme where
+  filename := "hl/my-hl.css"
+  contents := ⟨".hljs { background: #abcdef; }\n"⟩
+
 def main : IO UInt32 := do
   let rc ← slidesMain
     { theme := "black", outputDir := "_test/markup", extraCss := #[markupBannerCss]
@@ -51,6 +56,21 @@ def main : IO UInt32 := do
     { theme := .custom themeFixtureTheme, outputDir := "_test/theme",
       extraCss := #[themeFixtureExtra] }
     (%doc TestFixtures.Theme)
+  if rc != 0 then return rc
+  -- Three minimal slideshows exercising the highlight.js theme field: default
+  -- (paired with `theme := "white"`), explicit bundled override, and a
+  -- user-supplied CssFile at a subpath. Drives `test_highlight_theme.py`.
+  let rc ← slidesMain
+    { theme := "white", outputDir := "_test/hl-default" }
+    (%doc TestFixtures.MinimalThemed)
+  if rc != 0 then return rc
+  let rc ← slidesMain
+    { theme := "white", highlightTheme := .githubDark, outputDir := "_test/hl-builtin" }
+    (%doc TestFixtures.MinimalThemed)
+  if rc != 0 then return rc
+  let rc ← slidesMain
+    { theme := "black", highlightTheme := hlCustomCss, outputDir := "_test/hl-custom" }
+    (%doc TestFixtures.MinimalThemed)
   if rc != 0 then return rc
   -- One minimal deck per built-in theme: drives `test_offline_themes.py`,
   -- which loads each of these with all non-local network blocked.

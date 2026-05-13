@@ -1,9 +1,10 @@
 This directory contains "vendored" dependencies, redistributed according to
-their licenses (all MIT).
+their licenses.
 
 They are:
-- reveal.js 5.1.0 - https://github.com/hakimel/reveal.js
-- marked 11.1.1 - https://github.com/markedjs/marked
+- reveal.js 5.1.0 - https://github.com/hakimel/reveal.js (MIT)
+- marked 11.1.1 - https://github.com/markedjs/marked (MIT)
+- highlight.js (selected theme stylesheets) - https://github.com/highlightjs/highlight.js (BSD-3-Clause)
 
 KaTeX is also used but is vendored by Verso (the upstream dependency) rather
 than by this project directly.
