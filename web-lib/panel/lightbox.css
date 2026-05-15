@@ -28,6 +28,16 @@ code.hl.lean.inline [data-verso-hover] {
     border-radius: 6px;
     overflow-y: auto;
     overflow-x: hidden;
+    /* `.r-overlay` is reveal.js' image lightbox class and forces a black
+       background. We follow the active reveal theme instead. */
+    background: var(--r-background-color);
+    color: var(--r-main-color);
+}
+
+/* Don't let r-overlay's dark default leak through the content wrapper either. */
+.r-overlay-lean-hover .r-overlay-content {
+    background: transparent;
+    color: inherit;
 }
 
 /* Viewport: content-sized, no absolute positioning or padding gap */

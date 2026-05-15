@@ -157,3 +157,10 @@ fn main() {
     }
 }
 ```
+
+# Light Inline Lean
+%%%
+backgroundColor := some "#f5f5f5"
+%%%
+
+{lean}`hello` on a light slide.

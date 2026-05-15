@@ -65,8 +65,11 @@
     --verso-code-var-color: #56d4c0;
     --verso-code-comment-color: #9da0a8;
 }
-/* Light slides — set per-section by code-block-bg.js */
-.reveal section.slide-light-bg {
+/* Light slides — set per-section by code-block-bg.js. The lean-hover overlay
+   gets the same class copied onto it by lightbox.js so token colors stay
+   readable on light themes. */
+.reveal section.slide-light-bg,
+.reveal .r-overlay-lean-hover.slide-light-bg {
     --verso-code-keyword-color: #8839a0;
     --verso-code-const-color: #1a5fb4;
     --verso-code-var-color: #1a7a6a;
