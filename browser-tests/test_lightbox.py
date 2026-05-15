@@ -1,7 +1,7 @@
 """Browser tests for the inline Lean term lightbox overlay."""
 
 from playwright.sync_api import expect, Page
-from conftest import wait_for_reveal_ready
+from conftest import goto_slide_by_title, wait_for_reveal_ready
 
 
 class TestLightboxOpen:
@@ -135,14 +135,16 @@ class TestLightboxThemeColors:
     """The lightbox must follow the slide theme rather than r-overlay's hardcoded dark."""
 
     def _click_first_token(self, page: Page):
-        token = page.locator("code.hl.lean.inline [data-verso-hover]").first
+        """Click within the active slide — multiple slides have inline tokens,
+        and clicking an off-screen one would fail with 'outside the viewport'."""
+        active = page.locator("section.present")
+        token = active.locator("code.hl.lean.inline [data-verso-hover]").first
         token.click()
         page.wait_for_timeout(500)
 
     def test_dark_slide_no_light_bg_class(self, code_url: str, page: Page):
         """Dark slide (default in this fixture): overlay must NOT get slide-light-bg."""
-        page.goto(f"{code_url}/index.html#/3")
-        wait_for_reveal_ready(page)
+        goto_slide_by_title(page, code_url, "Inline Lean")
         self._click_first_token(page)
 
         overlay = page.locator(".r-overlay-lean-hover")
@@ -156,8 +158,7 @@ class TestLightboxThemeColors:
         a dark grey (#191919) rather than pure black. The bug being fixed was
         r-overlay forcing #000 regardless of theme.
         """
-        page.goto(f"{code_url}/index.html#/3")
-        wait_for_reveal_ready(page)
+        goto_slide_by_title(page, code_url, "Inline Lean")
         self._click_first_token(page)
 
         overlay = page.locator(".r-overlay-lean-hover")
@@ -168,12 +169,11 @@ class TestLightboxThemeColors:
     def test_light_slide_copies_light_bg_class(self, code_url: str, page: Page):
         """Light slide: overlay must inherit slide-light-bg from the active section.
 
-        Slide /4 ("Light Inline Lean") has backgroundColor "#f5f5f5", which
+        The "Light Inline Lean" slide has backgroundColor "#f5f5f5", which
         code-block-bg.js tags with .slide-light-bg. lightbox.js copies that
         onto the overlay so the light Lean token palette applies.
         """
-        page.goto(f"{code_url}/index.html#/4")
-        wait_for_reveal_ready(page)
+        goto_slide_by_title(page, code_url, "Light Inline Lean")
 
         # Sanity check: the active section actually got tagged as light.
         active_section = page.locator("section.present").first
@@ -189,8 +189,7 @@ class TestLightboxThemeColors:
 
     def test_light_slide_token_palette_applied(self, code_url: str, page: Page):
         """With slide-light-bg on the overlay, --verso-code-keyword-color uses the light palette."""
-        page.goto(f"{code_url}/index.html#/4")
-        wait_for_reveal_ready(page)
+        goto_slide_by_title(page, code_url, "Light Inline Lean")
         self._click_first_token(page)
 
         overlay = page.locator(".r-overlay-lean-hover")

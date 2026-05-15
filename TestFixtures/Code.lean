@@ -46,13 +46,6 @@ theorem and_comm_ex (p q : Prop) (h : p ∧ q) : q ∧ p := by
 The function {lean}`hello` was defined above.
 Also try {lean}`Nat.add`.
 
-# Light Inline Lean
-%%%
-backgroundColor := some "#f5f5f5"
-%%%
-
-{lean}`hello` opens its lightbox on a light slide.
-
 # Fragment Effects
 
 ```lean
@@ -164,3 +157,10 @@ fn main() {
     }
 }
 ```
+
+# Light Inline Lean
+%%%
+backgroundColor := some "#f5f5f5"
+%%%
+
+{lean}`hello` on a light slide.
