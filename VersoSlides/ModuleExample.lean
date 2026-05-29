@@ -44,6 +44,7 @@ structure ModuleConfig where
   error : Bool := false
   «show» : Bool := true
   panel : Bool := true
+  stretch : Bool := true
   lakefile : Bool := false
 
 section
@@ -51,7 +52,7 @@ section
 variable [Monad m] [MonadError m]
 
 instance : FromArgs ModuleConfig m where
-  fromArgs := ModuleConfig.mk <$> .named' `name true <*> .named' `moduleName true <*> .flag `error false <*> .flag `show true <*> .flag `panel true <*> .flag `lakefile false
+  fromArgs := ModuleConfig.mk <$> .named' `name true <*> .named' `moduleName true <*> .flag `error false <*> .flag `show true <*> .flag `panel true <*> .flag `stretch true <*> .flag `lakefile false
 
 end
 
@@ -107,7 +108,7 @@ def lineStx [Monad m] [MonadFileMap m] (l : Nat) : m Syntax := do
 open Lean.Doc.Syntax in
 @[code_block]
 def leanModule : CodeBlockExpanderOf ModuleConfig
-  | { name, moduleName, error, «show», panel, lakefile }, str => do
+  | { name, moduleName, error, «show», panel, stretch, lakefile }, str => do
     let line := (← getFileMap).utf8PosToLspPos str.raw.getPos! |>.line
     let leanCode := line.fold (fun _ _ s => s.push '\n') "" ++ str.getString ++ "\n"
     let hl ← IO.FS.withTempDir fun dirname => do
@@ -206,7 +207,7 @@ def leanModule : CodeBlockExpanderOf ModuleConfig
       match fragmentize hl.trim with
       | .ok sc =>
         let exported := scToExport sc
-        ``(Verso.Doc.Block.other (VersoSlides.BlockExt.slideCode $(quote exported) $(quote panel))
+        ``(Verso.Doc.Block.other (VersoSlides.BlockExt.slideCode $(quote exported) $(quote panel) $(quote stretch))
             #[Verso.Doc.Block.code $(quote str.getString)])
       | .error msg =>
         throwErrorAt str.raw msg
@@ -445,7 +446,7 @@ def leanModules : DirectiveExpanderOf ModulesConfig
             | .ok sc =>
               let exported := scToExport sc
               ``((Verso.Doc.Block.other
-                  (VersoSlides.BlockExt.slideCode $(quote exported) $(quote modConfig.panel))
+                  (VersoSlides.BlockExt.slideCode $(quote exported) $(quote modConfig.panel) $(quote modConfig.stretch))
                   #[Verso.Doc.Block.code $(quote s.getString)] : Verso.Doc.Block Slides))
             | .error msg =>
               throwErrorAt blame msg

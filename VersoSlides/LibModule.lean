@@ -49,6 +49,8 @@ structure LibModuleConfig where
   endLine : Option Nat := none
   /-- Whether to show the interactive info panel below the slide. -/
   panel : Bool := true
+  /-- Whether the code box fills the remaining vertical space on the slide. -/
+  stretch : Bool := true
 
 section
 
@@ -63,6 +65,7 @@ instance : FromArgs LibModuleConfig m where
       <*> .named `startLine .nat true
       <*> .named `endLine .nat true
       <*> .flag `panel true
+      <*> .flag `stretch true
 end
 
 /-- Cached extracted module JSON, keyed by fully-qualified module name. -/
@@ -477,7 +480,8 @@ def leanLibCode : CodeBlockExpanderOf LibModuleConfig
                 cfg.package.map (s!"(package := {·.getId})"),
                 some s!"(startLine := {newSl})",
                 some s!"(endLine := {newEl})",
-                if !cfg.panel then some "-panel" else none
+                if !cfg.panel then some "-panel" else none,
+                if !cfg.stretch then some "-stretch" else none
               ]
               editCodeBlock ref (some (" ".intercalate (newArgs.filterMap id))) newContents
             else pure none
@@ -499,7 +503,7 @@ def leanLibCode : CodeBlockExpanderOf LibModuleConfig
     | .ok sc =>
       let exported := scToExport sc
       ``(Verso.Doc.Block.other
-           (VersoSlides.BlockExt.slideCode $(quote exported) $(quote cfg.panel))
+           (VersoSlides.BlockExt.slideCode $(quote exported) $(quote cfg.panel) $(quote cfg.stretch))
            #[Verso.Doc.Block.code $(quote str.getString)])
     | .error msg =>
       throwErrorAt str.raw msg

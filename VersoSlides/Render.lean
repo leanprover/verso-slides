@@ -112,10 +112,14 @@ instance [Monad m] : GenreHtml Slides m where
     | .wrap attrs =>
       let inner ← contents.mapM blockHtml
       pure (.tag "div" attrs (.seq inner))
-    | .slideCode scExport panel =>
+    | .slideCode scExport panel stretch =>
       let sc := scFromExport! scExport
       let codeHtml ← pure {{ <code class="hl lean block"> {{ ← sc.toHtml (g := Slides) }} </code> }}
-      pure (wrapWithPanel codeHtml panel)
+      let wrapped := wrapWithPanel codeHtml panel
+      -- When stretched, add reveal.js's `r-stretch` class to the outermost element
+      -- (the `.code-with-panel` div, or the bare `<code>`) so it fills the slide's
+      -- remaining vertical space. `addClassToHtml` only touches the top-level tag.
+      pure (if stretch then addClassToHtml "r-stretch" wrapped else wrapped)
     | .leanCode hlExport panel =>
       let hl := (hlFromExport! hlExport).trim
       let codeHtml ← match fragmentize hl with

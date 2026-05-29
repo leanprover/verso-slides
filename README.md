@@ -400,6 +400,29 @@ Instead of hovers, information about code is revealed on click. This
 is to allow the presenter to point using the mouse without hover boxes
 popping up over content.
 
+### Code Box Sizing
+
+By default, a code box fills the remaining vertical space on its slide.
+This uses `reveal.js`'s `r-stretch` mechanism. Code shorter than the
+available space sits at the top of the box; code taller than the
+available space scrolls within the box. Pass the `-stretch` flag to opt
+out, sizing the box to its content instead:
+
+````
+```lean -stretch
+def answer : Nat := 42
+```
+````
+
+`reveal.js` can only stretch one element per slide. If a slide has more
+than one code box, add `-stretch` to all but one of them; otherwise the
+heights are computed incorrectly. (The standalone `:::stretch` directive,
+documented above, applies the same mechanism to arbitrary content such
+as images.)
+
+The `stretch` flag is available on `lean`, `leanModule`, and
+`leanLibCode` code blocks.
+
 ### Tips
 
 Use the `-show` flag to include Lean code that is not rendered. This
@@ -549,6 +572,10 @@ Arguments:
 - `panel`: a flag that determines whether to show the interactive info
   panel under the slide (default `true`). Disable with `-panel`;
   re-enable explicitly with `+panel`.
+- `stretch`: a flag that determines whether the code box fills the
+  remaining vertical space on the slide (default `true`). Disable with
+  `-stretch` to size the box to its content. See [Code Box
+  Sizing](#code-box-sizing).
 
 Omitting `decl` and the line range shows the entire module.
 

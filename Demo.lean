@@ -50,10 +50,34 @@ def hello : IO Unit := do
   IO.println "Hello from VersoSlides!"
 ```
 
-```lean
+```lean -stretch
 #check hello
 ```
 And some inline {lean}`hello` for good measure. {lean}`Unit`
+
+# Stretched Code Fills the Slide
+
+```lean
+def answer : Nat := 42
+```
+
+# Text Above Stretched Code
+
+A short paragraph of explanation sits above the code box. The box
+stretches to fill whatever vertical space is left below this text.
+
+```lean
+def double (n : Nat) : Nat := n + n
+```
+
+# Unstretched Code Sizes to Content
+
+Passing `-stretch` opts out of filling, so the box is only as tall as
+the code it contains:
+
+```lean -stretch
+def triple (n : Nat) : Nat := n + n + n
+```
 
 # Code on Light Background
 %%%
@@ -230,12 +254,12 @@ lean_lib MiniRadix
 # Multi-Module Examples
 
 :::leanModules (moduleRoot := Lib)
-```leanModule (moduleName := Lib.A)
+```leanModule (moduleName := Lib.A) -stretch
 module
 public def x : Nat := 1
 def y : Nat := 2
 ```
-```leanModule (moduleName := Lib.B)
+```leanModule (moduleName := Lib.B) -stretch
 module
 import Lib.A
 def z := x
@@ -248,7 +272,7 @@ def x' := y
 # Multi-Module Examples with Lakefiles
 
 :::leanModules
-```leanModule +lakefile
+```leanModule +lakefile -stretch
 import Lake
 open Lake DSL
 
@@ -256,7 +280,7 @@ package p
 
 lean_lib A
 ```
-```leanModule (moduleName := A)
+```leanModule (moduleName := A) -stretch
 def x := "Module A!"
 ```
 We can refer to {name}`x`.
@@ -275,7 +299,7 @@ public meta def withNl (s : String) : String := if s.endsWith "\n" then s else s
 
 Or a specific line range:
 
-```leanLibCode Verso.Code.External (package := verso) (startLine := 77) (endLine := 77)
+```leanLibCode Verso.Code.External (package := verso) (startLine := 77) (endLine := 77) -stretch
 public meta def withNl (s : String) : String := if s.endsWith "\n" then s else s ++ "\n"
 ```
 

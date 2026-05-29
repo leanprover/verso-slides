@@ -12,6 +12,17 @@
     max-width: 95%;
     overflow-x: auto;
 }
+/* Stretched (default) bare code box: reveal.js sets an explicit inline height
+   so the box fills the slide's remaining vertical space. reveal also sets an
+   inline full width, so restore the centered 95% with !important (a stylesheet
+   !important beats a non-important inline declaration). Tall code scrolls. */
+.reveal code.hl.lean.block.r-stretch {
+    width: 95% !important;
+    max-width: 95% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    overflow-y: auto;
+}
 .reveal code.hl.lean.inline {
     font-size: 0.9em;
     background: rgba(0, 0, 0, 0.25);

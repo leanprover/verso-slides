@@ -17,8 +17,20 @@ def hello : IO Unit := do
   IO.println "Hello from VersoSlides!"
 ```
 
-```lean
+```lean -stretch
 #check hello
+```
+
+# Stretch Default
+
+```lean
+def stretchedDef : Nat := 1
+```
+
+# Stretch Off
+
+```lean -stretch
+def unstretchedDef : Nat := 1
 ```
 
 # Light Code
