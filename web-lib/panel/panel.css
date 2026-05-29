@@ -8,6 +8,22 @@
     margin: 0.5em auto;
 }
 
+/* Stretched (default) panel: reveal.js sets an explicit inline height on the
+   grid container. Make the single row fill that height (minmax(0, 1fr) so it
+   can also shrink) and restore the centered 95% width over reveal's inline
+   full width. The grid's align-items: stretch fills the code and panel cells. */
+.code-with-panel.r-stretch {
+    grid-template-rows: minmax(0, 1fr);
+    width: 95% !important;
+    max-width: 95% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+.code-with-panel.r-stretch > code.hl.lean.block {
+    min-height: 0;
+    overflow-y: auto;
+}
+
 /* Code block inside panel — override standalone margins/shadow */
 .code-with-panel > code.hl.lean.block {
     margin: 0;

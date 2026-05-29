@@ -1,17 +1,16 @@
 """Browser tests for the inline Lean term lightbox overlay."""
 
 from playwright.sync_api import expect, Page
-from conftest import goto_slide_by_title, wait_for_reveal_ready
+from conftest import goto_slide_by_title
 
 
 class TestLightboxOpen:
     def test_click_inline_token_opens_lightbox(self, code_url: str, page: Page):
         """Clicking a data-verso-hover token in inline code should open a lightbox."""
-        page.goto(f"{code_url}/index.html#/3")
-        wait_for_reveal_ready(page)
+        slide = goto_slide_by_title(page, code_url, "Inline Lean")
 
         # Find an inline lean code element
-        inline = page.locator("code.hl.lean.inline").first
+        inline = slide.locator("code.hl.lean.inline").first
         expect(inline).to_be_visible()
 
         # Click a token with hover data inside it
@@ -26,10 +25,9 @@ class TestLightboxOpen:
 
     def test_lightbox_has_content(self, code_url: str, page: Page):
         """The lightbox should contain hover information."""
-        page.goto(f"{code_url}/index.html#/3")
-        wait_for_reveal_ready(page)
+        slide = goto_slide_by_title(page, code_url, "Inline Lean")
 
-        token = page.locator("code.hl.lean.inline [data-verso-hover]").first
+        token = slide.locator("code.hl.lean.inline [data-verso-hover]").first
         token.click()
         page.wait_for_timeout(500)
 
@@ -39,10 +37,9 @@ class TestLightboxOpen:
 
     def test_lightbox_monospace_font(self, code_url: str, page: Page):
         """Lightbox content should use a monospace font."""
-        page.goto(f"{code_url}/index.html#/3")
-        wait_for_reveal_ready(page)
+        slide = goto_slide_by_title(page, code_url, "Inline Lean")
 
-        token = page.locator("code.hl.lean.inline [data-verso-hover]").first
+        token = slide.locator("code.hl.lean.inline [data-verso-hover]").first
         token.click()
         page.wait_for_timeout(500)
 
@@ -54,9 +51,8 @@ class TestLightboxOpen:
 class TestLightboxClose:
     def _open_lightbox(self, page: Page, code_url: str):
         """Helper to navigate and open a lightbox."""
-        page.goto(f"{code_url}/index.html#/3")
-        wait_for_reveal_ready(page)
-        token = page.locator("code.hl.lean.inline [data-verso-hover]").first
+        slide = goto_slide_by_title(page, code_url, "Inline Lean")
+        token = slide.locator("code.hl.lean.inline [data-verso-hover]").first
         token.click()
         page.wait_for_timeout(500)
         expect(page.locator(".r-overlay-lean-hover")).to_be_visible()
@@ -102,10 +98,9 @@ class TestLightboxClose:
 class TestLightboxSizing:
     def test_lightbox_width(self, code_url: str, page: Page):
         """Lightbox should be 75% of the slide width."""
-        page.goto(f"{code_url}/index.html#/3")
-        wait_for_reveal_ready(page)
+        slide = goto_slide_by_title(page, code_url, "Inline Lean")
 
-        token = page.locator("code.hl.lean.inline [data-verso-hover]").first
+        token = slide.locator("code.hl.lean.inline [data-verso-hover]").first
         token.click()
         page.wait_for_timeout(500)
 
@@ -119,10 +114,9 @@ class TestLightboxSizing:
 
     def test_lightbox_scrollable_when_tall(self, code_url: str, page: Page):
         """Lightbox with overflow-y: auto should allow scrolling if content is tall."""
-        page.goto(f"{code_url}/index.html#/3")
-        wait_for_reveal_ready(page)
+        slide = goto_slide_by_title(page, code_url, "Inline Lean")
 
-        token = page.locator("code.hl.lean.inline [data-verso-hover]").first
+        token = slide.locator("code.hl.lean.inline [data-verso-hover]").first
         token.click()
         page.wait_for_timeout(500)
 
@@ -205,10 +199,9 @@ class TestLightboxThemeColors:
 class TestTippySuppression:
     def test_no_tippy_on_inline_code(self, code_url: str, page: Page):
         """Hovering an inline Lean token should not create a Tippy tooltip."""
-        page.goto(f"{code_url}/index.html#/3")
-        wait_for_reveal_ready(page)
+        slide = goto_slide_by_title(page, code_url, "Inline Lean")
 
-        token = page.locator("code.hl.lean.inline [data-verso-hover]").first
+        token = slide.locator("code.hl.lean.inline [data-verso-hover]").first
         expect(token).to_be_visible()
         token.hover()
         page.wait_for_timeout(500)

@@ -1,16 +1,15 @@
 """Browser tests for fragment effects on code blocks."""
 
 from playwright.sync_api import expect, Page
-from conftest import wait_for_reveal_ready
+from conftest import goto_slide_by_title
 
 
 class TestFragmentTransform:
     def test_span_fragment_inline_block(self, code_url: str, page: Page):
         """Span fragments inside code should have display: inline-block for transforms."""
-        page.goto(f"{code_url}/index.html#/4")
-        wait_for_reveal_ready(page)
+        slide = goto_slide_by_title(page, code_url, "Fragment Effects")
 
-        span_frag = page.locator("code.hl.lean.block span.fragment").first
+        span_frag = slide.locator("code.hl.lean.block span.fragment").first
         if span_frag.count() == 0:
             return  # skip if no span fragments
 
@@ -19,10 +18,9 @@ class TestFragmentTransform:
 
     def test_div_fragment_not_inline_block(self, code_url: str, page: Page):
         """Div fragments inside code should NOT be inline-block (preserves line structure)."""
-        page.goto(f"{code_url}/index.html#/4")
-        wait_for_reveal_ready(page)
+        slide = goto_slide_by_title(page, code_url, "Fragment Effects")
 
-        div_frag = page.locator("code.hl.lean.block div.fragment").first
+        div_frag = slide.locator("code.hl.lean.block div.fragment").first
         if div_frag.count() == 0:
             return  # skip if no div fragments
 
@@ -31,11 +29,10 @@ class TestFragmentTransform:
 
     def test_grow_fragment_scales(self, code_url: str, page: Page):
         """A visible .fragment.grow should have a scale transform."""
-        page.goto(f"{code_url}/index.html#/4")
-        wait_for_reveal_ready(page)
+        slide = goto_slide_by_title(page, code_url, "Fragment Effects")
 
         # Advance fragments to make the grow fragment visible
-        grow = page.locator(".fragment.grow").first
+        grow = slide.locator(".fragment.grow").first
         if grow.count() == 0:
             return
 
@@ -58,10 +55,9 @@ class TestFragmentTransform:
 class TestFragmentColor:
     def test_highlight_current_red_changes_token_color(self, code_url: str, page: Page):
         """A .fragment.highlight-current-red.current-fragment should override token colors."""
-        page.goto(f"{code_url}/index.html#/4")
-        wait_for_reveal_ready(page)
+        slide = goto_slide_by_title(page, code_url, "Fragment Effects")
 
-        red_frag = page.locator(".fragment.highlight-current-red").first
+        red_frag = slide.locator(".fragment.highlight-current-red").first
         if red_frag.count() == 0:
             return
 
@@ -89,10 +85,9 @@ class TestFragmentColor:
 
     def test_token_color_inherits_from_fragment(self, code_url: str, page: Page):
         """When a color fragment is active, descendant tokens should use color: inherit."""
-        page.goto(f"{code_url}/index.html#/4")
-        wait_for_reveal_ready(page)
+        slide = goto_slide_by_title(page, code_url, "Fragment Effects")
 
-        red_frag = page.locator(".fragment.highlight-current-red").first
+        red_frag = slide.locator(".fragment.highlight-current-red").first
         if red_frag.count() == 0:
             return
 

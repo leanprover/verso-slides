@@ -272,8 +272,12 @@ public inductive BlockExt where
   | wrap (attrs : Array (String × String))
   /-- Elaborated Lean code block with syntax highlighting (fallback when fragmentize fails). -/
   | leanCode (hlExport : String) (panel : Bool)
-  /-- Fragmentized Lean code block, serialized via {lit}`ExportSlideCode`. -/
-  | slideCode (scExport : String) (panel : Bool)
+  /-- Fragmentized Lean code block, serialized via {lit}`ExportSlideCode`.
+
+  When {name}`stretch` is {name}`true` (the default), the rendered box carries
+  reveal.js's {lit}`r-stretch` class so it fills the remaining vertical space on
+  the slide; otherwise it is sized to its content. -/
+  | slideCode (scExport : String) (panel : Bool) (stretch : Bool)
   /-- Non-Lean code block with a language tag for highlight.js. -/
   | otherLanguage (language : String) (code : String)
   /-- Custom CSS block to be injected into the page header. -/
