@@ -5,12 +5,16 @@ from playwright.sync_api import Page
 from conftest import goto_slide_by_title
 
 
-def _block_in_section(doc: BeautifulSoup, title: str):
-    """Return the first code.hl.lean.block inside the slide with the given title."""
+def _code_box_in_section(doc: BeautifulSoup, title: str):
+    """Return the outermost code-box element on the slide with the given title.
+
+    With the info panel on (the default), the stretch class lands on the
+    ``.code-with-panel`` wrapper; without it, on the bare ``code.hl.lean.block``.
+    """
     for s in doc.select("section"):
         h = s.select_one("h1, h2, h3")
         if h and h.get_text().strip() == title:
-            return s.select_one("code.hl.lean.block")
+            return s.select_one(".code-with-panel") or s.select_one("code.hl.lean.block")
     return None
 
 
@@ -59,15 +63,15 @@ class TestCodeBlocks:
 
     def test_stretch_default_has_class(self, code_doc: BeautifulSoup):
         """A code box defaults to filling vertical space (carries r-stretch)."""
-        block = _block_in_section(code_doc, "Stretch Default")
-        assert block is not None, "Stretch Default slide not found"
-        assert "r-stretch" in block.get("class", [])
+        box = _code_box_in_section(code_doc, "Stretch Default")
+        assert box is not None, "Stretch Default slide not found"
+        assert "r-stretch" in box.get("class", [])
 
     def test_stretch_off_omits_class(self, code_doc: BeautifulSoup):
         """The -stretch flag opts out, so the box is content-sized (no r-stretch)."""
-        block = _block_in_section(code_doc, "Stretch Off")
-        assert block is not None, "Stretch Off slide not found"
-        assert "r-stretch" not in block.get("class", [])
+        box = _code_box_in_section(code_doc, "Stretch Off")
+        assert box is not None, "Stretch Off slide not found"
+        assert "r-stretch" not in box.get("class", [])
 
     def test_error_block_renders(self, code_doc: BeautifulSoup):
         """A code block with +error should render with error diagnostics as warnings."""

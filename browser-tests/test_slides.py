@@ -43,8 +43,14 @@ class TestSlideStructure:
         slides_div = markup_doc.select_one("div.slides")
         top_sections = slides_div.find_all("section", recursive=False)
 
-        # Second section (index 1) is "Vertical Section"
-        vertical_section = top_sections[1]
+        # Locate the "Vertical Section" group by its heading rather than by position.
+        vertical_section = None
+        for sec in top_sections:
+            heading = sec.find(["h1", "h2"])
+            if heading and heading.get_text(strip=True) == "Vertical Section":
+                vertical_section = sec
+                break
+        assert vertical_section is not None, "Vertical Section slide not found"
         inner_sections = vertical_section.find_all("section", recursive=False)
         assert len(inner_sections) == 3  # implicit first + Sub A + Sub B
 
