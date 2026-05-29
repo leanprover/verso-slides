@@ -7,7 +7,7 @@ import Lake
 
 open System Lake DSL
 
-require verso from git "https://github.com/leanprover/verso.git"@"main"
+require verso from git "https://github.com/leanprover/verso.git"@"v4.30.0"
 require illuminate from git "https://github.com/leanprover/illuminate.git"@"main"
 
 package «verso-slides» where
