@@ -90,7 +90,7 @@ private def wrapWithPanel (codeHtml : Html) (panel : Bool) : Html :=
        </div> }}
   else codeHtml
 
-instance [Monad m] : GenreHtml Slides m where
+instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
   part partHtml _metadata contents := partHtml contents
   block _inlineHtml blockHtml container contents := do
     match container with
@@ -230,7 +230,7 @@ instance [Monad m] : GenreHtml Slides m where
           match st.imageFiles[resolved]? with
           | some outputName => pure s!"images/{outputName}"
           | none =>
-            HtmlT.logError s!"internal error: image '{resolved}' was not collected during traversal"
+            reportError s!"internal error: image '{resolved}' was not collected during traversal"
             pure resolved
         | .remote url => pure url
       let mut attrs := #[("src", imgSrc), ("alt", alt)]
@@ -674,15 +674,17 @@ def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := do
   -- Validate the config and build the deduplicated asset plan up-front so
   -- any filename collision fails before we start writing files.
   let assetPlan ← config.collectAssets
-  let hasError ← IO.mkRef false
-  let logError (msg : String) : IO Unit := do hasError.set true; IO.eprintln msg
+
+  -- A logger collects build errors; it both prints them and tracks them so we
+  -- can report a non-zero exit code at the end.
+  let logger ← Logger.new
 
   -- Run the traversal pass (collects CSS blocks, etc.)
   let (doc, traverseState) ← (Slides.traverse doc : TraverseM (Part Slides)) () {}
 
   -- Set up HtmlT context
-  let ctx : HtmlT.Context Slides IO := {
-    options := { logError := logError }
+  let ctx : HtmlT.Context Slides := {
+    options := {}
     traverseContext := ()
     traverseState := traverseState
     definitionIds := {}
@@ -690,8 +692,9 @@ def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := do
     codeOptions := {}
   }
 
-  -- Generate slide HTML
-  let (slidesHtml, hoverState) ← (renderDocument config doc).run ctx |>.run {}
+  -- Generate slide HTM
+  let render : HtmlT Slides (BuildLogT IO) Html := renderDocument config doc
+  let (slidesHtml, hoverState) ← render.run ctx |>.run {} |>.run logger
 
   -- Produce full HTML document
   let title := inlinesToPlainText doc.title
@@ -729,9 +732,6 @@ def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := do
 
   IO.println s!"Slides written to {indexPath}"
 
-  if ← hasError.get then
-    IO.eprintln "Errors were encountered!"
-    return 1
-  return 0
+  logger.failIfErrors
 
 end VersoSlides
