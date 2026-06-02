@@ -670,14 +670,10 @@ def Config.validateFilenames (config : Config) : IO Unit := do
   let _ ← config.collectAssets
 
 /-- Generates a {lit}`reveal.js` slide presentation from a Verso document. -/
-def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := do
+def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := runWithLogger do
   -- Validate the config and build the deduplicated asset plan up-front so
   -- any filename collision fails before we start writing files.
   let assetPlan ← config.collectAssets
-
-  -- A logger collects build errors; it both prints them and tracks them so we
-  -- can report a non-zero exit code at the end.
-  let logger ← Logger.new
 
   -- Run the traversal pass (collects CSS blocks, etc.)
   let (doc, traverseState) ← (Slides.traverse doc : TraverseM (Part Slides)) () {}
@@ -694,7 +690,7 @@ def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := do
 
   -- Generate slide HTML
   let render : HtmlT Slides (BuildLogT IO) Html := renderDocument config doc
-  let (slidesHtml, hoverState) ← render.run ctx |>.run {} |>.run logger
+  let (slidesHtml, hoverState) ← render.run ctx |>.run {}
 
   -- Produce full HTML document
   let title := inlinesToPlainText doc.title
@@ -731,7 +727,5 @@ def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := do
       writeBinFileWithDirs (imagesDir / outputName) contents
 
   IO.println s!"Slides written to {indexPath}"
-
-  logger.failIfErrors
 
 end VersoSlides
