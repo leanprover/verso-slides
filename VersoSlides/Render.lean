@@ -90,7 +90,7 @@ private def wrapWithPanel (codeHtml : Html) (panel : Bool) : Html :=
        </div> }}
   else codeHtml
 
-instance [Monad m] : GenreHtml Slides m where
+instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
   part partHtml _metadata contents := partHtml contents
   block _inlineHtml blockHtml container contents := do
     match container with
@@ -230,7 +230,7 @@ instance [Monad m] : GenreHtml Slides m where
           match st.imageFiles[resolved]? with
           | some outputName => pure s!"images/{outputName}"
           | none =>
-            HtmlT.logError s!"internal error: image '{resolved}' was not collected during traversal"
+            reportError s!"internal error: image '{resolved}' was not collected during traversal"
             pure resolved
         | .remote url => pure url
       let mut attrs := #[("src", imgSrc), ("alt", alt)]
@@ -670,19 +670,17 @@ def Config.validateFilenames (config : Config) : IO Unit := do
   let _ ← config.collectAssets
 
 /-- Generates a {lit}`reveal.js` slide presentation from a Verso document. -/
-def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := do
+def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := runWithLogger do
   -- Validate the config and build the deduplicated asset plan up-front so
   -- any filename collision fails before we start writing files.
   let assetPlan ← config.collectAssets
-  let hasError ← IO.mkRef false
-  let logError (msg : String) : IO Unit := do hasError.set true; IO.eprintln msg
 
   -- Run the traversal pass (collects CSS blocks, etc.)
   let (doc, traverseState) ← (Slides.traverse doc : TraverseM (Part Slides)) () {}
 
   -- Set up HtmlT context
-  let ctx : HtmlT.Context Slides IO := {
-    options := { logError := logError }
+  let ctx : HtmlT.Context Slides := {
+    options := {}
     traverseContext := ()
     traverseState := traverseState
     definitionIds := {}
@@ -691,7 +689,8 @@ def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := do
   }
 
   -- Generate slide HTML
-  let (slidesHtml, hoverState) ← (renderDocument config doc).run ctx |>.run {}
+  let render : HtmlT Slides (BuildLogT IO) Html := renderDocument config doc
+  let (slidesHtml, hoverState) ← render.run ctx |>.run {}
 
   -- Produce full HTML document
   let title := inlinesToPlainText doc.title
@@ -728,10 +727,5 @@ def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := do
       writeBinFileWithDirs (imagesDir / outputName) contents
 
   IO.println s!"Slides written to {indexPath}"
-
-  if ← hasError.get then
-    IO.eprintln "Errors were encountered!"
-    return 1
-  return 0
 
 end VersoSlides
