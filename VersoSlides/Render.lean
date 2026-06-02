@@ -692,7 +692,7 @@ def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := do
     codeOptions := {}
   }
 
-  -- Generate slide HTM
+  -- Generate slide HTML
   let render : HtmlT Slides (BuildLogT IO) Html := renderDocument config doc
   let (slidesHtml, hoverState) ← render.run ctx |>.run {} |>.run logger
 
