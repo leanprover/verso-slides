@@ -119,6 +119,15 @@ def code_doc(site_dir):
 
 
 @pytest.fixture(scope="session")
+def paneloption_doc(site_dir):
+    """Parse _test/paneloption/index.html with BeautifulSoup (panel-option fixture)."""
+    html_path = site_dir / "paneloption" / "index.html"
+    assert html_path.exists(), f"Panel-option fixture not found at {html_path}. Run 'lake exe test-fixtures-build' first."
+    with open(html_path) as f:
+        return BeautifulSoup(f.read(), "html.parser")
+
+
+@pytest.fixture(scope="session")
 def diagramanim_doc(site_dir):
     """Parse _test/diagramanim/index.html with BeautifulSoup (diagram/animation fixture)."""
     html_path = site_dir / "diagramanim" / "index.html"
@@ -174,6 +183,12 @@ def markup_url(server):
 def code_url(server):
     """Base URL for the code fixture."""
     return f"{server}/code"
+
+
+@pytest.fixture(scope="session")
+def paneloption_url(server):
+    """Base URL for the panel-option fixture."""
+    return f"{server}/paneloption"
 
 
 @pytest.fixture(scope="session")

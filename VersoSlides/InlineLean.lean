@@ -20,7 +20,22 @@ open Verso.Genre.Manual.InlineLean.Scopes (getScopes setScopes runWithOpenDecls 
 open Verso (withoutAsync)
 open Lean.Doc.Syntax
 
+register_option verso.slides.panel : Bool := {
+  defValue := true
+  descr := "default value for the `panel` flag on Lean code boxes, which determines whether to show the interactive info panel"
+}
+
 namespace VersoSlides
+
+/--
+An `ArgParse` parser for the `panel` flag shared by all code-box directives. Its default is taken
+from the `verso.slides.panel` option (which itself defaults to `true`), so a document can flip the
+default with `set_option verso.slides.panel false` while individual boxes still override it with
+`+panel`/`-panel`.
+-/
+def panelFlag [Monad m] [MonadOptions m] : Verso.ArgParse m Bool :=
+  .flagM `panel (return (← getOptions).getBool `verso.slides.panel true)
+    (doc? := "whether to show the interactive info panel below the code box (defaults to the value of the `verso.slides.panel` option)")
 
 /-- Syntax node kinds whose output should be rendered inline after the command. -/
 private def queryCommandKinds : Array SyntaxNodeKind :=
@@ -68,8 +83,12 @@ private structure SlidesLeanBlockConfig extends LeanBlockConfig where
   panel : Bool
   stretch : Bool
 
-instance : Verso.ArgParse.FromArgs SlidesLeanBlockConfig DocElabM where
-  fromArgs := SlidesLeanBlockConfig.mk <$> Verso.ArgParse.fromArgs <*> .flag `panel true <*> .flag `stretch true
+open Verso ArgParse in
+instance : FromArgs SlidesLeanBlockConfig DocElabM where
+  fromArgs := SlidesLeanBlockConfig.mk <$>
+    fromArgs <*>
+    panelFlag <*>
+    .flag `stretch true
 
 /-- Callback for `elabCommands`: produces a `Block.other (BlockExt.slideCode ...)` term. -/
 private def toSlidesHighlightedBlock (panel stretch shouldShow : Bool) (hls : Highlighted)

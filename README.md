@@ -423,6 +423,34 @@ to arbitrary content such as images.)
 The `stretch` flag is available on `lean`, `leanModule`, and
 `leanLibCode` code blocks.
 
+### Info Panel
+
+By default, each code box includes an interactive information panel.
+Clicking on part of the code reveals its type, proof state, and/or
+documentation in the panel. Pass the `-panel` flag to omit the panel
+from a single code box. If panels are disabled, use `+panel` to
+re-enable it.
+
+````
+```lean -panel
+def answer : Nat := 42
+```
+````
+
+To change the default for an entire slide show, set the
+`verso.slides.panel` option at the top of the file. It defaults to
+`true`:
+
+```lean
+set_option verso.slides.panel false
+
+#doc (Slides) "My Talk" =>
+...
+```
+
+The `panel` flag and the `verso.slides.panel` option apply to `lean`,
+`leanModule`, and `leanLibCode` code blocks.
+
 ### Tips
 
 Use the `-show` flag to include Lean code that is not rendered. This

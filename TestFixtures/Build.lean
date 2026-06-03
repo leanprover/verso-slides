@@ -7,6 +7,7 @@ import VersoSlides
 import VersoUtil.BinFiles
 import TestFixtures.Markup
 import TestFixtures.Code
+import TestFixtures.PanelOption
 import TestFixtures.DiagramAnim
 import TestFixtures.Theme
 import TestFixtures.MinimalThemed
@@ -47,6 +48,10 @@ def main : IO UInt32 := do
   let rc ← slidesMain
     { theme := "black", outputDir := "_test/code" }
     (%doc TestFixtures.Code)
+  if rc != 0 then return rc
+  let rc ← slidesMain
+    { theme := "black", outputDir := "_test/paneloption" }
+    (%doc TestFixtures.PanelOption)
   if rc != 0 then return rc
   let rc ← slidesMain
     { theme := "black", outputDir := "_test/diagramanim" }
