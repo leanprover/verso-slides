@@ -32,6 +32,24 @@ class TestPanelStructure:
         # The code block should contain the definition
         assert "noPanelDef" in code_block.inner_text()
 
+    def test_panel_option_default(self, paneloption_url: str, page: Page):
+        """set_option verso.slides.panel false drops the panel from flag-less
+        boxes, while +panel still opts an individual box back in."""
+        slide = goto_slide_by_title(page, paneloption_url, "Panel Off By Default")
+
+        # The flag-less box (optNoPanelDef) should have no panel wrapper.
+        no_panel = slide.locator(
+            ".code-with-panel", has=page.get_by_text("optNoPanelDef")
+        )
+        assert no_panel.count() == 0
+
+        # The +panel box (optPanelDef) should still be wrapped in a panel.
+        with_panel = slide.locator(
+            ".code-with-panel", has=page.get_by_text("optPanelDef")
+        )
+        assert with_panel.count() == 1
+        expect(with_panel.locator(".info-panel")).to_be_visible()
+
     def test_panel_starts_empty(self, code_url: str, page: Page):
         """.info-panel should start with no content."""
         slide = goto_slide_by_title(page, code_url, "Dark Code")

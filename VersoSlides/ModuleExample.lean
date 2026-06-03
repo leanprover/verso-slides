@@ -49,10 +49,17 @@ structure ModuleConfig where
 
 section
 
-variable [Monad m] [MonadError m]
+variable [Monad m] [MonadError m] [MonadOptions m]
 
 instance : FromArgs ModuleConfig m where
-  fromArgs := ModuleConfig.mk <$> .named' `name true <*> .named' `moduleName true <*> .flag `error false <*> .flag `show true <*> .flag `panel true <*> .flag `stretch true <*> .flag `lakefile false
+  fromArgs := ModuleConfig.mk <$>
+    .named' `name true <*>
+    .named' `moduleName true <*>
+    .flag `error false <*>
+    .flag `show true <*>
+    panelFlag <*>
+    .flag `stretch true <*>
+    .flag `lakefile false
 
 end
 

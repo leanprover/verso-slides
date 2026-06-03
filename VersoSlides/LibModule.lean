@@ -54,7 +54,7 @@ structure LibModuleConfig where
 
 section
 
-variable [Monad m] [MonadError m]
+variable [Monad m] [MonadError m] [MonadOptions m]
 
 instance : FromArgs LibModuleConfig m where
   fromArgs :=
@@ -64,7 +64,7 @@ instance : FromArgs LibModuleConfig m where
       <*> .named `decl .ident true
       <*> .named `startLine .nat true
       <*> .named `endLine .nat true
-      <*> .flag `panel true
+      <*> panelFlag
       <*> .flag `stretch true
 end
 
