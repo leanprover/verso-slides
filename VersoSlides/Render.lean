@@ -387,11 +387,6 @@ JS that adapts code block styling based on the computed background luminance of 
 {lit}`.slide-light-bg` on light sections (toggles CSS variable palette) and applies appropriate code
 block / panel background overlays.
 -/
--- TODO(verso#274): remove leanCommentsJs, its <script> tag in renderFullHtml,
--- its writeFileWithDirs call in writeVendoredAssets, and the .lean-comment CSS
--- rules in slides-highlight.css when SubVerso tokenizes comments natively.
-private def leanCommentsJs : String := include_str "../web-lib/panel/lean-comments.js"
-
 private def codeBlockBgJs : String := include_str "../web-lib/panel/code-block-bg.js"
 
 /--
@@ -515,8 +510,6 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
       <script src={{s!"{libPrefix}/tippy.js"}}></script>
       <script src={{s!"{libPrefix}/tippy-panel-filter.js"}}></script>
       <script src={{s!"{libPrefix}/highlighting.js"}}></script>
-      <!-- TODO(verso#274): remove lean-comments.js when SubVerso tokenizes comments -->
-      <script src={{s!"{libPrefix}/lean-comments.js"}}></script>
       <script src={{s!"{libPrefix}/code-block-bg.js"}}></script>
       <script src={{s!"{libPrefix}/pretty.js"}}></script>
       <script src={{s!"{libPrefix}/panel.js"}}></script>
@@ -579,7 +572,6 @@ def writeVendoredAssets (outputDir : System.FilePath) (theme : Theme) : IO Unit 
   writeFileWithDirs (libDir / "slides-highlight.css") slidesHighlightCss
   writeFileWithDirs (libDir / "panel.css") slideCodePanelCss
   writeFileWithDirs (libDir / "tippy-panel-filter.js") tippyPanelFilterJs
-  writeFileWithDirs (libDir / "lean-comments.js") leanCommentsJs  -- TODO: remove when verso#274 is fixed
   writeFileWithDirs (libDir / "code-block-bg.js") codeBlockBgJs
   writeFileWithDirs (libDir / "pretty.js") prettyJs
   writeFileWithDirs (libDir / "panel.js") slideCodePanelJs

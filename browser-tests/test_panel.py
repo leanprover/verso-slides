@@ -101,6 +101,80 @@ class TestTacticReflow:
         assert reflowed_after.count() > 0, "Reflowed spans should still exist after resize"
 
 
+class TestNestedTacticState:
+    def test_nested_rw_shows_own_state(self, code_url: str, page: Page):
+        """A tactic with nested child tactics (e.g. a multi-rewrite
+        ``rw [h1, h2, ...]``) must show its OWN resulting state when clicked.
+
+        In the DOM the outer ``.tactic`` element holds its own ``.tactic-state``
+        as its last child, after the nested per-rewrite ``.tactic`` elements (each
+        with their own ``.tactic-state``). The panel must use this tactic's
+        direct-child state (``All goals completed``), not a nested child's
+        intermediate goal (``b = e``).
+        """
+        slide = goto_slide_by_title(page, code_url, "Nested Tactic")
+        block = slide.locator(".code-with-panel").first
+        panel = block.locator(".info-panel")
+
+        # Click the `rw` keyword token. Its outermost clickable ancestor is the
+        # whole rw tactic, so the panel is populated from that tactic.
+        rw = block.get_by_text("rw", exact=True)
+        expect(rw).to_be_visible()
+        rw.click()
+        page.wait_for_timeout(300)
+
+        text = panel.inner_text()
+        assert "All goals completed" in text, (
+            f"Expected the rw tactic's own final state, but panel showed: {text!r}"
+        )
+        assert "b = e" not in text, (
+            f"Panel showed a nested child tactic's intermediate state: {text!r}"
+        )
+
+    def test_rw_click_sequence_reveals_distinct_states(self, code_url: str, page: Page):
+        """Repeatedly clicking a deeply nested token cycles the selection
+        outward-to-inward through the clickable chain, and each click reveals
+        different information.
+
+        The ``h1`` hypothesis in ``rw [h1, h2, h3, ←h4]`` sits three clickable
+        levels deep: the whole ``rw`` tactic, the first rewrite step, then the
+        ``h1`` variable token. So successive clicks on it surface the rw's own
+        resulting state, then that rewrite step's goal, then the hypothesis's
+        own hover info — and a fourth click wraps back to the outermost.
+        """
+        slide = goto_slide_by_title(page, code_url, "Nested Tactic")
+        block = slide.locator(".code-with-panel").first
+        panel = block.locator(".info-panel")
+
+        rw = block.locator(".tactic[data-tactic-range]", has_text="rw").first
+        # The first rewrite step is the outermost nested tactic; its direct-child
+        # `.var` is the visible `h1` token (the `:scope >` avoids the hidden `h1`
+        # occurrences inside the rewrite step's tactic-state goal).
+        first_step = rw.locator(".tactic").first
+        h1 = first_step.locator(":scope > .var")
+        expect(h1).to_have_count(1)
+
+        seen = []
+        for _ in range(3):
+            h1.click()
+            page.wait_for_timeout(200)
+            seen.append(panel.inner_text().strip())
+
+        # 1st click: the whole rw tactic's own resulting state.
+        assert "All goals completed" in seen[0], seen
+        # 2nd click: the first rewrite step turns the goal `a = e` into `b = e`.
+        assert "b = e" in seen[1], seen
+        # 3rd click: the `h1` hypothesis itself, whose type is `a = b`.
+        assert "a = b" in seen[2], seen
+        # Each click revealed information distinct from the previous one.
+        assert seen[0] != seen[1] and seen[1] != seen[2] and seen[0] != seen[2], seen
+
+        # A fourth click wraps back around to the outermost selection.
+        h1.click()
+        page.wait_for_timeout(200)
+        assert panel.inner_text().strip() == seen[0]
+
+
 class TestPanelInteraction:
     def test_click_populates_panel(self, code_url: str, page: Page):
         """Clicking a [data-verso-hover] token should populate the panel."""

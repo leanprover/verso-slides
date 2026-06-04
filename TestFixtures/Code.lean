@@ -53,6 +53,14 @@ theorem and_comm_ex (p q : Prop) (h : p ∧ q) : q ∧ p := by
   exact ⟨hq, hp⟩
 ```
 
+# Nested Tactic
+
+```lean
+example : a = b → b = c → c = d → d = e → a = e := by
+  intro h1 h2 h3 h4
+  rw [h1, h2, h3, ←h4]
+```
+
 # Inline Lean
 
 The function {lean}`hello` was defined above.

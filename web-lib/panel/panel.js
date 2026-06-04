@@ -201,7 +201,11 @@
         var html = "";
 
         if (el.classList.contains("tactic")) {
-            var ts = el.querySelector(".tactic-state");
+            // `:scope >` restricts to this tactic's _own_ state. A tactic with nested child tactics
+            // (e.g. a multi-step `rw`) holds its own `.tactic-state` as a direct child, after the
+            // nested tactics. Each child has its own `.tactic-state`. It's important to avoid
+            // selecting one of them by accident.
+            var ts = el.querySelector(":scope > .tactic-state");
             if (ts) {
                 var richFmt = ts.getAttribute("data-rich-format");
                 if (richFmt && typeof goalsToHtml === "function") {
@@ -224,7 +228,8 @@
                 }
             }
         } else if (el.classList.contains("has-info")) {
-            var msgs = el.querySelector(".hover-info.messages");
+            // `:scope >` ensures that nested info isn't chosen instead of this element's info.
+            var msgs = el.querySelector(":scope > .hover-info.messages");
             if (msgs) html = '<span class="hl lean">' + msgs.innerHTML + "</span>";
         } else if (el.hasAttribute("data-verso-hover")) {
             var id = el.getAttribute("data-verso-hover");
