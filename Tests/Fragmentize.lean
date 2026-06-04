@@ -440,6 +440,30 @@ where
     -- tokens built by `lineComment`/`blockComment` here. These cases mirror the ones above to check
     -- that magic comments are recognized through that representation.
 
+    testOk "tokenized: ordinary line comment stays tokenized"
+      (.seq (#[kw "def", u " ", id' "foo", u " := ", id' "1", ws "\n"] ++
+              lineComment " ordinary comment" ++
+              #[kw "def", u " ", id' "bar", u " := ", id' "2"]))
+      (.hl (.seq (#[kw "def", u " ", id' "foo", u " := ", id' "1", ws "\n"] ++
+              lineComment " ordinary comment" ++
+              #[kw "def", u " ", id' "bar", u " := ", id' "2"])))
+
+    testOk "tokenized: ordinary block comment stays tokenized"
+      (.seq (#[kw "def", u " ", id' "foo", u " := "] ++
+              blockComment " ordinary comment " ++
+              #[ws " ", id' "1"]))
+      (.hl (.seq (#[kw "def", u " ", id' "foo", u " := "] ++
+              blockComment " ordinary comment " ++
+              #[ws " ", id' "1"])))
+
+    testOk "tokenized: non-line-start magic-looking comment stays tokenized"
+      (.seq (#[kw "def", u " ", id' "foo", u " := ", id' "1", ws " "] ++
+              #[cdelim "--", lcomment " !fragment", ws "\n"] ++
+              #[kw "def", u " ", id' "bar", u " := ", id' "2"]))
+      (.hl (.seq (#[kw "def", u " ", id' "foo", u " := ", id' "1", ws " "] ++
+              #[cdelim "--", lcomment " !fragment", ws "\n"] ++
+              #[kw "def", u " ", id' "bar", u " := ", id' "2"])))
+
     testOk "tokenized: single fragment break"
       (.seq (#[kw "def", u " ", id' "foo", u " := ", id' "1", ws "\n"] ++
               #[cdelim "--", lcomment " !fragment", ws "\n"] ++
