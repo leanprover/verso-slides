@@ -17,6 +17,30 @@ def kw (s : String) : Highlighted := .token ⟨.keyword none none none, s⟩
 def id' (s : String) : Highlighted := .token ⟨.unknown, s⟩
 def u (s : String) : Highlighted := .unparsed s
 
+/-- A `--` or `/-`/`-/` comment delimiter token. -/
+def cdelim (s : String) : Highlighted := .token ⟨.commentDelim, s⟩
+/-- A line-comment body token (the text after `--`, up to but not including the newline). -/
+def lcomment (s : String) : Highlighted := .token ⟨.lineComment, s⟩
+/-- A block-comment body token (the text between `/-` and `-/`). -/
+def bcomment (s : String) : Highlighted := .token ⟨.blockComment, s⟩
+/-- A whitespace trivia text node. -/
+def ws (s : String) : Highlighted := .text s
+
+/--
+Builds the tokenized form of a line comment `-- <body>` followed by a newline, matching SubVerso's
+`emitLineComment`: a `--` delimiter, the body as a `.lineComment` token, then the newline as
+whitespace text.
+-/
+def lineComment (body : String) : Array Highlighted :=
+  #[cdelim "--", lcomment body, ws "\n"]
+
+/--
+Builds the tokenized form of a block comment `/- <body> -/`, matching SubVerso's `emitBlockComment`:
+`/-` and `-/` delimiters around a `.blockComment` body token.
+-/
+def blockComment (body : String) : Array Highlighted :=
+  #[cdelim "/-", bcomment body, cdelim "-/"]
+
 def dummyGoal (conclusion : String) : Goal Highlighted :=
   { name := none, goalPrefix := "⊢ ", hypotheses := #[], conclusion := .token ⟨.unknown, conclusion⟩ }
 
@@ -410,3 +434,69 @@ where
     testErr "error: unclosed line-level hide"
       (.seq #[u "-- !hide\n",
               kw "def", u " ", id' "foo"])
+
+    ---- Tokenized comments ----
+    -- Real highlighting represents comments as the `.commentDelim`/`.lineComment`/`.blockComment`
+    -- tokens built by `lineComment`/`blockComment` here. These cases mirror the ones above to check
+    -- that magic comments are recognized through that representation.
+
+    testOk "tokenized: single fragment break"
+      (.seq (#[kw "def", u " ", id' "foo", u " := ", id' "1", ws "\n"] ++
+              #[cdelim "--", lcomment " !fragment", ws "\n"] ++
+              #[kw "def", u " ", id' "bar", u " := ", id' "2"]))
+      (.seq #[
+        .hl (.seq #[kw "def", u " ", id' "foo", u " := ", id' "1", .text "\n"]),
+        .fragment ⟨none, none⟩ true
+          (.hl (.seq #[kw "def", u " ", id' "bar", u " := ", id' "2"]))
+      ])
+
+    testOk "tokenized: fragment break with style"
+      (.seq (#[kw "def", u " ", id' "foo", u " := ", id' "1", ws "\n"] ++
+              lineComment " !fragment highlight-current-blue" ++
+              #[kw "def", u " ", id' "bar", u " := ", id' "2"]))
+      (.seq #[
+        .hl (.seq #[kw "def", u " ", id' "foo", u " := ", id' "1", .text "\n"]),
+        .fragment ⟨some "highlight-current-blue", none⟩ true
+          (.hl (.seq #[kw "def", u " ", id' "bar", u " := ", id' "2"]))
+      ])
+
+    testOk "tokenized: standalone click on tactic"
+      (.seq (#[kw "theorem", u " ", id' "foo", u " : ", id' "P", u " := ",
+              tac "P" 21 23 (kw "by"), ws "\n"] ++
+              lineComment "                 ^ !click"))
+      (.seq #[
+        .hl (.seq #[kw "theorem", u " ", id' "foo", u " : ", id' "P", u " := "]),
+        .click
+          (.tactics #[dummyGoal "P"] 21 23 (.hl (kw "by")))
+          none,
+        .hl (.text "\n")
+      ])
+
+    testOk "tokenized: inline fragment"
+      (.seq (#[kw "def", u " ", id' "bar", u " (x : String) := "] ++
+              blockComment " !fragment " ++ #[ws " ", id' "s!\"{x}{x}\"", ws " "] ++
+              blockComment " !end fragment "))
+      (.seq #[
+        .hl (.seq #[kw "def", u " ", id' "bar", u " (x : String) := "]),
+        .fragment ⟨none, none⟩ false
+          (.seq #[.hl (.text " "), .hl (id' "s!\"{x}{x}\""), .hl (.text " ")])
+      ])
+
+    testOk "tokenized: inline hide"
+      (.seq (#[kw "def", u " ", id' "foo", u " := "] ++
+              blockComment " !hide " ++ #[ws " ", id' "secret", ws " "] ++
+              blockComment " !end hide " ++ #[id' "1"]))
+      (.seq #[
+        .hl (.seq #[kw "def", u " ", id' "foo", u " := "]),
+        .hl (id' "1")
+      ])
+
+    testOk "tokenized: line-level hide"
+      (.seq (lineComment " !hide" ++
+              #[kw "def", u " ", id' "secret", u " := ", id' "1", ws "\n"] ++
+              lineComment " !end hide" ++
+              #[kw "def", u " ", id' "foo", u " := ", id' "2"]))
+      (.hl (.seq #[kw "def", u " ", id' "foo", u " := ", id' "2"]))
+
+    testErr "tokenized: error: click with no preceding line"
+      (.seq (lineComment " ^ !click" ++ #[kw "def", u " ", id' "foo"]))

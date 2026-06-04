@@ -673,6 +673,57 @@ and then line-level magic comments.
 private def processTextNode (st : FragState) (s : String) (isText : Bool) : Except String FragState :=
   (splitInlineMarkers s).foldlM (init := st) fun acc seg => processSegment acc seg isText
 
+/--
+The source text of a node that represents whitespace or a (non-doc) comment: a {lit}`.text` node, or
+a {lit}`.commentDelim`/{lit}`.lineComment`/{lit}`.blockComment` token. Returns {name}`none` for any
+other node.
+
+SubVerso highlights comments as dedicated tokens: {lit}`--`, {lit}`/-`, and {lit}`-/` are
+{lit}`.commentDelim` tokens, and the bodies are {lit}`.lineComment`/{lit}`.blockComment` tokens. Doc
+comments ({lit}`/-- … -/`) are a single {lit}`.docComment` token and are never magic comments, so they
+are excluded here.
+-/
+private def commentTriviaText? : Highlighted → Option String
+  | .text s => some s
+  | .token ⟨.commentDelim, s⟩
+  | .token ⟨.lineComment, s⟩
+  | .token ⟨.blockComment, s⟩ => some s
+  | _ => none
+
+/--
+Merges each maximal run of adjacent whitespace/comment nodes (see {name}`commentTriviaText?`) into a
+single {name}`Highlighted.text` node holding the concatenated source. Non-trivia nodes are left
+untouched and in place.
+-/
+private def mergeCommentRun (xs : Array Highlighted) : Array Highlighted := Id.run do
+  let mut out : Array Highlighted := #[]
+  let mut pending : String := ""
+  for x in xs do
+    match commentTriviaText? x with
+    | some s => pending := pending ++ s
+    | none =>
+      unless pending.isEmpty do out := out.push (.text pending)
+      pending := ""
+      out := out.push x
+  unless pending.isEmpty do out := out.push (.text pending)
+  return out
+
+/--
+Coalesces each run of whitespace text and comment tokens in a {name}`Highlighted` tree into a single
+{name}`Highlighted.text` node carrying the original trivia source.
+
+SubVerso highlights comments as {lit}`.commentDelim`/{lit}`.lineComment`/{lit}`.blockComment` tokens,
+but the magic-comment scanners in {name}`processTextNode` operate on the text of
+{name}`Highlighted.text`/{name}`Highlighted.unparsed` nodes, so a comment and its surrounding
+whitespace must reach them as one contiguous string. Comment tokens are siblings of their surrounding
+whitespace (they sit outside open tactic regions), so a per-{name}`Highlighted.seq` merge suffices.
+-/
+private partial def coalesceComments : Highlighted → Highlighted
+  | .seq xs => .seq (mergeCommentRun (xs.map coalesceComments))
+  | .span info x => .span info (coalesceComments x)
+  | .tactics info s e x => .tactics info s e (coalesceComments x)
+  | other => other
+
 /-- Main worklist loop for the fragmentize transformation. -/
 private partial def fragmentizeLoop
     (todo : List (Option Highlighted))
@@ -708,6 +759,7 @@ private partial def fragmentizeLoop
 Transforms a {name}`Highlighted` tree into a {name}`SlideCode` tree, processing magic comments.
 -/
 public def fragmentize (hl : Highlighted) : Except String SlideCode := do
+  let hl := coalesceComments hl
   let initSt : FragState := {
     doc := .empty
     pendingFragments := #[]

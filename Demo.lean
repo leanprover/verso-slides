@@ -138,6 +138,17 @@ theorem fact_pos : ∀ n, 0 < fact n := by
     omega
 ```
 
+# Proof with `rw` Steps
+
+Click on the individual `rw` steps to see intermediate proof states.
+Multiple clicks cycle between the proof states and the info about the lemma.
+
+```lean
+example : a = b → b = c → c = d → d = e → a = e := by
+  intro h1 h2 h3 h4
+  rw [h1, h2, h3, ←h4]
+```
+
 # Proof with Fragment Indices
 
 ```lean
