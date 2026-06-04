@@ -11,7 +11,6 @@
         "panel.js",
         "lightbox.js",
         "code-block-bg.js",
-        "lean-comments.js",
         "tippy-panel-filter.js",
         "globals.d.ts"
     ]
