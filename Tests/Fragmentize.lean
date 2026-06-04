@@ -26,18 +26,11 @@ def bcomment (s : String) : Highlighted := .token ⟨.blockComment, s⟩
 /-- A whitespace trivia text node. -/
 def ws (s : String) : Highlighted := .text s
 
-/--
-Builds the tokenized form of a line comment `-- <body>` followed by a newline, matching SubVerso's
-`emitLineComment`: a `--` delimiter, the body as a `.lineComment` token, then the newline as
-whitespace text.
--/
+/-- Builds SubVerso's tokenized representation of `-- <body>\n`. -/
 def lineComment (body : String) : Array Highlighted :=
   #[cdelim "--", lcomment body, ws "\n"]
 
-/--
-Builds the tokenized form of a block comment `/- <body> -/`, matching SubVerso's `emitBlockComment`:
-`/-` and `-/` delimiters around a `.blockComment` body token.
--/
+/-- Builds SubVerso's tokenized representation of `/- <body> -/`. -/
 def blockComment (body : String) : Array Highlighted :=
   #[cdelim "/-", bcomment body, cdelim "-/"]
 
@@ -456,13 +449,16 @@ where
               blockComment " ordinary comment " ++
               #[ws " ", id' "1"])))
 
-    testOk "tokenized: non-line-start magic-looking comment stays tokenized"
+    -- A trailing `-- !fragment` (with code before it on the same line) is still a line-level break.
+    testOk "tokenized: trailing line-level fragment break is recognized"
       (.seq (#[kw "def", u " ", id' "foo", u " := ", id' "1", ws " "] ++
               #[cdelim "--", lcomment " !fragment", ws "\n"] ++
               #[kw "def", u " ", id' "bar", u " := ", id' "2"]))
-      (.hl (.seq (#[kw "def", u " ", id' "foo", u " := ", id' "1", ws " "] ++
-              #[cdelim "--", lcomment " !fragment", ws "\n"] ++
-              #[kw "def", u " ", id' "bar", u " := ", id' "2"])))
+      (.seq #[
+        .hl (.seq #[kw "def", u " ", id' "foo", u " := ", id' "1"]),
+        .fragment ⟨none, none⟩ true
+          (.hl (.seq #[kw "def", u " ", id' "bar", u " := ", id' "2"]))
+      ])
 
     testOk "tokenized: single fragment break"
       (.seq (#[kw "def", u " ", id' "foo", u " := ", id' "1", ws "\n"] ++
@@ -488,6 +484,21 @@ where
       (.seq (#[kw "theorem", u " ", id' "foo", u " : ", id' "P", u " := ",
               tac "P" 21 23 (kw "by"), ws "\n"] ++
               lineComment "                 ^ !click"))
+      (.seq #[
+        .hl (.seq #[kw "theorem", u " ", id' "foo", u " : ", id' "P", u " := "]),
+        .click
+          (.tactics #[dummyGoal "P"] 21 23 (.hl (kw "by")))
+          none,
+        .hl (.text "\n")
+      ])
+
+    -- Regression test: a tokenized magic comment can have its indentation in a separate whitespace
+    -- node. `mergeTextNodes` must rejoin that indentation before parsing the click marker, otherwise
+    -- the caret column is computed incorrectly and the click resolves to the wrong token.
+    testOk "tokenized: indented click on tactic"
+      (.seq (#[kw "theorem", u " ", id' "foo", u " : ", id' "P", u " := ",
+              tac "P" 21 23 (kw "by"), ws "\n  "] ++
+              #[cdelim "--", lcomment "               ^ !click", ws "\n"]))
       (.seq #[
         .hl (.seq #[kw "theorem", u " ", id' "foo", u " : ", id' "P", u " := "]),
         .click

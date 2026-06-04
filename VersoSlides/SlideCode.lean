@@ -599,16 +599,21 @@ where
         let (acc, remaining) := emitAt remaining offset afterEnd .replaceEnd acc
         go remaining acc
 
+/--
+Whether a single source line is a line-level slide magic comment: a `-- !fragment` break, a
+`-- ^ !click` marker, or a `-- !hide`/`-- !end hide` delimiter.
+-/
+private def isLineMagic (line : String.Slice) : Bool :=
+  (parseFragmentBreak line).isSome || (parseClickComment line).isSome ||
+    parseHideComment line || parseEndHideComment line
+
 /-- Processes plain text lines for line-level magic comments. -/
 private def processPlainLines (st : FragState) (s : String) (isText : Bool) : Except String FragState := do
   let mkLeaf := fun (content : String) =>
     if isText then SlideCode.hl (.text content) else SlideCode.hl (.unparsed content)
   let lines := getLines s
   -- Fast path: no magic comments → push entire text as one node
-  let hasMagic := lines.any fun line =>
-    (parseFragmentBreak line).isSome || (parseClickComment line).isSome ||
-    parseHideComment line || parseEndHideComment line
-  if !hasMagic then
+  if !lines.any isLineMagic then
     return st.pushSC (mkLeaf s)
   -- Slow path: process line by line
   let mut st := st
@@ -666,27 +671,9 @@ private def processSegment (st : FragState) (seg : TextSegment) (isText : Bool) 
     else
       .ok { st with hideDepth := st.hideDepth - 1 }
 
-/--
-Processes a {name}`text` or {name}`unparsed` node, scanning for inline fragment markers
-and then line-level magic comments.
--/
+/-- Processes text-like source, handling inline markers before line-level magic comments. -/
 private def processTextNode (st : FragState) (s : String) (isText : Bool) : Except String FragState :=
   (splitInlineMarkers s).foldlM (init := st) fun acc seg => processSegment acc seg isText
-
-/-- Whether, after emitting {name}`s`, the cursor is still at the start of a line. -/
-private def lineStartAfter (atLineStart : Bool) (s : String) : Bool :=
-  s.foldl (init := atLineStart) fun atStart c =>
-    if c == '\n' then true
-    else if c.isWhitespace then atStart
-    else false
-
-/--
-Returns true if the reconstructed line comment is a line-level slide magic comment.
--/
-private def isLineMagicComment (comment : String) : Bool :=
-  let line := comment.toSlice
-  (parseFragmentBreak line).isSome || (parseClickComment line).isSome ||
-    parseHideComment line || parseEndHideComment line
 
 /-- Returns true if the reconstructed block comment contains an inline slide magic marker. -/
 private def isInlineMagicComment (comment : String) : Bool :=
@@ -706,11 +693,7 @@ private def mergeTextRun (xs : Array Highlighted) : Array Highlighted := Id.run 
   unless pending.isEmpty do out := out.push (.text pending)
   return out
 
-/--
-Merges adjacent {name}`Highlighted.text` nodes throughout a {name}`Highlighted` tree. This lets
-reconstructed magic-comment text join with surrounding whitespace while preserving ordinary comment
-tokens.
--/
+/-- Merges adjacent text nodes while leaving tokens and structural nodes intact. -/
 private partial def mergeTextNodes : Highlighted → Highlighted
   | .seq xs => .seq (mergeTextRun (xs.map mergeTextNodes))
   | .span info x => .span info (mergeTextNodes x)
@@ -718,57 +701,40 @@ private partial def mergeTextNodes : Highlighted → Highlighted
   | other => other
 
 /--
-Reconstructs only slide magic comments from SubVerso's tokenized comment representation.
+Rewrites tokenized slide magic comments back into text so the existing magic-comment scanners can
+process them.
 
-SubVerso highlights comments as {lit}`.commentDelim`/{lit}`.lineComment`/{lit}`.blockComment` tokens,
-but the magic-comment scanners in {name}`processTextNode` operate on the text of
-{name}`Highlighted.text`/{name}`Highlighted.unparsed` nodes. Ordinary comment tokens must remain
-tokens so native comment highlighting survives.
+Ordinary comment tokens are preserved for native comment highlighting. For line comments, recognition
+uses only the reconstructed comment text (`-- ...`); any indentation remains in adjacent text nodes and
+is rejoined by {name}`mergeTextNodes` before line-level parsing.
 -/
-private partial def reconstructMagicCommentsAux (atLineStart : Bool) :
-    Highlighted → Highlighted × Bool
-  | .text s => (.text s, lineStartAfter atLineStart s)
-  | .unparsed s => (.unparsed s, lineStartAfter atLineStart s)
-  | .token t => (.token t, false)
-  | .point k i => (.point k i, atLineStart)
-  | .span info x =>
-    let (x, a) := reconstructMagicCommentsAux atLineStart x
-    (.span info x, a)
-  | .tactics info s e x =>
-    let (x, a) := reconstructMagicCommentsAux atLineStart x
-    (.tactics info s e x, a)
-  | .seq xs =>
-    let (xs, a) := goSeq atLineStart xs.toList
-    (.seq xs.toArray, a)
+private partial def reconstructMagicCommentsAux : Highlighted → Highlighted
+  | .span info x => .span info (reconstructMagicCommentsAux x)
+  | .tactics info s e x => .tactics info s e (reconstructMagicCommentsAux x)
+  | .seq xs => .seq (goSeq xs.toList).toArray
+  | other => other
 where
-  goSeq (atLineStart : Bool) : List Highlighted → List Highlighted × Bool
+  goSeq : List Highlighted → List Highlighted
     | .token ⟨.commentDelim, "--"⟩ :: .token ⟨.lineComment, body⟩ :: rest =>
       let comment := "--" ++ body
-      if atLineStart && isLineMagicComment comment then
-        let (rest, a) := goSeq (lineStartAfter atLineStart comment) rest
-        (.text comment :: rest, a)
+      if isLineMagic comment.toSlice then
+        .text comment :: goSeq rest
       else
-        let (rest, a) := goSeq false rest
-        (.token ⟨.commentDelim, "--"⟩ :: .token ⟨.lineComment, body⟩ :: rest, a)
+        .token ⟨.commentDelim, "--"⟩ :: .token ⟨.lineComment, body⟩ :: goSeq rest
     | .token ⟨.commentDelim, "/-"⟩ :: .token ⟨.blockComment, body⟩ ::
         .token ⟨.commentDelim, "-/"⟩ :: rest =>
       let comment := "/-" ++ body ++ "-/"
       if isInlineMagicComment comment then
-        let (rest, a) := goSeq (lineStartAfter atLineStart comment) rest
-        (.text comment :: rest, a)
+        .text comment :: goSeq rest
       else
-        let (rest, a) := goSeq false rest
-        (.token ⟨.commentDelim, "/-"⟩ :: .token ⟨.blockComment, body⟩ ::
-          .token ⟨.commentDelim, "-/"⟩ :: rest, a)
-    | x :: rest =>
-      let (x, a) := reconstructMagicCommentsAux atLineStart x
-      let (rest, a') := goSeq a rest
-      (x :: rest, a')
-    | [] => ([], atLineStart)
+        .token ⟨.commentDelim, "/-"⟩ :: .token ⟨.blockComment, body⟩ ::
+          .token ⟨.commentDelim, "-/"⟩ :: goSeq rest
+    | x :: rest => reconstructMagicCommentsAux x :: goSeq rest
+    | [] => []
 
 /-- Reconstructs tokenized slide magic comments and joins them with adjacent text. -/
 private def reconstructMagicComments (hl : Highlighted) : Highlighted :=
-  mergeTextNodes (reconstructMagicCommentsAux true hl).1
+  mergeTextNodes (reconstructMagicCommentsAux hl)
 
 /-- Main worklist loop for the fragmentize transformation. -/
 private partial def fragmentizeLoop
