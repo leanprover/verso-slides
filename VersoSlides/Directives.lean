@@ -581,3 +581,39 @@ Usage:
 public meta def css : CodeBlockExpanderOf Unit
   | (), str =>
     ``(Verso.Doc.Block.other (BlockExt.css $(quote str.getString)) #[])
+
+/--
+Custom HTML block. The content is inserted directly into the slide body
+without escaping.
+
+Usage:
+````
+```html
+<div class="custom-widget"></div>
+```
+````
+-/
+@[code_block]
+public meta def html : CodeBlockExpanderOf Unit
+  | (), str => do
+    -- The `false` parameter treats the text as unescaped raw HTML data.
+    let html := Verso.Output.Html.text false str.getString
+    ``(Verso.Doc.Block.other (BlockExt.ofHtml $(quote html)) #[])
+
+/--
+Inline HTML role. Inserts inline code content directly as HTML, without escaping.
+
+Usage:
+```
+This is {html}`<span class="custom-html">custom HTML</span>`.
+```
+-/
+@[role html]
+public meta def htmlRole : RoleExpanderOf Unit
+  | (), inlines => do
+  let #[arg] := inlines
+    | throwError "Expected a single inline code argument"
+  let `(inline|code( $htmlStr:str )) := arg
+    | throwErrorAt arg "Expected inline code"
+  let html := Verso.Output.Html.text false htmlStr.getString
+  ``(Verso.Doc.Inline.other (VersoSlides.InlineExt.ofHtml $(quote html)) #[])

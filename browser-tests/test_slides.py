@@ -9,7 +9,7 @@ class TestSlideStructure:
         slides_div = markup_doc.select_one("div.slides")
         assert slides_div is not None
         top_sections = slides_div.find_all("section", recursive=False)
-        assert len(top_sections) == 11
+        assert len(top_sections) == 12
 
     def test_slide_titles(self, markup_doc: BeautifulSoup):
         """Each top-level slide should have the expected heading."""
@@ -27,6 +27,7 @@ class TestSlideStructure:
             "CSS Test",
             "Tables",
             "Math",
+            "Custom HTML",
             "Last Slide",
         ]
 
@@ -128,3 +129,19 @@ class TestFragments:
         """Inline fragments should have the correct style classes."""
         assert markup_doc.select_one("span.fragment.highlight-red") is not None
         assert markup_doc.select_one("span.fragment.highlight-blue") is not None
+
+
+class TestCustomHtml:
+    def test_custom_html_block_is_inserted_raw(self, markup_doc: BeautifulSoup):
+        """The `html` code block should insert real HTML, not escaped text."""
+        hook = markup_doc.select_one(".custom-html-hook[data-raw-html='ok']")
+        assert hook is not None
+        child = hook.select_one("span")
+        assert child is not None
+        assert child.get_text(strip=True) == "Custom HTML"
+
+    def test_custom_html_role_is_inserted_raw(self, markup_doc: BeautifulSoup):
+        """The `{html}` role should insert real inline HTML, not escaped text."""
+        hook = markup_doc.select_one(".custom-inline-html[data-inline-html='ok']")
+        assert hook is not None
+        assert hook.get_text(strip=True) == "custom inline HTML"

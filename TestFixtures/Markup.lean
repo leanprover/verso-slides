@@ -179,6 +179,14 @@ The fundamental theorem: $`\sum_{k=1}^n k = \frac{n(n+1)}{2}`.
 
 Prelude macro: $`\RR` and display $$`\Hom(A, B) \subseteq \RR`.
 
+# Custom HTML
+
+```html
+<div class="custom-html-hook" data-raw-html="ok"><span>Custom HTML</span></div>
+```
+
+Inline {html}`<span class="custom-inline-html" data-inline-html="ok">custom inline HTML</span>` works too.
+
 # Last Slide
 :::fragment
 A fragment paragraph.

@@ -5,6 +5,7 @@ Author: David Thrane Christiansen
 -/
 module
 public import Verso.Doc
+public import Verso.Output.Html
 public import VersoSlides.ImgSrc
 public import VersoManual.Html.CssFile
 public import VersoSlidesVendored
@@ -270,6 +271,8 @@ public inductive BlockExt where
   | attr (attrs : Array (String × String))
   /-- Wraps ALL children in a `<div>` with the given attributes. -/
   | wrap (attrs : Array (String × String))
+  /-- Trusted custom HTML inserted directly into the slide body. -/
+  | ofHtml (html : Verso.Output.Html)
   /-- Elaborated Lean code block with syntax highlighting (fallback when fragmentize fails). -/
   | leanCode (hlExport : String) (panel : Bool)
   /-- Fragmentized Lean code block, serialized via {lit}`ExportSlideCode`.
@@ -299,6 +302,8 @@ public inductive InlineExt where
   | styled (attrs : Array (String × String))
   /-- Image with configurable dimensions. All fields determined at elaboration time. -/
   | image (src : ImgSrc) (alt : String) (width : Option String) (height : Option String) (cssClass : Option String)
+  /-- Trusted custom HTML inserted directly into inline content. -/
+  | ofHtml (html : Verso.Output.Html)
   /-- Elaborated inline Lean code with syntax highlighting (fallback when fragmentize fails). -/
   | leanCode (hlExport : String)
   /-- Fragmentized inline Lean code, serialized via {lit}`ExportSlideCode`. -/
