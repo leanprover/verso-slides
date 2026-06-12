@@ -250,6 +250,34 @@ This directive is particularly useful for auto-animate element
 matching, where paired elements across adjacent slides need matching
 `data-id` attributes.
 
+### Custom HTML
+
+The `html` code block and inline `{html}` role insert trusted HTML
+directly into the slide body. This is useful for custom widgets or
+markup that is easier to write by hand than through Verso directives.
+
+````
+```html
+<div class="custom-widget" data-state="ready">
+  <button type="button">Run</button>
+</div>
+```
+````
+
+Inline HTML can be inserted with the matching role:
+
+```
+This uses {html}`<span class="custom-widget">inline HTML</span>` in a paragraph.
+```
+
+The HTML body is not escaped or sanitized, so only use it with HTML
+you control. To display HTML source code instead, use the generic
+`code` block with `html` as the language.
+
+Programmatic clients can construct the same custom elements with
+`BlockExt.ofHtml` or `InlineExt.ofHtml`, which carry
+`Verso.Output.Html` values.
+
 ### Tables
 
 The `table` directive renders an HTML `<table>` from a nested list of

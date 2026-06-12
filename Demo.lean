@@ -507,6 +507,17 @@ This {attr («data-id» := "morphing-word")}[word] has a custom data attribute.
 This text is styled with custom CSS injected via a `css` code block.
 :::
 
+# Custom HTML
+
+The `html` code block inserts raw trusted HTML into a slide.
+
+```html
+<div class="demo-highlight" data-demo-html="block">Block-level custom HTML</div>
+```
+
+Inline HTML works with the matching role:
+{html}`<span class="demo-highlight" data-demo-html="inline">inline custom HTML</span>`.
+
 # Image Role
 
 The `{image}` role renders an `<img>` tag with configurable width and height. The path to the image is relative to the source file.

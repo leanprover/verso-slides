@@ -112,6 +112,8 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
     | .wrap attrs =>
       let inner ← contents.mapM blockHtml
       pure (.tag "div" attrs (.seq inner))
+    | .ofHtml html =>
+      pure html
     | .slideCode scExport panel stretch =>
       let sc := scFromExport! scExport
       let codeHtml ← pure {{ <code class="hl lean block"> {{ ← sc.toHtml (g := Slides) }} </code> }}
@@ -246,6 +248,8 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
         | (false, none)   => none
       if let some c := classVal then attrs := attrs.push ("class", c)
       pure (.tag "img" attrs .empty)
+    | .ofHtml html =>
+      pure html
     | .slideCode scExport =>
       let sc := scFromExport! scExport
       pure {{ <code class="hl lean inline"> {{ ← sc.toHtml (g := Slides) }} </code> }}
