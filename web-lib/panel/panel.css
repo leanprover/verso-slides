@@ -26,6 +26,7 @@
 
 /* Code block inside panel — override standalone margins/shadow */
 .code-with-panel > code.hl.lean.block {
+    position: relative; /* anchor for the .panel-outline-svg overlay */
     margin: 0;
     box-shadow: none;
     border-radius: 6px 0 0 6px;
@@ -65,18 +66,32 @@
     text-align: left;
 }
 
-/* Highlight on the focused source element */
-.panel-focus {
-    outline: 2px solid rgba(100, 150, 255, 0.6);
-    outline-offset: 1px;
-    border-radius: 2px;
+/* Focus/hover highlights are drawn as one contiguous SVG path per element
+   (see drawElementOutline in panel.js). A plain CSS outline is unusable here:
+   when a tactic wraps across lines, Firefox and Safari draw a separate closed
+   box around each line fragment, while only Chromium merges them. The
+   .panel-focus / .panel-hover classes still mark the source element. */
+.panel-outline-svg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+    overflow: visible;
+    pointer-events: none;
 }
-
-/* Subtle hover preview for the element that would be selected on click */
-.panel-hover {
-    outline: 1px solid rgba(100, 150, 255, 0.3);
-    outline-offset: 1px;
-    border-radius: 2px;
+.panel-outline-svg path {
+    fill: none;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+.panel-outline-svg .panel-outline-focus {
+    stroke: rgba(100, 150, 255, 0.6);
+    stroke-width: 2px;
+}
+.panel-outline-svg .panel-outline-hover {
+    stroke: rgba(100, 150, 255, 0.3);
+    stroke-width: 1px;
 }
 
 /* Collapsed state — hide panel, thin divider */

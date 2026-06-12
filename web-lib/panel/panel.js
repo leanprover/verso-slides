@@ -29,6 +29,11 @@
         Reveal.on("fragmentshown", onFragmentShown);
         Reveal.on("fragmenthidden", onFragmentHidden);
         Reveal.on("slidechanged", onSlideChanged);
+        Reveal.on("resize", function () {
+            document.querySelectorAll(".code-with-panel").forEach(function (el) {
+                redrawFocusOutline(/** @type {PanelBlock} */ (el));
+            });
+        });
     }
 
     // ---- Per-block setup ----
@@ -60,6 +65,7 @@
             if (chosen && chosen !== block._activeSource) {
                 clearHoverPreview(codeEl);
                 chosen.classList.add("panel-hover");
+                drawElementOutline(codeEl, chosen, "panel-outline-hover");
             } else {
                 clearHoverPreview(codeEl);
             }
@@ -105,16 +111,20 @@
         var divider = block.querySelector(".panel-divider");
         if (divider) setupDividerDrag(block, /** @type {HTMLElement} */ (divider));
 
-        // ResizeObserver for reflowing rich format content
+        // ResizeObserver for reflowing rich format content and redrawing the
+        // focus outline (the code may rewrap when the divider moves)
         if (typeof ResizeObserver !== "undefined") {
             /** @type {ReturnType<typeof setTimeout> | null} */
             var reflowTimer = null;
-            new ResizeObserver(function () {
+            var observer = new ResizeObserver(function () {
                 if (reflowTimer) clearTimeout(reflowTimer);
                 reflowTimer = setTimeout(function () {
                     reflowPanel(panel);
+                    redrawFocusOutline(block);
                 }, 100);
-            }).observe(panel);
+            });
+            observer.observe(panel);
+            observer.observe(codeEl);
         }
     }
 
@@ -123,6 +133,214 @@
         codeEl.querySelectorAll(".panel-hover").forEach(function (el) {
             el.classList.remove("panel-hover");
         });
+        setOutlinePath(codeEl, "panel-outline-hover", "");
+    }
+
+    // ---- Focus/hover outline overlay ----
+    //
+    // CSS `outline` on an inline element that wraps across lines is drawn as a
+    // separate closed box per line fragment in Firefox and Safari (only
+    // Chromium merges the fragments). To get one contiguous border in every
+    // browser we draw it ourselves: merge the element's client rects (one per
+    // line) into a single staircase polygon and stroke it in an SVG overlay.
+
+    var SVG_NS = "http://www.w3.org/2000/svg";
+
+    /**
+     * Get (or create) the outline overlay for a code block, with one path for
+     * the focused element and one for the hover preview.
+     * @param {Element} codeEl
+     * @return {SVGSVGElement}
+     */
+    function ensureOutlineSvg(codeEl) {
+        var existing = codeEl.querySelector(":scope > svg.panel-outline-svg");
+        if (existing) return /** @type {SVGSVGElement} */ (existing);
+        var svg = /** @type {SVGSVGElement} */ (document.createElementNS(SVG_NS, "svg"));
+        svg.setAttribute("class", "panel-outline-svg");
+        svg.setAttribute("aria-hidden", "true");
+        ["panel-outline-focus", "panel-outline-hover"].forEach(function (cls) {
+            var path = document.createElementNS(SVG_NS, "path");
+            path.setAttribute("class", cls);
+            svg.appendChild(path);
+        });
+        codeEl.appendChild(svg);
+        return svg;
+    }
+
+    /**
+     * @param {Element} codeEl
+     * @param {string} cls
+     * @param {string} d
+     */
+    function setOutlinePath(codeEl, cls, d) {
+        var svg = ensureOutlineSvg(codeEl);
+        var path = svg.querySelector("." + cls);
+        if (path) path.setAttribute("d", d);
+    }
+
+    /**
+     * Merge an element's client rects into one rect per line.
+     * @param {Element} el
+     * @return {Array<{left: number, right: number, top: number, bottom: number}>}
+     */
+    function lineRects(el) {
+        /** @type {Array<{left: number, right: number, top: number, bottom: number}>} */
+        var lines = [];
+        var rects = el.getClientRects();
+        for (var i = 0; i < rects.length; i++) {
+            var r = rects[i];
+            if (r.width === 0 || r.height === 0) continue;
+            var merged = false;
+            for (var j = 0; j < lines.length; j++) {
+                var ln = lines[j];
+                // Same line if the vertical ranges mostly overlap
+                var overlap = Math.min(ln.bottom, r.bottom) - Math.max(ln.top, r.top);
+                if (overlap > 0.5 * Math.min(ln.bottom - ln.top, r.height)) {
+                    ln.left = Math.min(ln.left, r.left);
+                    ln.right = Math.max(ln.right, r.right);
+                    ln.top = Math.min(ln.top, r.top);
+                    ln.bottom = Math.max(ln.bottom, r.bottom);
+                    merged = true;
+                    break;
+                }
+            }
+            if (!merged) lines.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom });
+        }
+        lines.sort(function (a, b) {
+            return a.top - b.top;
+        });
+        return lines;
+    }
+
+    /**
+     * Draw a single contiguous outline around all line fragments of `el`,
+     * into the overlay path identified by `cls` ("" for el === null clears it).
+     * @param {Element} codeEl
+     * @param {Element | null} el
+     * @param {string} cls
+     */
+    function drawElementOutline(codeEl, el, cls) {
+        if (!el) {
+            setOutlinePath(codeEl, cls, "");
+            return;
+        }
+        var lines = lineRects(el);
+        if (lines.length === 0) {
+            setOutlinePath(codeEl, cls, "");
+            return;
+        }
+
+        // Coordinates are computed relative to the SVG overlay itself, and
+        // divided by the reveal.js zoom so they live in element-space pixels.
+        var svg = ensureOutlineSvg(codeEl);
+        var origin = svg.getBoundingClientRect();
+        var scale =
+            codeEl.getBoundingClientRect().width /
+                /** @type {HTMLElement} */ (codeEl).offsetWidth || 1;
+        var pad = 2; // outline offset, in element-space pixels
+
+        /** @param {number} x */
+        function relX(x) {
+            return (x - origin.left) / scale;
+        }
+        /** @param {number} y */
+        function relY(y) {
+            return (y - origin.top) / scale;
+        }
+
+        var n = lines.length;
+        // Vertical boundaries between consecutive lines, so adjacent fragments
+        // share an edge instead of leaving a gap or double border.
+        /** @type {number[]} */
+        var bounds = [];
+        for (var i = 0; i < n - 1; i++) {
+            bounds.push(relY((lines[i].bottom + lines[i + 1].top) / 2));
+        }
+
+        /** @type {Array<{x: number, y: number}>} */
+        var pts = [];
+        /**
+         * @param {number} x
+         * @param {number} y
+         */
+        function pt(x, y) {
+            // Skip zero-length jogs (e.g. consecutive lines with equal edges)
+            var last = pts[pts.length - 1];
+            if (last && Math.abs(last.x - x) < 0.5 && Math.abs(last.y - y) < 0.5) return;
+            pts.push({ x: x, y: y });
+        }
+
+        // Clockwise: across the top, down the right side (jogging at each line
+        // boundary), back across the bottom, and up the left side.
+        pt(relX(lines[0].left) - pad, relY(lines[0].top) - pad);
+        pt(relX(lines[0].right) + pad, relY(lines[0].top) - pad);
+        for (var i = 0; i < n - 1; i++) {
+            pt(relX(lines[i].right) + pad, bounds[i]);
+            pt(relX(lines[i + 1].right) + pad, bounds[i]);
+        }
+        pt(relX(lines[n - 1].right) + pad, relY(lines[n - 1].bottom) + pad);
+        pt(relX(lines[n - 1].left) - pad, relY(lines[n - 1].bottom) + pad);
+        for (var i = n - 1; i > 0; i--) {
+            pt(relX(lines[i].left) - pad, bounds[i - 1]);
+            pt(relX(lines[i - 1].left) - pad, bounds[i - 1]);
+        }
+
+        setOutlinePath(codeEl, cls, roundedPathFrom(pts, 4));
+    }
+
+    /**
+     * Build an SVG path for a closed polygon, rounding each corner with a
+     * quadratic curve of the given radius (clamped to half of each adjacent
+     * segment so short jogs stay well-formed).
+     * @param {Array<{x: number, y: number}>} pts
+     * @param {number} radius
+     * @return {string}
+     */
+    function roundedPathFrom(pts, radius) {
+        var n = pts.length;
+        if (n < 3) return "";
+        /** @type {string[]} */
+        var parts = [];
+        for (var i = 0; i < n; i++) {
+            var prev = pts[(i + n - 1) % n];
+            var cur = pts[i];
+            var next = pts[(i + 1) % n];
+            var inLen = Math.hypot(cur.x - prev.x, cur.y - prev.y);
+            var outLen = Math.hypot(next.x - cur.x, next.y - cur.y);
+            if (inLen === 0 || outLen === 0) {
+                parts.push((i === 0 ? "M" : "L") + cur.x.toFixed(2) + " " + cur.y.toFixed(2));
+                continue;
+            }
+            var r = Math.min(radius, inLen / 2, outLen / 2);
+            // Corner start: back off along the incoming edge; corner end:
+            // advance along the outgoing edge.
+            var sx = cur.x + ((prev.x - cur.x) / inLen) * r;
+            var sy = cur.y + ((prev.y - cur.y) / inLen) * r;
+            var ex = cur.x + ((next.x - cur.x) / outLen) * r;
+            var ey = cur.y + ((next.y - cur.y) / outLen) * r;
+            parts.push(
+                (i === 0 ? "M" : "L") + sx.toFixed(2) + " " + sy.toFixed(2),
+                "Q" +
+                    cur.x.toFixed(2) +
+                    " " +
+                    cur.y.toFixed(2) +
+                    " " +
+                    ex.toFixed(2) +
+                    " " +
+                    ey.toFixed(2),
+            );
+        }
+        return parts.join(" ") + " Z";
+    }
+
+    /**
+     * Redraw the focus outline of a block (e.g. after a resize or rewrap).
+     * @param {PanelBlock} block
+     */
+    function redrawFocusOutline(block) {
+        var codeEl = block.querySelector("code.hl.lean.block");
+        if (!codeEl) return;
+        drawElementOutline(codeEl, block._activeSource, "panel-outline-focus");
     }
 
     // ---- Clickable element discovery ----
@@ -193,6 +411,7 @@
 
         block._activeSource = el;
         el.classList.add("panel-focus");
+        if (codeEl) drawElementOutline(codeEl, el, "panel-outline-focus");
 
         // Store the source element for reflow on resize
         panel._richFormatSource = null;
@@ -386,6 +605,7 @@
             codeEl.querySelectorAll(".panel-focus").forEach(function (f) {
                 f.classList.remove("panel-focus");
             });
+            drawElementOutline(codeEl, null, "panel-outline-focus");
         }
         block._activeSource = null;
         panel.innerHTML = "";

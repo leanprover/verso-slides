@@ -102,6 +102,29 @@ class TestTacticReflow:
 
 
 class TestNestedTacticState:
+    def test_obtain_tactics_show_own_states(self, code_url: str, page: Page):
+        """Both ``obtain`` tactics in issue #46's proof should have clickable states."""
+        slide = goto_slide_by_title(page, code_url, "Obtain State")
+        block = slide.locator(".code-with-panel").first
+        panel = block.locator(".info-panel")
+        obtains = block.get_by_text("obtain", exact=True)
+        expect(obtains).to_have_count(2)
+
+        obtains.nth(0).click()
+        page.wait_for_timeout(200)
+        first_state = panel.inner_text().strip()
+        assert "k : Nat" in first_state, first_state
+        assert "1 < k" in first_state, first_state
+        assert "k < n" in first_state, first_state
+        assert "k ∣ n" in first_state, first_state
+
+        obtains.nth(1).click()
+        page.wait_for_timeout(200)
+        second_state = panel.inner_text().strip()
+        assert "p : Nat" in second_state, second_state
+        assert "IsPrime p" in second_state, second_state
+        assert "p ∣ k" in second_state, second_state
+
     def test_nested_rw_shows_own_state(self, code_url: str, page: Page):
         """A tactic with nested child tactics (e.g. a multi-rewrite
         ``rw [h1, h2, ...]``) must show its OWN resulting state when clicked.
