@@ -110,9 +110,16 @@ class TestNestedTacticState:
         obtains = block.get_by_text("obtain", exact=True)
         expect(obtains).to_have_count(2)
 
+        def panel_text() -> str:
+            # The goal display is a table, so inner_text() separates the
+            # hypothesis name, colon, and type with tabs; line breaks within a
+            # reflowed type also vary with panel width. Collapse all whitespace
+            # runs so assertions can use plain `name : type` strings.
+            return " ".join(panel.inner_text().split())
+
         obtains.nth(0).click()
         page.wait_for_timeout(200)
-        first_state = panel.inner_text().strip()
+        first_state = panel_text()
         assert "k : Nat" in first_state, first_state
         assert "1 < k" in first_state, first_state
         assert "k < n" in first_state, first_state
@@ -120,7 +127,7 @@ class TestNestedTacticState:
 
         obtains.nth(1).click()
         page.wait_for_timeout(200)
-        second_state = panel.inner_text().strip()
+        second_state = panel_text()
         assert "p : Nat" in second_state, second_state
         assert "IsPrime p" in second_state, second_state
         assert "p ∣ k" in second_state, second_state
