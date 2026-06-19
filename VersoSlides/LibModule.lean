@@ -406,7 +406,7 @@ private meta def editCodeBlock [Monad m] [MonadFileMap m] (stx : Syntax) (newArg
     | none =>
       return some s!"{delims}{line1rest.dropWhile (· == '`') |>.trimAscii}\n{withNl newContents}{delims}"
     | some newArgs =>
-      let name := line1rest.dropWhile (· == '`') |>.trimAscii |>.takeWhile (!·.isWhitespace) |>.copy
+      let name := line1rest.dropWhile (· == '`') |>.trimAscii |>.takeWhile (!Char.isWhitespace ·) |>.copy
       let newArgs := newArgs.trimAscii
       let newArgs := if newArgs.isEmpty then "" else " " ++ newArgs.copy
       return some s!"{delims}{name}{newArgs}\n{withNl newContents}{delims}"
