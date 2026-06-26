@@ -12,6 +12,7 @@ public import VersoSlidesVendored
 import Std.Data.HashMap
 
 open Lean
+open Verso Output
 
 set_option doc.verso true
 /-!
@@ -175,6 +176,8 @@ public structure Config where
   Additional CSS files that are added to the output and linked from the slide HTML.
   -/
   extraCss : Array CssFile := #[]
+  /-- Extra elements to add to the page's {lit}`head` tag. -/
+  extraHead : Array Html := #[]
   extraJs : Array String := #[]
   /--
   Math prelude evaluated once before any math on the page is rendered.
