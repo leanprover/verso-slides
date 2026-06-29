@@ -4,9 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 /-
-  Tests for the `SlideCode.toHtml` rendering.
+  Tests for rendering-related HTML output.
 -/
 import SubVerso.Highlighting.Highlighted
+import VersoSlides.Render
 import VersoSlides.SlideCode
 import VersoSlides.SlideCode.Render
 import VersoSlides.Basic
@@ -86,6 +87,16 @@ def testLacks (name : String) (sc : SlideCode) (needle : String) : TestM Unit :=
     }
   else
     modify fun s => { s with passed := s.passed + 1 }
+
+/-- Asserts that an HTML string contains the given substring. -/
+def testHtmlHas (name : String) (html needle : String) : TestM Unit := do
+  if hasSubstr html needle then
+    modify fun s => { s with passed := s.passed + 1 }
+  else
+    modify fun s => { s with
+      failed := s.failed + 1
+      errors := s.errors.push s!"FAIL (has): {name}\n  expected to contain: {repr needle}\n  actual: {repr html}"
+    }
 
 
 def main : IO UInt32 := do
@@ -206,3 +217,12 @@ where
     testHas "seq renders children"
       (.seq #[.hl (kw "def"), .hl (u " "), .hl (id' "foo")])
       "foo"
+
+    -- ---- Full page: Config.extraHead is emitted into <head> ----
+    let blueprintRuntime := "-verso-data/blueprint-page-runtime.mjs"
+    let fullHtml := renderFullHtml
+      { extraHead := #[{{ <script type="module" src={{blueprintRuntime}}></script> }}] }
+      "Deck" (.seq #[])
+    testHtmlHas "extraHead renders module script"
+      fullHtml.asString
+      s!"<script type=\"module\" src=\"{blueprintRuntime}\"></script>"
