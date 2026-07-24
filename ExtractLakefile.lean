@@ -9,8 +9,10 @@ import SubVerso.Highlighting.Code
 import SubVerso.Module
 
 /-
-This import initializes Lake builtins and includes Lake's symbols in the
-symbol table. These are necessary when elaborating `lakefile`s.
+This import initializes Lake builtins AND, in combination with 
+the with `supportInterpreter := true`, option, includes Lake's
+symbols in the symbol table. This lets the executable use Lake's
+symbols when elaborating `lakefiles`.
 -/
 import Lake -- shake: keep
 
