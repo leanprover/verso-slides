@@ -29,7 +29,9 @@ lean_lib Demo where
 
 @[default_target] lean_exe «demo-slides» where root := `Main
 
-lean_exe «extract-lakefile» where root := `ExtractLakefile
+lean_exe «extract-lakefile» where
+  root := `ExtractLakefile
+  supportInterpreter := true
 
 @[test_driver]
 lean_exe «verso-slides-test» where root := `TestMain

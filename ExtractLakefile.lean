@@ -4,10 +4,15 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 import Lean
-import Lake.DSL
 import SubVerso.Compat
 import SubVerso.Highlighting.Code
 import SubVerso.Module
+
+/-
+This import initializes Lake builtins and includes Lake's symbols in the
+symbol table. These are necessary when elaborating `lakefile`s.
+-/
+import Lake -- shake: keep
 
 open SubVerso
 
@@ -70,16 +75,12 @@ unsafe def main (args : List String) : IO UInt32 := do
 
   enableInitializersExecution
 
-  -- Load Lake as a plugin so its builtin_initialize functions (DSL macros, etc.) run.
-  -- This is the same approach the language server uses for lakefile.lean.
-  let lakePlugin := lakeSharedLib sysroot
-
   let contents ← IO.FS.readFile lakefile
   let ictx := Parser.mkInputContext contents lakefile
   let (headerStx, parserState, msgs) ← Parser.parseHeader ictx
   let imports := headerToImports headerStx
 
-  let env ← importModules imports {}  (plugins := #[lakePlugin]) (trustLevel := 1024) (loadExts := true)
+  let env ← importModules imports {} (trustLevel := 1024) (loadExts := true)
   let pctx : Elab.Frontend.Context := {inputCtx := ictx}
 
   let commandState : Command.State := { env, maxRecDepth := defaultMaxRecDepth, messages := msgs }
