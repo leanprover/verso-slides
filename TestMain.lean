@@ -16,7 +16,15 @@ def runCmd (cmd : String) (args : Array String) (desc : String) : IO UInt32 := d
     IO.eprintln s!"[test] {desc} failed (exit code {result.exitCode})"
   return result.exitCode
 
-def main : IO UInt32 := do
+def main (args : List String) : IO UInt32 := do
+  let mut runPlaywright := true
+  for arg in args do
+    match arg with
+    | "--no-playwright" => runPlaywright := false
+    | _ =>
+      IO.eprintln s!"[test] unknown argument: {arg}"
+      return 1
+
   -- Step 0: Lean-side unit tests that don't require browsers
   let rc ← runCmd "lake" #["exe", "test-config-validation"]
     "Running Config.validateFilenames unit tests"
@@ -25,6 +33,10 @@ def main : IO UInt32 := do
   -- Step 1: generate test fixture slides
   let rc ← runCmd "lake" #["exe", "test-fixtures-build"] "Generating test fixtures"
   if rc != 0 then return rc
+
+  if !runPlaywright then
+    IO.println "[test] Skipping Playwright browser tests (--no-playwright)"
+    return 0
 
   -- Step 2: install Python test dependencies
   let rc ← runCmd "uv" #["sync", "--project", "browser-tests"]
