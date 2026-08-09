@@ -1,0 +1,5 @@
+banner = "Demo Slides"
+
+[[mounts]]
+path = "/"
+dir = "_slides"
