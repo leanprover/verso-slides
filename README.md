@@ -272,7 +272,8 @@ This uses {html}`<span class="custom-widget">inline HTML</span>` in a paragraph.
 
 The HTML body is not escaped or sanitized, so only use it with HTML
 you control. To display HTML source code instead, use the generic
-`code` block with `html` as the language.
+`code` block with `html` as the language (see [Non-Lean Code
+Blocks](#non-lean-code-blocks)).
 
 Programmatic clients can construct the same custom elements with
 `BlockExt.ofHtml` or `InlineExt.ofHtml`, which carry
@@ -680,6 +681,31 @@ elaborating the slides.
 Lean's own prelude and `Std` modules don't need the `needs`
 configuration.
 
+## Non-Lean Code Blocks
+
+Code in languages other than Lean can be displayed with the
+`code` block, which takes the language name as an argument:
+
+````
+```code typescript
+const greet = (name: string): string => `hello, ${name}`;
+```
+````
+
+The language name can be written as an identifier (`python`, `rust`,
+`typescript`) or, when it contains characters that aren't valid in an
+identifier, as a string (`"c++"`, `"c#"`).
+
+Unlike `lean` blocks, these blocks are not elaborated or
+checked at build time. They get syntax-highlighted at
+presentation time by [highlight.js](https://highlightjs.org/) (via the
+`reveal.js` highlight plugin). Any language name that
+highlight.js recognizes works here; see the [list of supported
+languages](https://github.com/highlightjs/highlight.js/blob/main/SUPPORTED_LANGUAGES.md)
+for the available names and their aliases. The color scheme
+used for these blocks is configurable — see [Syntax
+Highlighting Theme](#syntax-highlighting-theme) below.
+
 ## Document-Level Configuration
 
 Document-level `reveal.js` settings live on the `Config` value passed
@@ -844,10 +870,10 @@ resolution). For a single file, use `include_bin` directly:
 
 ## Syntax Highlighting Theme
 
-Non-Lean code blocks are highlighted at presentation time by the
-`reveal.js` plugin that uses `highlight.js` plugin. The `highlight.js`
-theme, which is a CSS file, is configurable via
-`Config.highlightTheme`.
+[Non-Lean code blocks](#non-lean-code-blocks) are highlighted at
+presentation time by the `reveal.js` highlight plugin, which uses
+`highlight.js`. The `highlight.js` theme, which is a CSS file, is
+configurable via `Config.highlightTheme`.
 
 The following themes are bundled:
 
