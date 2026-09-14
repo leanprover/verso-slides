@@ -310,7 +310,7 @@ public meta def withNl (s : String) : String := if s.endsWith "\n" then s else s
 
 Or a specific line range:
 
-```leanLibCode Verso.Code.External (package := verso) (startLine := 77) (endLine := 77) -stretch
+```leanLibCode Verso.Code.External (package := verso) (startLine := 78) (endLine := 78) -stretch
 public meta def withNl (s : String) : String := if s.endsWith "\n" then s else s ++ "\n"
 ```
 
