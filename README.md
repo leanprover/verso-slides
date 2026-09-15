@@ -42,8 +42,9 @@ The document title becomes the HTML page title. Each top-level heading
 slide body.
 
 ```
-import VersoSlides
-import Verso.Doc.Concrete
+module
+
+public import VersoSlides
 
 open VersoSlides
 
@@ -413,6 +414,13 @@ compiler and rendered with full syntax highlighting and hover
 documentation. The code is type-checked at build time, so any errors
 are caught before the slides are generated.
 
+When using the module system, building slides from the command line
+requires `import all` of a declaration's defining module to include
+its docstring in hovers. For example, add `import all Init.System.IO`
+to the presentation's imports for the documentation of `IO.println`.
+Without it, the code still compiles, but the generated hover omits the
+docstring.
+
 ````
 ```lean
 def factorial : Nat → Nat
@@ -690,12 +698,14 @@ carry per-slide attributes (the table above); doc-level config does
 not appear in `%%%` blocks at all.
 
 ```
+module
+
 import VersoSlides
 import MyPresentation
 
 open VersoSlides
 
-def main : IO UInt32 :=
+public def main : IO UInt32 :=
   slidesMain
     (config := { theme := "white", slideNumber := true,
                  transition := "fade", autoSlide := 5000 })
@@ -787,7 +797,7 @@ def customRevealTheme : CssFile where
   filename := "theme/my-reveal-theme.css"
   contents := ⟨include_str "my-reveal-theme.css"⟩
 
-def main : IO UInt32 :=
+public def main : IO UInt32 :=
   slidesMain
     (config := { theme := .custom customRevealTheme })
     (doc := %doc MyPresentation)
@@ -864,7 +874,7 @@ themes use `monokai`, light themes use `github`, and `solarized` uses
 `solarizedLight`. This default can be overridden:
 
 ```
-def main : IO UInt32 :=
+public def main : IO UInt32 :=
   slidesMain
     (config := { theme := "white", highlightTheme := .githubDark })
     (doc := %doc MyPresentation)
@@ -877,7 +887,7 @@ def myHighlight : HighlightTheme where
   filename := "lib/my-hl.css"
   contents := ⟨include_str "my-hl.css"⟩
 
-def main : IO UInt32 :=
+public def main : IO UInt32 :=
   slidesMain
     (config := { highlightTheme := myHighlight })
     (doc := %doc MyPresentation)
@@ -901,6 +911,8 @@ Use `include_str` to embed the stylesheet at compile time so the
 compiled executable stays self-contained:
 
 ```
+module
+
 import VersoSlides
 import MyPresentation
 
@@ -910,7 +922,7 @@ def myExtraCss : CssFile where
   filename := "custom.css"
   contents := ⟨include_str "custom.css"⟩
 
-def main : IO UInt32 :=
+public def main : IO UInt32 :=
   slidesMain
     (config := { extraCss := #[myExtraCss] })
     (doc := %doc MyPresentation)
@@ -939,3 +951,11 @@ plan before touching the filesystem:
   asset both claiming `theme.css`), `slidesMain` raises an
   `IO.userError` and writes nothing. The error names the offending
   filename and both sources so the conflict is easy to fix.
+
+## Import Maintenance
+
+Use `lake shake --keep-public VersoSlides` when minimizing the
+library's imports. This preserves the library's re-exports while
+allowing redundant imports to be removed. Some elaboration-time
+dependencies still need targeted `shake: keep` annotations, explained
+at the corresponding imports.

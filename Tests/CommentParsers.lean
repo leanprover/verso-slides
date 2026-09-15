@@ -6,6 +6,8 @@ Author: David Thrane Christiansen
 /-
   Tests for the magic comment parsers.
 -/
+module
+
 import VersoSlides.SlideCode.CommentParsers
 
 open VersoSlides
@@ -58,7 +60,7 @@ def testBool (name : String) (actual expected : Bool) : TestM Unit := do
     }
 
 
-def main : IO UInt32 := do
+public def main : IO UInt32 := do
   let ((), s) ← tests.run {}
   s.report
 where

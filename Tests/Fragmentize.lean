@@ -6,6 +6,8 @@ Author: David Thrane Christiansen
 /-
   Tests for the `fragmentize` transformation.
 -/
+module
+
 import SubVerso.Highlighting.Highlighted
 import VersoSlides.SlideCode
 
@@ -96,7 +98,7 @@ def testErr (name : String) (input : Highlighted) : TestM Unit := do
     }
 
 
-def main : IO UInt32 := do
+public def main : IO UInt32 := do
   let ((), s) ← tests.run {}
   s.report
 where

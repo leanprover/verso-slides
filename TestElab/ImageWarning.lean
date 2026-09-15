@@ -7,8 +7,9 @@ Author: David Thrane Christiansen
 Tests for the `verso.slides.warnOnImage` option and the `{image}` role's
 alt-text validation.
 -/
-import VersoSlides
-import Verso.Doc.Concrete
+module
+
+public import VersoSlides
 
 open VersoSlides
 

@@ -3,9 +3,11 @@ Copyright (c) 2026 Lean FRO LLC. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
-import Lean
-import SubVerso.Compat
-import SubVerso.Highlighting.Code
+
+module
+
+import Lean.Elab.Frontend
+import Std.Do.Triple.SpecLemmas
 import SubVerso.Module
 
 /-
@@ -62,7 +64,7 @@ def processArgs (args : List String) : IO Args := do
 where
   fail {α} (msg : String) : IO α := throw <| .userError msg
 
-unsafe def main (args : List String) : IO UInt32 := do
+public unsafe def main (args : List String) : IO UInt32 := do
   let { lakefile, jsonFile, pkgDir } ← processArgs args
 
   let pkgDir : String := Id.run do

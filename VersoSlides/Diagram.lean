@@ -4,11 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 
-import VersoSlides.Basic
-import Verso.Doc.ArgParse
-import Verso.Doc.Elab.Monad
-import VersoManual.InlineLean
-import Illuminate
+module
+
+-- The expanders below refer to declarations from `VersoSlides.Basic` inside generated
+-- quotations. These references are not currently recorded as dependencies for Shake.
+meta import VersoSlides.Basic -- shake: keep
+public import Verso.Doc.Elab.Monad
+import Illuminate.Widget
+meta import Illuminate.Widget
+meta import VersoManual.InlineLean.Scopes
+meta import Verso.WithoutAsync
+public meta import Verso.Doc.Elab.Monad
 
 open Verso ArgParse Doc Elab
 open Lean Elab
@@ -17,10 +23,14 @@ open Verso.Genre.Manual.InlineLean.Scopes (runWithOpenDecls runWithVariables)
 open Verso (withoutAsync)
 open Lean.Doc.Syntax
 
+public section
+
 namespace VersoSlides
 
-private structure DiagramConfig where
+structure DiagramConfig where
   background : Option String := none
+
+meta section
 
 section
 variable [Monad m] [MonadInfoTree m] [MonadLiftT CoreM m] [MonadEnv m] [MonadError m]
@@ -29,7 +39,7 @@ private def DiagramConfig.parse : ArgParse m DiagramConfig :=
   DiagramConfig.mk <$> .named `background .string true
 
 instance : FromArgs DiagramConfig m where
-  fromArgs := DiagramConfig.parse
+  fromArgs := private DiagramConfig.parse
 end
 
 /-- Extracts the `viewBox` width from an SVG string produced by Illuminate.
@@ -54,7 +64,7 @@ def svgViewBoxWidth (svg : String) : Float :=
   go.getD 640.0
 
 open Lean.Widget Lean.Elab.Term Lean.Meta Illuminate in
-private meta unsafe def diagramExpanderUnsafe (config : DiagramConfig) (str : StrLit) :
+private unsafe def diagramExpanderUnsafe (config : DiagramConfig) (str : StrLit) :
     DocElabM Term := withoutAsync do
   let altStr ← parserInputString str
 
@@ -116,5 +126,3 @@ private opaque diagramExpanderImpl (config : DiagramConfig) (str : StrLit) : Doc
 @[code_block]
 def diagram : CodeBlockExpanderOf DiagramConfig
   | config, str => diagramExpanderImpl config str
-
-end VersoSlides

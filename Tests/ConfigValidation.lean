@@ -3,6 +3,9 @@ Copyright (c) 2026 Lean FRO LLC. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
+
+module
+
 import VersoSlides
 
 open VersoSlides
@@ -54,7 +57,7 @@ def expectFailMentioning (desc : String) (cfg : Config)
     else
       return .error s!"{desc}: error missing substrings {missing}\n  got: {msg}"
 
-def main : IO UInt32 := do
+public def main : IO UInt32 := do
   let cases : List (IO (Except String Unit)) := [
     expectOk "builtin theme + no extraCss" { theme := "black" },
     expectOk "builtin theme + unique extraCss"

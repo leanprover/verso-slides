@@ -7,9 +7,7 @@ module
 public import Verso.Doc
 public import Verso.Output.Html
 public import VersoSlides.ImgSrc
-public import VersoManual.Html.CssFile
 public import VersoSlidesVendored
-import Std.Data.HashMap
 
 open Lean
 open Verso Output

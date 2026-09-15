@@ -6,6 +6,8 @@ Author: David Thrane Christiansen
 /-
   Tests for rendering-related HTML output.
 -/
+module
+
 import SubVerso.Highlighting.Highlighted
 import VersoSlides.Render
 import VersoSlides.SlideCode
@@ -99,7 +101,7 @@ def testHtmlHas (name : String) (html needle : String) : TestM Unit := do
     }
 
 
-def main : IO UInt32 := do
+public def main : IO UInt32 := do
   let ((), s) ← tests.run {}
   s.report
 where

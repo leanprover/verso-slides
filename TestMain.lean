@@ -3,6 +3,9 @@ Copyright (c) 2026 Lean FRO LLC. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
+
+module
+
 import VersoSlides
 import TestElab
 
@@ -16,7 +19,7 @@ def runCmd (cmd : String) (args : Array String) (desc : String) : IO UInt32 := d
     IO.eprintln s!"[test] {desc} failed (exit code {result.exitCode})"
   return result.exitCode
 
-def main (args : List String) : IO UInt32 := do
+public def main (args : List String) : IO UInt32 := do
   let mut runPlaywright := true
   for arg in args do
     match arg with
@@ -26,6 +29,15 @@ def main (args : List String) : IO UInt32 := do
       return 1
 
   -- Step 0: Lean-side unit tests that don't require browsers
+  let leanTests := #[
+    ("test-fragmentize", "Running fragmentize unit tests"),
+    ("test-render", "Running rendering unit tests"),
+    ("test-comment-parsers", "Running comment-parser unit tests")
+  ]
+  for (exe, desc) in leanTests do
+    let rc ← runCmd "lake" #["exe", exe] desc
+    if rc != 0 then return rc
+
   let rc ← runCmd "lake" #["exe", "test-config-validation"]
     "Running Config.validateFilenames unit tests"
   if rc != 0 then return rc

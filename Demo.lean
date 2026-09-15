@@ -3,9 +3,22 @@ Copyright (c) 2026 Lean FRO LLC. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
-import VersoSlides
-import Verso.Doc.Concrete
-import Illuminate
+
+module
+
+public import VersoSlides
+-- Needed by the embedded `diagram` and `animate` blocks, including shapes and widget registrations.
+-- Shake does not currently record all of these elaboration-time dependencies.
+import Illuminate -- shake: keep
+public meta import VersoSlides.Animate
+public meta import Illuminate.Diagram.Paper
+public meta import Illuminate.Animation.Interpolate
+public meta import Illuminate.Animation.Morph.Evaluate
+public meta import Illuminate.Animation.Morph.Prepare
+public meta import Illuminate.Animation.Easing
+-- "Hovers" in the panel need docstring metadata, which is not part of the public module data.
+-- Import the full module so declarations such as `IO.println` retain their docs.
+import all Init.System.IO
 
 open VersoSlides
 

@@ -10,8 +10,8 @@ single `ModuleItem` (range/kind/defines are irrelevant — the function only rea
 `item.code.toString`) and asserts that the returned 1-based source line range matches expectation,
 or `none` when the body is too far from anything in the module.
 -/
-import SubVerso.Module
-import SubVerso.Highlighting.Highlighted
+module
+
 import VersoSlides.LibModule
 
 open SubVerso.Module
@@ -22,14 +22,14 @@ open VersoSlides
 Wraps a string as a single `ModuleItem`. The function under test only looks at `item.code.toString`,
 so the other fields are placeholders.
 -/
-private def mkItem (text : String) : ModuleItem :=
+private meta def mkItem (text : String) : ModuleItem :=
   { range := none, kind := `command, defines := #[], code := .text text }
 
 /-- Convenience wrapper that searches `body` against a single-item array built from `modText`. -/
-private def find (body modText : String) : Option (Nat × Nat × String) :=
+private meta def find (body modText : String) : Option (Nat × Nat × String) :=
   findBodyLineRange body #[mkItem modText]
 
-private def mod5 : String := "module Foo\n\nimport Bar\n\ndef hello := 42\n"
+private meta def mod5 : String := "module Foo\n\nimport Bar\n\ndef hello := 42\n"
 
 -- Exact one-line match.
 /-- info: some (5, 5, "def hello := 42\n") -/

@@ -6,7 +6,6 @@ Author: David Thrane Christiansen
 module
 public import VersoSlides.SlideCode
 public import Verso.Code.Highlighted
-import Verso.Output.Html
 
 set_option doc.verso true
 

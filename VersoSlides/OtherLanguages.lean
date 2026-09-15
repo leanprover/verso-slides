@@ -4,8 +4,13 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 
-import VersoSlides.Basic
-import Verso.Doc.Elab.Monad
+module
+
+-- The expander below refers to declarations from `VersoSlides.Basic` inside generated
+-- quotations. These references are not currently recorded as dependencies for Shake.
+meta import VersoSlides.Basic -- shake: keep
+public import Verso.Doc.Elab.Monad
+public meta import Verso.Doc.Elab.Monad
 
 /-!
 Code block handler for other (non-Lean) languages.
@@ -33,7 +38,14 @@ open Lean Elab
 open Verso Doc Elab
 open Lean.Doc.Syntax
 
+public section
+
 namespace VersoSlides
+
+structure CodeConfig where
+  language : String
+
+meta section
 
 /-- A language name parsed from either an identifier or a string literal. -/
 private def langName : Verso.ArgParse.ValDesc DocElabM String where
@@ -44,12 +56,8 @@ private def langName : Verso.ArgParse.ValDesc DocElabM String where
     | .str s => pure s.getString
     | other => throwError "Expected language name (identifier or string), got {repr other}"
 
-/-- Configuration for the `code` block expander: a required language name. -/
-private structure CodeConfig where
-  language : String
-
 instance : Verso.ArgParse.FromArgs CodeConfig DocElabM where
-  fromArgs := CodeConfig.mk <$> .positional `language langName
+  fromArgs := private (CodeConfig.mk <$> .positional `language langName)
 
 /--
 Uses `reveal.js`'s built-in syntax highlighting for code.
@@ -58,5 +66,3 @@ Uses `reveal.js`'s built-in syntax highlighting for code.
 def code : CodeBlockExpanderOf CodeConfig
   | config, str =>
     ``(Verso.Doc.Block.other (BlockExt.otherLanguage $(quote config.language) $(quote str.getString)) #[])
-
-end VersoSlides

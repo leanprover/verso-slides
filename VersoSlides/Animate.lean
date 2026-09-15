@@ -4,12 +4,19 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 
-import VersoSlides.Basic
+module
+
+-- The expanders below refer to declarations from `VersoSlides.Basic` inside generated
+-- quotations. These references are not currently recorded as dependencies for Shake.
+meta import VersoSlides.Basic -- shake: keep
 import VersoSlides.Diagram
-import Verso.Doc.ArgParse
-import Verso.Doc.Elab.Monad
-import VersoManual.InlineLean
-import Illuminate
+public meta import VersoSlides.Diagram
+public import Verso.Doc.Elab.Monad
+import Illuminate.Animation.Widget
+public import Illuminate.Animation.Types
+public import Illuminate.Backend.SVG
+meta import VersoManual.InlineLean.Scopes
+meta import Verso.WithoutAsync
 
 open Verso ArgParse Doc Elab
 open Lean Elab
@@ -17,6 +24,8 @@ open Verso.SyntaxUtils (parserInputString)
 open Verso.Genre.Manual.InlineLean.Scopes (runWithOpenDecls runWithVariables)
 open Verso (withoutAsync)
 open Lean.Doc.Syntax
+
+public section
 
 namespace VersoSlides
 
@@ -52,10 +61,12 @@ def SlideAnimation.compile (sa : SlideAnimation) (fps : Nat := 60) : CompiledSli
     (sa.steps.filterMap fun s =>
       if s.pause then some s.fragmentIndex else none).toArray
 
-private structure AnimateConfig where
+structure AnimateConfig where
   fps : Nat := 60
   background : Option String := none
   autoplay : Bool := false
+
+meta section
 
 section
 variable [Monad m] [MonadInfoTree m] [MonadLiftT CoreM m] [MonadEnv m] [MonadError m]
@@ -64,13 +75,13 @@ private def AnimateConfig.parse : ArgParse m AnimateConfig :=
   AnimateConfig.mk <$> .namedD `fps .nat 60 <*> .named `background .string true <*> .flag `autoplay false
 
 instance : FromArgs AnimateConfig m where
-  fromArgs := AnimateConfig.parse
+  fromArgs := private AnimateConfig.parse
 end
 
 private initialize animContainerCounter : IO.Ref Nat ← IO.mkRef 0
 
 open Lean.Widget Lean.Elab.Term Lean.Meta Illuminate in
-private meta unsafe def animateExpanderUnsafe (config : AnimateConfig) (str : StrLit) :
+private unsafe def animateExpanderUnsafe (config : AnimateConfig) (str : StrLit) :
     DocElabM Term := withoutAsync do
   let altStr ← parserInputString str
 
@@ -140,5 +151,3 @@ private opaque animateExpanderImpl (config : AnimateConfig) (str : StrLit) : Doc
 @[code_block]
 def «animate» : CodeBlockExpanderOf AnimateConfig
   | config, str => animateExpanderImpl config str
-
-end VersoSlides

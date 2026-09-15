@@ -4,11 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 
-import VersoSlides.Basic
-import VersoSlides.SlideCode.Export
-import VersoManual.InlineLean
-import Verso.Code.Highlighted
-import Verso.Doc.Helpers
+module
+
+-- The expanders below refer to declarations from `VersoSlides.Basic` inside generated
+-- quotations. These references are not currently recorded as dependencies for Shake.
+meta import VersoSlides.Basic -- shake: keep
+public meta import VersoSlides.SlideCode.Export
+public import VersoManual.InlineLean
+public meta import VersoManual.InlineLean
 
 open Lean Elab
 open Verso Doc Elab
@@ -20,12 +23,23 @@ open Verso.Genre.Manual.InlineLean.Scopes (getScopes setScopes runWithOpenDecls 
 open Verso (withoutAsync)
 open Lean.Doc.Syntax
 
-register_option verso.slides.panel : Bool := {
+public register_option verso.slides.panel : Bool := {
   defValue := true
   descr := "default value for the `panel` flag on Lean code boxes, which determines whether to show the interactive info panel"
 }
 
+public section
+
 namespace VersoSlides
+
+structure SlidesLeanBlockConfig extends LeanBlockConfig where
+  panel : Bool
+  stretch : Bool
+
+structure NameConfig where
+  full : Option Name
+
+meta section
 
 /--
 An `ArgParse` parser for the `panel` flag shared by all code-box directives. Its default is taken
@@ -74,14 +88,6 @@ private partial def collectQueryOutput : Highlighted → Array Highlighted
   | .seq xs => xs.foldl (init := #[]) fun acc x => acc ++ collectQueryOutput x
   | .tactics _ _ _ x => collectQueryOutput x
   | _ => #[]
-
-/--
-Slides-specific code block configuration, extending {name}`LeanBlockConfig` with a panel toggle and
-a vertical-stretch toggle.
--/
-private structure SlidesLeanBlockConfig extends LeanBlockConfig where
-  panel : Bool
-  stretch : Bool
 
 open Verso ArgParse in
 instance : FromArgs SlidesLeanBlockConfig DocElabM where
@@ -147,7 +153,11 @@ def elabCommandsWithFormat (config : LeanBlockConfig) (str : StrLit)
     let origScopes ← if config.fresh then pure [{header := ""}] else getScopes
 
     let origScopes := origScopes.modifyHead fun sc =>
-      { sc with opts := pp.tagAppFns.set (Elab.async.set sc.opts false) true }
+      let opts := pp.tagAppFns.set (Elab.async.set sc.opts false) true
+      -- Under the module system, declarations are private by default and receive mangled names.
+      -- Documented declarations must remain public so later code blocks can refer to them by the
+      -- names written in the slides.
+      { sc with opts, isPublic := true }
 
     let text ← getFileMap
     let (ictx, startPos) ← strLitInputContext str.raw (← getFileName)
@@ -343,10 +353,6 @@ def leanInline : RoleExpanderOf LeanInlineConfig
 
     toSlidesHighlightedInline config.show hls term
 
-/-- Configuration for the `name` role. -/
-private structure NameConfig where
-  full : Option Name
-
 section
 open Verso.ArgParse
 variable [Monad m] [MonadError m] [MonadLiftT CoreM m] [MonadLiftT TermElabM m]
@@ -368,7 +374,8 @@ where
       | other => throwError "Expected reference name, got {repr other}"
   }
 
-instance : FromArgs NameConfig m := ⟨NameConfig.parse⟩
+instance : FromArgs NameConfig m where
+  fromArgs := private NameConfig.parse
 end
 
 /-- Create a highlighted token for a resolved constant name. -/

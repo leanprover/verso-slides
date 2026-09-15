@@ -10,8 +10,9 @@ Before the fix, a code block with an error (but no +error flag) would throw
 "No error expected in code block, one occurred" in addition to the actual
 Lean error. After the fix, only the actual error is reported.
 -/
-import VersoSlides
-import Verso.Doc.Concrete
+module
+
+public import VersoSlides
 
 open VersoSlides
 

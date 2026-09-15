@@ -3,7 +3,9 @@ Copyright (c) 2026 Lean FRO LLC. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
-import VersoSlides
+
+module
+
 import VersoUtil.BinFiles
 import TestFixtures.Markup
 import TestFixtures.Code
@@ -39,7 +41,7 @@ def hlCustomCss : HighlightTheme where
   filename := "hl/my-hl.css"
   contents := ⟨".hljs { background: #abcdef; }\n"⟩
 
-def main : IO UInt32 := do
+public def main : IO UInt32 := do
   let rc ← slidesMain
     { theme := "black", outputDir := "_test/markup", extraCss := #[markupBannerCss]
       mathPrelude := "\\def\\RR{\\mathbb{R}}\n\\newcommand{\\Hom}[2]{\\mathrm{Hom}(#1, #2)}\n" }

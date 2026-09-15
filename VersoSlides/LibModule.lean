@@ -4,23 +4,15 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 
-import Lean.Elab.Term
+module
 
-import Verso.Code.Highlighted
-import Verso.Code.External
-import Verso.Doc.Elab
-import Verso.Doc.ArgParse
-import Verso.Doc.Helpers
-import Verso.ExpectString
-import Verso.Log
-import SubVerso.Highlighting.Code
-import SubVerso.Module
-
-import VersoSlides.Basic
-import VersoSlides.InlineLean
-import VersoSlides.ModuleExample
+-- The expanders below refer to declarations from `VersoSlides.Basic` inside generated
+-- quotations. These references are not currently recorded as dependencies for Shake.
+meta import VersoSlides.Basic -- shake: keep
+public import VersoSlides.ModuleExample
 import VersoSlides.SlideCode
-import VersoSlides.SlideCode.Export
+public meta import VersoSlides.ModuleExample
+public meta import Std.Data.Iterators.Combinators.Drop
 
 open Verso.Doc.Elab
 open Verso.ArgParse
@@ -29,6 +21,8 @@ open Verso.Code.External (withNl)
 open Lean
 open SubVerso.Highlighting
 open SubVerso.Module
+
+public section
 
 namespace VersoSlides
 
@@ -51,6 +45,8 @@ structure LibModuleConfig where
   panel : Bool := true
   /-- Whether the code box fills the remaining vertical space on the slide. -/
   stretch : Bool := true
+
+meta section
 
 section
 
@@ -392,7 +388,7 @@ The opening and closing delimiters are sized to be longer than any run of backti
 Returns `none` when the syntax has no source range, or when the opening line at that range does
 not start with a backtick.
 -/
-private meta def editCodeBlock [Monad m] [MonadFileMap m] (stx : Syntax) (newArgs? : Option String) (newContents : String) : m (Option String) := do
+private def editCodeBlock [Monad m] [MonadFileMap m] (stx : Syntax) (newArgs? : Option String) (newContents : String) : m (Option String) := do
   let txt ← getFileMap
   let some rng := stx.getRange?
     | pure none

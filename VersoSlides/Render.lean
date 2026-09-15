@@ -3,14 +3,12 @@ Copyright (c) 2026 Lean FRO LLC. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
-import VersoSlides.Basic
-import VersoSlides.Attributes
-import VersoSlides.SlideCode.Render
-import VersoSlides.SlideCode.Export
-import VersoSlidesVendored
-import Verso.Doc.Html
-import Verso.Output.Html
-import Verso.Code.Highlighted
+module
+
+public import VersoSlides.Attributes
+public import VersoSlides.SlideCode.Render
+public import VersoSlides.SlideCode.Export
+public import Verso.Doc.Html
 import Verso.Code.Highlighted.WebAssets
 import Illuminate.Animation.Render
 
@@ -24,6 +22,8 @@ open Verso.Code (HighlightHtmlM highlightingStyle highlightingJs)
 /-
 HTML generation for {lit}`reveal.js` slides
 -/
+
+public section
 
 namespace VersoSlides
 
@@ -79,7 +79,7 @@ def fragmentClass (style : Option String) : String :=
 
 
 /-- Conditionally wraps a code block in the interactive info panel layout. -/
-private def wrapWithPanel (codeHtml : Html) (panel : Bool) : Html :=
+def wrapWithPanel (codeHtml : Html) (panel : Bool) : Html :=
   if panel then
     {{ <div class="code-with-panel">
          {{codeHtml}}
@@ -597,7 +597,7 @@ stylesheet or an {lit}`extraCss` entry). Entries tagged {lit}`.binary` come
 from a {name}`ThemeAsset`. The distinction matters because two payloads at
 the same filename are only compatible if they share both tag and contents.
 -/
-private inductive AssetPayload
+inductive AssetPayload
   | text (body : String)
   | binary (bytes : ByteArray)
 

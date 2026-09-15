@@ -3,8 +3,14 @@ Copyright (c) 2026 Lean FRO LLC. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
-import VersoSlides
-import Verso.Doc.Concrete
+
+module
+
+public import VersoSlides
+import Std.Tactic.BVDecide.Normalize.Prop
+-- "Hovers" in the panel need docstring metadata, which is not part of the public module data.
+-- Import the full module so declarations such as `IO.println` retain their docs.
+import all Init.System.IO
 
 open VersoSlides
 

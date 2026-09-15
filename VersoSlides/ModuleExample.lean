@@ -4,39 +4,23 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 
-import Lean.Elab.Term
-import Lean.Elab.Tactic
+module
 
-import Verso.Code.Highlighted
-import Verso.Doc.Elab
-import Verso.Doc.ArgParse
-import Verso.Doc.Suggestion
-import Verso.Doc.Helpers
-import Verso.Log
-import SubVerso.Highlighting.Code
-
-
-import VersoSlides.Basic
-import VersoSlides.InlineLean
+-- The expanders below refer to declarations from `VersoSlides.Basic` inside generated
+-- quotations. These references are not currently recorded as dependencies for Shake.
+meta import VersoSlides.Basic -- shake: keep
+public import VersoSlides.InlineLean
 import VersoSlides.SlideCode
-import VersoSlides.SlideCode.Export
-import SubVerso.Module
+public meta import VersoSlides.InlineLean
 
 open Verso.Doc.Elab
 open Verso.ArgParse
 open Verso.Log
 open Lean
 
-namespace VersoSlides
+public section
 
-/-- Environment variables that should be cleared when running Lake/Lean subprocesses.
-Prevents the parent's build environment from leaking into child processes, which
-can cause spurious rebuilds (especially via `LEAN_GITHASH`). -/
-private def lakeEnvBlacklist : Array (String × Option String) :=
-  #["LAKE", "LAKE_HOME", "LAKE_PKG_URL_MAP",
-    "LEAN_SYSROOT", "LEAN_AR", "LEAN_PATH", "LEAN_SRC_PATH",
-    "LEAN_GITHASH",
-    "ELAN_TOOLCHAIN", "DYLD_LIBRARY_PATH", "LD_LIBRARY_PATH"].map (·, none)
+namespace VersoSlides
 
 structure ModuleConfig where
   name : Option Ident := none
@@ -46,6 +30,25 @@ structure ModuleConfig where
   panel : Bool := true
   stretch : Bool := true
   lakefile : Bool := false
+
+structure IdentRefConfig where
+  name : Ident
+
+structure ModulesConfig where
+  server : Bool
+  moduleRoots : List Ident
+  error : Bool
+
+meta section
+
+/-- Environment variables that should be cleared when running Lake/Lean subprocesses.
+Prevents the parent's build environment from leaking into child processes, which
+can cause spurious rebuilds (especially via `LEAN_GITHASH`). -/
+private def lakeEnvBlacklist : Array (String × Option String) :=
+  #["LAKE", "LAKE_HOME", "LAKE_PKG_URL_MAP",
+    "LEAN_SYSROOT", "LEAN_AR", "LEAN_PATH", "LEAN_SRC_PATH",
+    "LEAN_GITHASH",
+    "ELAN_TOOLCHAIN", "DYLD_LIBRARY_PATH", "LD_LIBRARY_PATH"].map (·, none)
 
 section
 
@@ -221,9 +224,6 @@ def leanModule : CodeBlockExpanderOf ModuleConfig
     else
       ``(Verso.Doc.Block.empty)
 
-structure IdentRefConfig where
-  name : Ident
-
 section
 variable [Monad m] [MonadError m]
 instance : FromArgs IdentRefConfig m where
@@ -237,11 +237,6 @@ def identRef : CodeBlockExpanderOf IdentRefConfig
 @[role identRef]
 def identRefRole : RoleExpanderOf IdentRefConfig
   | { name := x }, _ => pure x
-
-structure ModulesConfig where
-  server : Bool
-  moduleRoots : List Ident
-  error : Bool
 
 section
 variable [Monad m] [MonadError m]

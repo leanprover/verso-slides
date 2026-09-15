@@ -4,22 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 module
-import VersoSlides.Basic
 public meta import VersoSlides.Basic
-import VersoSlides.ImageWidget
 public meta import VersoSlides.ImageWidget
-public meta import VersoSlides.ImgSrc
-import Verso.Doc.Elab
-import Verso.Doc.ArgParse
-public import Verso.Doc.Elab.Monad
-public meta import Verso.Doc.Elab.Block
-public meta import Verso.Doc.Elab.Inline
+import VersoSlides.ImgSrc
+public import Verso.Doc.Elab
+public meta import Verso.Doc.Elab
 
 open Verso Doc Elab ArgParse
 open Lean Elab Widget
 open Lean.Doc.Syntax
 
-register_option verso.slides.warnOnImage : Bool := {
+public register_option verso.slides.warnOnImage : Bool := {
   defValue := true
   descr := "if true, warn when Markdown image syntax ![alt](url) is used instead of the {image} role"
 }

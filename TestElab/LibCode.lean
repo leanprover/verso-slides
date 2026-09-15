@@ -7,8 +7,9 @@ Author: David Thrane Christiansen
 Tests for `leanLibCode`: the code block that shows source from an external
 library module via the `highlighted` Lake facet.
 -/
-import VersoSlides
-import Verso.Doc.Concrete
+module
+
+public import VersoSlides
 
 open VersoSlides
 

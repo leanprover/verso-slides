@@ -11,6 +11,7 @@ require verso from git "https://github.com/leanprover/verso.git"@"main"
 
 package «verso-slides» where
   version := v!"0.1.0"
+  requiresModuleSystem := true
 
 input_dir vendorAssets where
   path := "vendor"
@@ -43,8 +44,6 @@ lean_exe «test-fixtures-build» where
 
 lean_lib TestElab where
   needs := #[`@verso/+Verso.Code.External:highlighted]
-
-lean_lib Tests
 
 lean_exe «test-fragmentize» where
   root := `Tests.Fragmentize
