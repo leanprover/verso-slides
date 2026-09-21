@@ -21,7 +21,8 @@ open Verso.SyntaxUtils (strLitInputContext parseStrLitAsCategory)
 open Verso.Genre.Manual.InlineLean (reportMessages firstToken? saveOutputs)
 open Verso.Genre.Manual.InlineLean.Scopes (getScopes setScopes runWithOpenDecls runWithVariables)
 open Verso (withoutAsync)
-open Lean.Doc.Syntax
+open Verso.Genre.Manual (warnLongLines)
+open Lean.Doc (CodeView RoleView)
 
 public register_option verso.slides.panel : Bool := {
   defValue := true
@@ -97,8 +98,8 @@ instance : FromArgs SlidesLeanBlockConfig DocElabM where
     .flag `stretch true
 
 /-- Callback for `elabCommands`: produces a `Block.other (BlockExt.slideCode ...)` term. -/
-private def toSlidesHighlightedBlock (panel stretch shouldShow : Bool) (hls : Highlighted)
-    (str : StrLit) : DocElabM Term := do
+private def toSlidesHighlightedBlock [Literal k] (panel stretch shouldShow : Bool)
+    (hls : Highlighted) (str : TSyntax k) : DocElabM Term := do
   if !shouldShow then
     return ← ``(Verso.Doc.Block.concat #[])
 
@@ -111,20 +112,20 @@ private def toSlidesHighlightedBlock (panel stretch shouldShow : Bool) (hls : Hi
   match fragmentize hls.trim with
   | .ok sc =>
     let exported := scToExport sc
-    ``(Verso.Doc.Block.other (VersoSlides.BlockExt.slideCode $(quote exported) $(quote panel) $(quote stretch)) #[Verso.Doc.Block.code $(quote str.getString)])
+    ``(Verso.Doc.Block.other (VersoSlides.BlockExt.slideCode $(quote exported) $(quote panel) $(quote stretch)) #[Verso.Doc.Block.code $(quote (Literal.decode str))])
   | .error msg =>
     throwErrorAt str.raw msg
 
 /-- Callback for `elabCommands`: produces an `Inline.other (InlineExt.slideCode ...)` term. -/
-private def toSlidesHighlightedInline (shouldShow : Bool) (hls : Highlighted) (str : StrLit) :
-    DocElabM Term := do
+private def toSlidesHighlightedInline [Literal k] (shouldShow : Bool) (hls : Highlighted)
+    (str : TSyntax k) : DocElabM Term := do
   if !shouldShow then
     return ← ``(Verso.Doc.Inline.concat #[])
 
   match fragmentize hls.trim with
   | .ok sc =>
     let exported := scToExport sc
-    ``(Verso.Doc.Inline.other (VersoSlides.InlineExt.slideCode $(quote exported)) #[Verso.Doc.Inline.code $(quote str.getString)])
+    ``(Verso.Doc.Inline.other (VersoSlides.InlineExt.slideCode $(quote exported)) #[Verso.Doc.Inline.code $(quote (Literal.decode str))])
   | .error msg =>
     throwErrorAt str.raw msg
 
@@ -138,17 +139,16 @@ private def abbrevFirstLine (width : Nat) (str : String) : String :=
 Fork of `Verso.Genre.Manual.InlineLean.elabCommands` that passes `collectFormat := true`
 to `highlightIncludingUnparsed`, enabling format data collection for reflowable rendering.
 -/
-def elabCommandsWithFormat (config : LeanBlockConfig) (str : StrLit)
-    (toHighlightedLeanContent : (shouldShow : Bool) → (hls : Highlighted) → (str: StrLit) → DocElabM Term)
+def elabCommandsWithFormat [Literal k] (config : LeanBlockConfig) (str : TSyntax k)
+    (toHighlightedLeanContent :
+      (shouldShow : Bool) → (hls : Highlighted) → (str : TSyntax k) → DocElabM Term)
     (minCommands : Option Nat := none)
     (maxCommands : Option Nat := none) :
     DocElabM Term :=
   withoutAsync <| do
-    PointOfInterest.save (← getRef) ((config.name.map (·.toString)).getD (abbrevFirstLine 20 str.getString))
+    PointOfInterest.save (← getRef) ((config.name.map (·.toString)).getD (abbrevFirstLine 20 (Literal.decode str)))
       (kind := Lsp.SymbolKind.file)
       (detail? := some ("Lean code" ++ config.outlineMeta))
-
-    let col? := (← getRef).getPos? |>.map (← getFileMap).utf8PosToLspPos |>.map (·.character)
 
     let origScopes ← if config.fresh then pure [{header := ""}] else getScopes
 
@@ -247,9 +247,6 @@ def elabCommandsWithFormat (config : LeanBlockConfig) (str : StrLit)
         saveOutputs name msgs
 
       reportMessages (if config.error then some true else none) str cmdState.messages
-
-      if config.show then
-        Verso.Genre.Manual.warnLongLines col? str
 where
   runCommand (act : Command.CommandElabM Unit) (stx : Syntax)
       (cctx : Command.Context) (cmdState : Command.State) :
@@ -272,13 +269,16 @@ where
 /-- Elaborated Lean code block for slides (with format data collection). -/
 @[code_block]
 def lean : CodeBlockExpanderOf SlidesLeanBlockConfig
-  | config, str => elabCommandsWithFormat config.toLeanBlockConfig str (toSlidesHighlightedBlock config.panel config.stretch)
+  | config, str => do
+    -- Only a code block is rendered wide enough for its line lengths to matter.
+    if config.show then warnLongLines str
+    elabCommandsWithFormat config.toLeanBlockConfig str (toSlidesHighlightedBlock config.panel config.stretch)
 
 /-- Inline elaborated Lean command for slides (with format data collection). -/
 @[role]
 def leanCommand : RoleExpanderOf LeanBlockConfig
   | config, inls => do
-    if let some str ← oneCodeStr? inls then
+    if let some str ← onlyCode? inls then
       elabCommandsWithFormat config str toSlidesHighlightedInline (minCommands := some 1) (maxCommands := some 1)
     else
       `(sorry)
@@ -289,7 +289,7 @@ def leanInline : RoleExpanderOf LeanInlineConfig
   | config, inlines => withoutAsync do
     let #[arg] := inlines
       | throwError "Expected exactly one argument"
-    let `(inline|code( $term:str )) := arg
+    let some { content := term, .. } := CodeView.of arg
       | throwErrorAt arg "Expected code literal with the example name"
     let leveller :=
       if let some us := config.universes then
@@ -343,9 +343,9 @@ def leanInline : RoleExpanderOf LeanInlineConfig
 
     pushInfoTree tree
 
-    if let `(inline|role{%$s $f $_*}%$e[$_*]) ← getRef then
-      Verso.Hover.addCustomHover (mkNullNode #[s, e]) type
-      Verso.Hover.addCustomHover f type
+    if let some v := RoleView.of ⟨← getRef⟩ then
+      Verso.Hover.addCustomHover (mkNullNode #[v.braceOpen, v.braceClose]) type
+      Verso.Hover.addCustomHover v.name type
 
     reportMessages (if config.error then some true else none) term newMsgs
 
@@ -396,9 +396,9 @@ Usage: `{name}[List.map]` or `{name List.map'}[map']`
 @[role]
 def name : RoleExpanderOf NameConfig
   | cfg, #[arg] => do
-    let `(inline|code( $nameStx:str )) := arg
+    let some { content := nameStx, .. } := CodeView.of arg
       | throwErrorAt arg "Expected code literal with the example name"
-    let exampleName := nameStx.getString.toName
+    let exampleName := nameStx.getVersoCode.toName
     let identStx := mkIdentFrom arg (cfg.full.getD exampleName) (canonical := true)
 
     try
@@ -407,13 +407,13 @@ def name : RoleExpanderOf NameConfig
           withInfoTreeContext (mkInfoTree := pure ∘ InfoTree.node (.ofCommandInfo {elaborator := `VersoSlides.name, stx := identStx})) do
             realizeGlobalConstNoOverloadWithInfo identStx
 
-      let hl : Highlighted ← constTok resolvedName nameStx.getString
+      let hl : Highlighted ← constTok resolvedName nameStx.getVersoCode
       let exported := hlToExport hl
 
-      ``(Verso.Doc.Inline.other (VersoSlides.InlineExt.name $(quote exported)) #[Verso.Doc.Inline.code $(quote nameStx.getString)])
+      ``(Verso.Doc.Inline.other (VersoSlides.InlineExt.name $(quote exported)) #[Verso.Doc.Inline.code $(quote nameStx.getVersoCode)])
     catch e =>
       logErrorAt identStx e.toMessageData
-      ``(Verso.Doc.Inline.code $(quote nameStx.getString))
+      ``(Verso.Doc.Inline.code $(quote nameStx.getVersoCode))
   | _, more =>
     if h : more.size > 0 then
       throwErrorAt more[0] "Unexpected contents"

@@ -12,7 +12,7 @@ public meta import Verso.Doc.Elab
 
 open Verso Doc Elab ArgParse
 open Lean Elab Widget
-open Lean.Doc.Syntax
+open Lean.Doc (CodeView ImageView InlineView UnorderedListView)
 
 public register_option verso.slides.warnOnImage : Bool := {
   defValue := true
@@ -416,10 +416,10 @@ public meta def image : RoleExpanderOf ImageArgs
   | args, stxs => do
   let mut altParts : Array String := #[]
   for stx in stxs do
-    match stx with
-    | `(inline| $strLit:str) =>
-      altParts := altParts.push strLit.getString.trimAscii.copy
-    | `(inline| line! $_) => continue
+    match InlineView.of stx with
+    | some (.text t) =>
+      altParts := altParts.push t.getVersoText.trimAscii.copy
+    | some (.linebreak _) => continue
     | _ => logErrorAt stx "image alt text must be plain text, not formatted content"
   let alt : String := " ".intercalate altParts.toList
 
@@ -447,11 +447,11 @@ Intercepts the Markdown-like `![alt](url)` syntax and warns that the `{image}` r
 instead, since it supports width, height, and class, and uses local path resolution. Controlled by
 the `verso.slides.warnOnImage` option. After warning, delegates to the default handler.
 -/
-@[inline_expander Lean.Doc.Syntax.image]
+@[inline_expander Lean.Doc.Parser.Inline.image]
 public meta def warnOnMarkdownImage : InlineExpander
-  | `(inline| image( $alt:str ) ( $url )) => do
+  | .image { alt, target := .url (url := url) .., .. } => do
     if (← getOptions).getBool `verso.slides.warnOnImage true then
-      let suggestion := "{image " ++ url.getString.quote ++ "}[" ++ alt.getString ++ "]"
+      let suggestion := "{image " ++ url.getVersoLinkUrl.quote ++ "}[" ++ alt.getVersoImageAlt ++ "]"
       let msg := m!"This image syntax is missing features that are useful for slides, such as width and height."
       let h ←
         (m!"Use the `{.ofConstName ``image}` role instead of `![alt](url)` for slides. " ++
@@ -528,15 +528,15 @@ public meta def table : DirectiveExpanderOf TableArgs
   | args, contents => do
     let #[oneBlock] := contents
       | throwError "Expected a single unordered list"
-    let `(block|ul{$items*}) := oneBlock
+    let some outer := UnorderedListView.of oneBlock
       | throwErrorAt oneBlock "Expected a single unordered list"
-    let preRows ← items.mapM getLi
+    let preRows := outer.items.map (·.contents)
     let rows ← preRows.mapM fun blks => do
-      let #[oneInRow] := blks.filter (·.raw.isOfKind ``Lean.Doc.Syntax.ul)
+      let #[oneInRow] := blks.filter (·.raw.isOfKind ``Lean.Doc.Parser.Block.ul)
         | throwError "Each row should have exactly one list in it"
-      let `(block|ul{ $cellItems*}) := oneInRow
+      let some inner := UnorderedListView.of oneInRow
         | throwErrorAt oneInRow "Each row should have exactly one list in it"
-      cellItems.mapM getLi
+      pure (inner.items.map (·.contents))
     if h : rows.size = 0 then
       throwErrorAt oneBlock "Expected at least one row"
     else
@@ -556,10 +556,6 @@ public meta def table : DirectiveExpanderOf TableArgs
       ``(Block.other
           (VersoSlides.BlockExt.table $(quote columns) $(quote style))
           #[Block.ul #[$[Verso.Doc.ListItem.mk #[$blocks,*]],*]])
-where
-  getLi : Syntax → DocElabM (TSyntaxArray `block)
-    | `(list_item| * $content*) => pure content
-    | other => throwErrorAt other "Expected list item"
 
 /--
 Custom CSS block. The content is collected during traversal and injected
@@ -575,7 +571,7 @@ Usage:
 @[code_block]
 public meta def css : CodeBlockExpanderOf Unit
   | (), str =>
-    ``(Verso.Doc.Block.other (BlockExt.css $(quote str.getString)) #[])
+    ``(Verso.Doc.Block.other (BlockExt.css $(quote str.getVersoCodeBlock)) #[])
 
 /--
 Custom HTML block. The content is inserted directly into the slide body
@@ -592,7 +588,7 @@ Usage:
 public meta def html : CodeBlockExpanderOf Unit
   | (), str => do
     -- The `false` parameter treats the text as unescaped raw HTML data.
-    let html := Verso.Output.Html.text false str.getString
+    let html := Verso.Output.Html.text false str.getVersoCodeBlock
     ``(Verso.Doc.Block.other (BlockExt.ofHtml $(quote html)) #[])
 
 /--
@@ -608,7 +604,7 @@ public meta def htmlRole : RoleExpanderOf Unit
   | (), inlines => do
   let #[arg] := inlines
     | throwError "Expected a single inline code argument"
-  let `(inline|code( $htmlStr:str )) := arg
+  let some { content := htmlStr, .. } := CodeView.of arg
     | throwErrorAt arg "Expected inline code"
-  let html := Verso.Output.Html.text false htmlStr.getString
+  let html := Verso.Output.Html.text false htmlStr.getVersoCode
   ``(Verso.Doc.Inline.other (VersoSlides.InlineExt.ofHtml $(quote html)) #[])

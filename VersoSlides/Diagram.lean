@@ -21,7 +21,7 @@ open Lean Elab
 open Verso.SyntaxUtils (parserInputString)
 open Verso.Genre.Manual.InlineLean.Scopes (runWithOpenDecls runWithVariables)
 open Verso (withoutAsync)
-open Lean.Doc.Syntax
+open Lean.Doc (VersoCodeBlock)
 
 public section
 
@@ -64,7 +64,7 @@ def svgViewBoxWidth (svg : String) : Float :=
   go.getD 640.0
 
 open Lean.Widget Lean.Elab.Term Lean.Meta Illuminate in
-private unsafe def diagramExpanderUnsafe (config : DiagramConfig) (str : StrLit) :
+private unsafe def diagramExpanderUnsafe (config : DiagramConfig) (str : VersoCodeBlock) :
     DocElabM Term := withoutAsync do
   let altStr ← parserInputString str
 
@@ -117,11 +117,11 @@ private unsafe def diagramExpanderUnsafe (config : DiagramConfig) (str : StrLit)
 
     let bg := config.background
     ``(Verso.Doc.Block.other (VersoSlides.BlockExt.diagram $(quote svgStr) $(quote cssWidth) $(quote bg))
-        #[Verso.Doc.Block.code $(quote str.getString)])
+        #[Verso.Doc.Block.code $(quote str.getVersoCodeBlock)])
 
 open Lean.Widget Lean.Elab.Term Lean.Meta Illuminate in
 @[implemented_by diagramExpanderUnsafe]
-private opaque diagramExpanderImpl (config : DiagramConfig) (str : StrLit) : DocElabM Term
+private opaque diagramExpanderImpl (config : DiagramConfig) (str : VersoCodeBlock) : DocElabM Term
 
 @[code_block]
 def diagram : CodeBlockExpanderOf DiagramConfig
