@@ -42,8 +42,6 @@ The document title becomes the HTML page title. Each top-level heading
 slide body.
 
 ```
-module
-
 public import VersoSlides
 
 open VersoSlides
@@ -414,13 +412,6 @@ compiler and rendered with full syntax highlighting and hover
 documentation. The code is type-checked at build time, so any errors
 are caught before the slides are generated.
 
-When using the module system, building slides from the command line
-requires `import all` of a declaration's defining module to include
-its docstring in hovers. For example, add `import all Init.System.IO`
-to the presentation's imports for the documentation of `IO.println`.
-Without it, the code still compiles, but the generated hover omits the
-docstring.
-
 ````
 ```lean
 def factorial : Nat → Nat
@@ -435,6 +426,24 @@ Verso's highlighting system.
 Instead of hovers, information about code is revealed on click. This
 is to allow the presenter to point using the mouse without hover boxes
 popping up over content.
+
+#### Using Lean's module system
+
+Support for
+[Lean's module system](https://lean-lang.org/doc/reference/latest/Source-Files-and-Modules/)
+in `verso-slides` is experimental. When using modules with Lean Code
+Blocks, docstrings may be missing from generated hovers.
+
+To include a declaration's docstring in its hover, import the module
+that defines it using `import all`. For example, to include the
+documentation for `IO.println`, add:
+
+```lean
+import all Init.System.IO
+```
+
+Without `import all`, the code will still compile, but the generated
+hover will omit the docstring.
 
 ### Code Box Sizing
 
@@ -698,8 +707,6 @@ carry per-slide attributes (the table above); doc-level config does
 not appear in `%%%` blocks at all.
 
 ```
-module
-
 import VersoSlides
 import MyPresentation
 
@@ -911,8 +918,6 @@ Use `include_str` to embed the stylesheet at compile time so the
 compiled executable stays self-contained:
 
 ```
-module
-
 import VersoSlides
 import MyPresentation
 

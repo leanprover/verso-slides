@@ -4,7 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 
-module
+-- Don't enable modules yet: SubVerso doesn't report missing Lean Code
+-- Blocks hovers caused by missing `import all`.
+
+-- module
 
 import VersoSlides
 import Demo
