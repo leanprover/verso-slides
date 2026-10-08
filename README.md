@@ -431,11 +431,13 @@ popping up over content.
 
 Support for
 [Lean's module system](https://lean-lang.org/doc/reference/latest/Source-Files-and-Modules/)
-in `verso-slides` is experimental. When using modules with Lean Code
-Blocks, docstrings may be missing from generated hovers.
+in `verso-slides` is experimental. When using modules with Lean code
+blocks, docstrings may be missing from generated hovers. It's usually
+best to use an ordinary source file.
 
-To include a declaration's docstring in its hover, import the module
-that defines it using `import all`. For example, to include the
+If you need to use a module, then a bit more work is required. To
+include a declaration's docstring in its hover, import the module that
+defines it using `import all`. For example, to include the
 documentation for `IO.println`, add:
 
 ```lean

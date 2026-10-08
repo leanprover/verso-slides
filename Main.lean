@@ -4,8 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: David Thrane Christiansen
 -/
 
--- Don't enable modules yet: SubVerso doesn't report missing Lean Code
--- Blocks hovers caused by missing `import all`.
+-- Don't use a module for your slides yet: a missing `import all` leads to docstrings
+-- not showing up in hovers, which can be hard to diagnose.
 
 -- module
 
