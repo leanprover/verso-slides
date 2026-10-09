@@ -1,7 +1,8 @@
 """Browser tests for the interactive info panel."""
 
 from playwright.sync_api import expect, Page
-from conftest import break_layout, goto_slide_by_title, take_forced_errors
+from conftest import break_layout, goto_slide_by_title, take_forced_errors, expect_console_error
+from pretty_helpers import set_goal
 
 
 class TestPanelStructure:
@@ -61,85 +62,65 @@ class TestPanelStructure:
 
 class TestTacticReflow:
     def test_tactic_goals_reflow_on_resize(self, code_url: str, page: Page):
-        """Clicking a tactic should show reflowed goals that re-render when the panel resizes."""
+        """A narrower panel changes the actual Lean layout, not just the DOM."""
         slide = goto_slide_by_title(page, code_url, "Proof")
+        page.wait_for_function("window.versoVirState === 'ready'")
         block = slide.locator(".code-with-panel").first
         panel = block.locator(".info-panel")
-
-        # Click the first tactic span to populate the panel with goal state
-        tactic = block.locator(".tactic").first
-        expect(tactic).to_be_visible()
-        tactic.click()
-        page.wait_for_timeout(500)
-
-        # Panel should now contain reflowed goal content
-        reflowed = panel.locator(".reflowed")
-        assert reflowed.count() > 0, "Expected .reflowed spans in the panel after clicking a tactic"
-        initial_html = reflowed.first.inner_html()
-        assert len(initial_html.strip()) > 0, "Reflowed span should have content"
-
-        # Inject a marker attribute into the panel's top-level element.
-        # If reflowPanel actually re-renders, it replaces panel.innerHTML entirely,
-        # which will remove this marker. If reflow is broken (no-op), the marker stays.
-        panel.evaluate("el => el.firstElementChild.setAttribute('data-reflow-marker', '1')")
-        assert panel.locator("[data-reflow-marker]").count() == 1, "Marker should be present before resize"
-
-        # Shrink the panel significantly to trigger ResizeObserver → reflowPanel
-        block.evaluate("""el => {
-            el.style.setProperty('--code-ratio', '0.9fr');
-            el.style.setProperty('--panel-ratio', '0.1fr');
+        widths = panel.evaluate("""panel => {
+            const measurer = createDOMMeasurer(panel);
+            const padding = panel.clientWidth - contentWidth(panel);
+            const widths = {wide: padding + 28 * measurer.spaceWidth,
+                narrow: padding + 12 * measurer.spaceWidth};
+            measurer.cleanup();
+            return widths;
         }""")
-        # Wait for ResizeObserver debounce (100ms) + rendering
-        page.wait_for_timeout(500)
-
-        # The marker should be gone — reflowPanel replaced innerHTML
-        assert panel.locator("[data-reflow-marker]").count() == 0, \
-            "Reflow marker should be gone after resize (reflowPanel should have re-rendered the panel)"
-
-        # And the panel should still have reflowed content
-        reflowed_after = panel.locator(".reflowed")
-        assert reflowed_after.count() > 0, "Reflowed spans should still exist after resize"
+        block.evaluate("(el, width) => el.style.setProperty('--panel-ratio', `${width}px`)", widths['wide'])
+        set_goal(block, [5, [4, 'abcdefgh', [4, 1, 'ijklmnop']]])
+        # textContent preserves the newline that a whitespace-normalized assertion loses.
+        page.wait_for_function("panel => panel.querySelector('.reflowed')?.textContent === 'abcdefgh ijklmnop'",
+            arg=panel.element_handle())
+        block.evaluate("(el, width) => el.style.setProperty('--panel-ratio', `${width}px`)", widths['narrow'])
+        page.wait_for_function("panel => panel.querySelector('.reflowed')?.textContent === 'abcdefgh\\nijklmnop'",
+            arg=panel.element_handle())
 
 
 class TestLayoutFailure:
-    """When laying out goal format data throws, the panel shows the static
-    rendering of the tactic state, with the measurer's probe removed."""
+    """Layout failures are visible and leave no measurement probe behind."""
 
-    def test_click_falls_back_to_static_goals(self, code_url: str, page: Page, browser_errors: list):
+    def test_click_reports_layout_failure(self, code_url: str, page: Page, browser_errors: list):
         slide = goto_slide_by_title(page, code_url, "Proof")
         block = slide.locator(".code-with-panel").first
         panel = block.locator(".info-panel")
         tactic = block.locator(".tactic").first
-        static_html = tactic.locator(":scope > .tactic-state").evaluate("el => el.innerHTML")
 
         break_layout(page)
-        tactic.click()
-        page.wait_for_timeout(500)
+        with expect_console_error(page, 'Lean expression formatting failed Error: forced layout failure'):
+            tactic.click()
 
-        assert panel.inner_html() == '<span class="hl lean">' + static_html + "</span>"
+        expect(panel.get_by_role("alert")).to_have_text("This Lean expression could not be formatted.")
         # The measurer's probe is a hidden `.reflowed` span appended to the panel
         assert panel.locator(".reflowed").count() == 0
-        assert take_forced_errors(browser_errors) == 1
+        # The error view can trigger another ResizeObserver redraw.
+        assert take_forced_errors(browser_errors) >= 1
 
-    def test_resize_restores_static_goals(self, code_url: str, page: Page, browser_errors: list):
+    def test_resize_reports_layout_failure(self, code_url: str, page: Page, browser_errors: list):
         slide = goto_slide_by_title(page, code_url, "Proof")
         block = slide.locator(".code-with-panel").first
         panel = block.locator(".info-panel")
         tactic = block.locator(".tactic").first
-        static_html = tactic.locator(":scope > .tactic-state").evaluate("el => el.innerHTML")
 
+        page.wait_for_function("window.versoVirState === 'ready'")
         tactic.click()
-        page.wait_for_timeout(500)
-        assert panel.locator(".reflowed").count() > 0
+        expect(panel.locator(".reflowed").first).not_to_be_empty()
 
         break_layout(page)
-        block.evaluate("""el => {
-            el.style.setProperty('--code-ratio', '0.9fr');
-            el.style.setProperty('--panel-ratio', '0.1fr');
-        }""")
-        page.wait_for_timeout(500)
-
-        assert panel.inner_html() == '<span class="hl lean">' + static_html + "</span>"
+        with expect_console_error(page, 'Lean expression formatting failed Error: forced layout failure'):
+            block.evaluate("""el => {
+                el.style.setProperty('--code-ratio', '0.9fr');
+                el.style.setProperty('--panel-ratio', '0.1fr');
+            }""")
+        expect(panel.get_by_role("alert")).to_have_text("This Lean expression could not be formatted.")
         assert panel.locator(".reflowed").count() == 0
         assert take_forced_errors(browser_errors) >= 1
 
