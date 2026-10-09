@@ -54,6 +54,11 @@
     background: rgba(128, 128, 128, 0.5);
 }
 
+.vir-panel-status {
+    white-space: normal;
+    font-family: sans-serif;
+}
+
 /* Info panel — absolutely positioned so it never influences grid row height */
 .info-panel {
     position: absolute;

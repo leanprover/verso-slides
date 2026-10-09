@@ -8,6 +8,82 @@
 
 "use strict";
 
+class PrettyFormatError extends Error {
+    /** @param {string} code */
+    constructor(code) {
+        super("PrettyM input error: " + code);
+        this.name = "PrettyFormatError";
+        this.code = code;
+    }
+}
+
+/** Typed array boundary for the compact format emitted by Verso.
+ * @param {VersoVirProgram} program @param {*} format
+ * @param {number} width @param {number} indent
+ * @return {PrettySegment[]}
+ */
+function formatCompactSegments(program, format, width, indent) {
+    var admitted = compactFormatToStdFormat(format);
+    return /** @type {PrettySegment[]} */ (program.call("VersoSlides.VirPrettyM.formatSegments", admitted, width, indent));
+}
+
+/** Convert Verso's compact format to VIR's Std.Format representation.
+ * Preserve numeric fields for VIR to validate/marshal as Nat or Int.
+ * Slides checks its compact constructor shape; resource budgets are deferred.
+ * @param {*} json @return {*}
+ */
+function compactFormatToStdFormat(json) {
+    if (json === null) return { kind: "nil" };
+    if (typeof json === "string") return { kind: "text", value: json };
+    if (json === 1) return { kind: "line" };
+    if (!Array.isArray(json) || json.length === 0) {
+        throw new PrettyFormatError("invalidInput");
+    }
+    switch (json[0]) {
+        case 2:
+            if (json.length !== 2 || typeof json[1] !== "boolean") throw new PrettyFormatError("invalidInput");
+            return { kind: "align", value: !!json[1] };
+        case 3:
+            if (json.length !== 3) throw new PrettyFormatError("invalidInput");
+            return {
+                kind: "nest",
+                fields: { indent: json[1], f: compactFormatToStdFormat(json[2]) },
+            };
+        case 4:
+            if (json.length !== 3) throw new PrettyFormatError("invalidInput");
+            return {
+                kind: "append",
+                fields: {
+                    arg1: compactFormatToStdFormat(json[1]),
+                    arg2: compactFormatToStdFormat(json[2]),
+                },
+            };
+        case 5:
+            if (json.length !== 2) throw new PrettyFormatError("invalidInput");
+            return {
+                kind: "group",
+                fields: { arg1: compactFormatToStdFormat(json[1]), behavior: "allOrNone" },
+            };
+        case 6:
+            if (json.length !== 2) throw new PrettyFormatError("invalidInput");
+            return {
+                kind: "group",
+                fields: { arg1: compactFormatToStdFormat(json[1]), behavior: "fill" },
+            };
+        case 7:
+            if (json.length !== 3) throw new PrettyFormatError("invalidInput");
+            return {
+                kind: "tag",
+                fields: {
+                    arg1: json[1],
+                    arg2: compactFormatToStdFormat(json[2]),
+                },
+            };
+        default:
+            throw new PrettyFormatError("invalidInput");
+    }
+}
+
 /**
  * @typedef {{ type: string, [key: string]: * }} FormatNode
  *
