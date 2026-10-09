@@ -259,8 +259,8 @@ FORCED_LAYOUT_FAILURE = "forced layout failure"
 
 
 def break_layout(page):
-    """Make every layout of Lean format data on ``page`` throw, so that rendering
-    has to fall back to the static content."""
+    """Make layout fail after initialization, to exercise the formatting error UI."""
+    page.wait_for_function("window.versoVirState === 'ready'")
     page.evaluate(
         f"() => {{ window.formatToHtml = () => {{ throw new Error('{FORCED_LAYOUT_FAILURE}'); }}; }}"
     )

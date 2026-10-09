@@ -102,32 +102,30 @@ class TestTacticReflow:
 
 
 class TestLayoutFailure:
-    """When laying out goal format data throws, the panel shows the static
-    rendering of the tactic state, with the measurer's probe removed."""
+    """Layout failures are visible and leave no measurement probe behind."""
 
-    def test_click_falls_back_to_static_goals(self, code_url: str, page: Page, browser_errors: list):
+    def test_click_reports_layout_failure(self, code_url: str, page: Page, browser_errors: list):
         slide = goto_slide_by_title(page, code_url, "Proof")
         block = slide.locator(".code-with-panel").first
         panel = block.locator(".info-panel")
         tactic = block.locator(".tactic").first
-        static_html = tactic.locator(":scope > .tactic-state").evaluate("el => el.innerHTML")
 
         break_layout(page)
         tactic.click()
         page.wait_for_timeout(500)
 
-        assert panel.inner_html() == '<span class="hl lean">' + static_html + "</span>"
+        expect(panel.get_by_role("alert")).to_have_text("This Lean expression could not be formatted.")
         # The measurer's probe is a hidden `.reflowed` span appended to the panel
         assert panel.locator(".reflowed").count() == 0
         assert take_forced_errors(browser_errors) == 1
 
-    def test_resize_restores_static_goals(self, code_url: str, page: Page, browser_errors: list):
+    def test_resize_reports_layout_failure(self, code_url: str, page: Page, browser_errors: list):
         slide = goto_slide_by_title(page, code_url, "Proof")
         block = slide.locator(".code-with-panel").first
         panel = block.locator(".info-panel")
         tactic = block.locator(".tactic").first
-        static_html = tactic.locator(":scope > .tactic-state").evaluate("el => el.innerHTML")
 
+        page.wait_for_function("window.versoVirState === 'ready'")
         tactic.click()
         page.wait_for_timeout(500)
         assert panel.locator(".reflowed").count() > 0
@@ -139,7 +137,7 @@ class TestLayoutFailure:
         }""")
         page.wait_for_timeout(500)
 
-        assert panel.inner_html() == '<span class="hl lean">' + static_html + "</span>"
+        expect(panel.get_by_role("alert")).to_have_text("This Lean expression could not be formatted.")
         assert panel.locator(".reflowed").count() == 0
         assert take_forced_errors(browser_errors) >= 1
 

@@ -3,6 +3,24 @@
 from playwright.sync_api import expect, Page
 from conftest import break_layout, goto_slide_by_title, take_forced_errors
 
+from test_vir_prettym_initialization import hold_or_fail_wasm
+
+
+class TestLightboxReadiness:
+    def test_pending_signature_formats_on_readiness(self, code_url: str, page: Page):
+        errors = hold_or_fail_wasm(page)
+        slide = goto_slide_by_title(page, code_url, "Inline Lean")
+        page.wait_for_function("window.formatterProbe.requests === 1")
+        slide.locator("code.hl.lean.inline [data-verso-hover]").first.click()
+        source = page.locator(".lean-hover-inner code[data-rich-format]").first
+        expect(source.get_by_role("status")).to_have_text("Loading Lean formatting…")
+        page.evaluate("window.formatterProbe.release()")
+        page.wait_for_function("window.versoVirState === 'ready'")
+        expect(source.locator(".reflowed")).not_to_be_empty()
+        expect(source.get_by_role("status")).to_have_count(0)
+        assert page.evaluate("window.formatterProbe.unhandled") == []
+        assert errors == []
+
 
 class TestLightboxOpen:
     def test_click_inline_token_opens_lightbox(self, code_url: str, page: Page):
@@ -35,9 +53,8 @@ class TestLightboxOpen:
         expect(inner).to_be_visible()
         assert inner.inner_html().strip() != "", "Lightbox content should not be empty"
 
-    def test_layout_failure_keeps_plain_signature(self, code_url: str, page: Page, browser_errors: list):
-        """When laying out the signature's format data throws, the lightbox shows
-        the plain-text signature, with the measurer's probe removed."""
+    def test_layout_failure_reports_signature_error(self, code_url: str, page: Page, browser_errors: list):
+        """A signature layout failure is visible and removes the measurer's probe."""
         slide = goto_slide_by_title(page, code_url, "Inline Lean")
         token = slide.locator("code.hl.lean.inline [data-verso-hover]").first
 
@@ -48,7 +65,7 @@ class TestLightboxOpen:
         inner = page.locator(".lean-hover-inner")
         signature = inner.locator("code[data-rich-format]")
         assert signature.count() == 1
-        assert signature.inner_text().strip() != ""
+        expect(signature.get_by_role("alert")).to_have_text("This Lean expression could not be formatted.")
         # The measurer's probe is a hidden `.reflowed` span appended to the lightbox
         assert inner.locator(".reflowed").count() == 0
         assert take_forced_errors(browser_errors) == 1

@@ -34,6 +34,13 @@ directory over HTTP:
 python3 -m http.server -d _slides
 ```
 
+Goal states and type signatures use Lean's pretty printer, running in
+the browser through [VIR](https://github.com/ejgallego/lean-vir). Lake
+downloads a prebuilt runtime and includes it in the generated slides.
+
+For a deck in a separate Lake project, see the
+[example presentation](examples/default-deck).
+
 ## Writing a Presentation
 
 A presentation is a Verso document declared with the `Slides` genre.
@@ -958,6 +965,20 @@ plan before touching the filesystem:
   asset both claiming `theme.css`), `slidesMain` raises an
   `IO.userError` and writes nothing. The error names the offending
   filename and both sources so the conflict is easy to fix.
+
+## Testing
+
+`lake test` runs the Lean, JavaScript, and browser tests. It requires
+Node.js and `uv`. Use `lake test -- --no-playwright` to skip the
+browser tests.
+
+To run just the formatting and lightbox browser tests:
+
+```sh
+lake exe test-fixtures-build
+uv run --project browser-tests pytest \
+  browser-tests/test_vir_prettym_*.py browser-tests/test_lightbox.py -v
+```
 
 ## Import Maintenance
 
