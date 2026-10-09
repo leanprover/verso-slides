@@ -660,3 +660,43 @@ function fillReflowedSpans(container, formats, measurer) {
         span.innerHTML = formatToHtml(entry.fmt, entry.annotations, width, measurer);
     }
 }
+
+/**
+ * Render goal or signature metadata using the same measurement and cleanup path.
+ * Goal structure is inserted before measuring its type cells. A caller can pass
+ * a signature width to retain its own layout fallback (as the lightbox does).
+ * @param {HTMLElement} container
+ * @param {Element} source
+ * @param {number} [signatureWidth]
+ */
+function renderRichFormat(container, source, signatureWidth) {
+    var parsed = JSON.parse(source.getAttribute("data-rich-format") || "{}");
+    if (Array.isArray(parsed)) {
+        var result = goalsToHtml(parsed);
+        container.innerHTML = '<span class="hl lean">' + result.html + "</span>";
+        var measurer = createDOMMeasurer(container);
+        try {
+            fillReflowedSpans(container, result.formats, measurer);
+        } finally {
+            measurer.cleanup();
+        }
+    } else {
+        var measurer = createDOMMeasurer(container);
+        try {
+            var width = signatureWidth;
+            if (width === undefined) {
+                var style = getComputedStyle(container);
+                width =
+                    container.clientWidth -
+                    parseFloat(style.paddingLeft || "0") -
+                    parseFloat(style.paddingRight || "0");
+            }
+            source.innerHTML =
+                '<span class="reflowed">' +
+                formatToHtml(parsed.fmt, parsed.annotations, width, measurer) +
+                "</span>";
+        } finally {
+            measurer.cleanup();
+        }
+    }
+}
