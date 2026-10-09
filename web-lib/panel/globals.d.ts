@@ -2,6 +2,7 @@
 
 /** Reveal.js presentation API (global). */
 declare var Reveal: {
+    isReady(): boolean;
     on(event: string, callback: (...args: any[]) => void): void;
     getCurrentSlide(): HTMLElement | null;
     getRevealElement(): HTMLElement | null;
