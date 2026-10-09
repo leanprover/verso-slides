@@ -4,10 +4,12 @@
         "target": "ES2024",
         "noEmit": true,
         "strict": true,
-        "checkJs": true
+        "checkJs": true,
+        "module": "ES2020"
     },
     "include": [
         "pretty.js",
+        "pretty-init.js",
         "panel.js",
         "lightbox.js",
         "code-block-bg.js",
