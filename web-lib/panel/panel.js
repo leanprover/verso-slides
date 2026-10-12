@@ -430,13 +430,7 @@
                 if (richFmt && typeof goalsToHtml === "function") {
                     panel._richFormatSource = ts;
                     try {
-                        var goalsData = JSON.parse(richFmt);
-                        var result = goalsToHtml(goalsData);
-                        // Pass 1: insert structural HTML so table layout computes cell widths
-                        panel.innerHTML = '<span class="hl lean">' + result.html + "</span>";
-                        // Pass 2: measure actual .type cell widths and format expressions
-                        var measurer = getPanelMeasurer(panel);
-                        fillReflowedSpans(panel, result.formats, measurer);
+                        renderRichFormat(panel, ts);
                         html = null; // already set innerHTML
                     } catch (e) {
                         html = '<span class="hl lean">' + ts.innerHTML + "</span>";
@@ -461,15 +455,8 @@
         var sigCode = panel.querySelector("code[data-rich-format]");
         if (sigCode && typeof formatToHtml === "function") {
             try {
-                var fmtData = JSON.parse(sigCode.getAttribute("data-rich-format") || "{}");
                 panel._richFormatSource = sigCode;
-                var measurer = getPanelMeasurer(panel);
-                var width =
-                    panel.clientWidth -
-                    parseFloat(getComputedStyle(panel).paddingLeft || "0") -
-                    parseFloat(getComputedStyle(panel).paddingRight || "0");
-                var rendered = formatToHtml(fmtData.fmt, fmtData.annotations, width, measurer);
-                sigCode.innerHTML = '<span class="reflowed">' + rendered + "</span>";
+                renderRichFormat(panel, sigCode);
             } catch (e) {
                 // Fall back to plain text signature on error
                 panel._richFormatSource = null;
@@ -486,15 +473,6 @@
     }
 
     /**
-     * Create a DOM measurer for text and element width measurement.
-     * @param {HTMLElement} panel
-     * @return {DOMMeasurer}
-     */
-    function getPanelMeasurer(panel) {
-        return createDOMMeasurer(panel);
-    }
-
-    /**
      * Reflow the panel's rich format content at current width.
      * @param {InfoPanel} panel
      */
@@ -504,24 +482,7 @@
         var richFmt = source.getAttribute("data-rich-format");
         if (!richFmt) return;
         try {
-            var parsed = JSON.parse(richFmt);
-            // Detect whether this is goal data (array) or signature format data (has "fmt" key)
-            if (Array.isArray(parsed) && typeof goalsToHtml === "function") {
-                var result = goalsToHtml(parsed);
-                panel.innerHTML = '<span class="hl lean">' + result.html + "</span>";
-                var measurer = getPanelMeasurer(panel);
-                fillReflowedSpans(panel, result.formats, measurer);
-            } else if (parsed.fmt && typeof formatToHtml === "function") {
-                var measurer = getPanelMeasurer(panel);
-                var width =
-                    panel.clientWidth -
-                    parseFloat(getComputedStyle(panel).paddingLeft || "0") -
-                    parseFloat(getComputedStyle(panel).paddingRight || "0");
-                source.innerHTML =
-                    '<span class="reflowed">' +
-                    formatToHtml(parsed.fmt, parsed.annotations, width, measurer) +
-                    "</span>";
-            }
+            renderRichFormat(panel, source);
         } catch (e) {
             // Fall back to pre-rendered HTML on error
         }
