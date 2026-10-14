@@ -3,6 +3,24 @@
 from playwright.sync_api import expect, Page
 from conftest import goto_slide_by_title
 
+from test_vir_prettym_initialization import hold_or_fail_wasm
+
+
+class TestLightboxReadiness:
+    def test_pending_signature_formats_on_readiness(self, code_url: str, page: Page):
+        errors = hold_or_fail_wasm(page)
+        slide = goto_slide_by_title(page, code_url, "Inline Lean")
+        page.wait_for_function("window.formatterProbe.requests === 1")
+        slide.locator("code.hl.lean.inline [data-verso-hover]").first.click()
+        source = page.locator(".lean-hover-inner code[data-rich-format]").first
+        expect(source.get_by_role("status")).to_have_text("Loading Lean formatting…")
+        page.evaluate("window.formatterProbe.release()")
+        page.wait_for_function("window.versoVirState === 'ready'")
+        expect(source.locator(".reflowed")).not_to_be_empty()
+        expect(source.get_by_role("status")).to_have_count(0)
+        assert page.evaluate("window.formatterProbe.unhandled") == []
+        assert errors == []
+
 
 class TestLightboxOpen:
     def test_click_inline_token_opens_lightbox(self, code_url: str, page: Page):

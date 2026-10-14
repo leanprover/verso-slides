@@ -63,6 +63,9 @@
 
         // Rescale lightbox content when viewport changes
         Reveal.on("resize", applyScale);
+        window.addEventListener("verso-vir-statechange", function () {
+            if (currentInner) reflowLightboxSignatures(currentInner);
+        });
 
         // Close on Escape — use capture phase to intercept before reveal.js
         document.addEventListener(
@@ -205,21 +208,17 @@
      * @param {HTMLElement} container
      */
     function reflowLightboxSignatures(container) {
-        var sigCode = container.querySelector("code[data-rich-format]");
-        if (!sigCode || typeof formatToHtml !== "function") return;
-        try {
-            var fmtData = JSON.parse(sigCode.getAttribute("data-rich-format") || "{}");
-            var measurer = createDOMMeasurer(container);
-            var width =
-                container.clientWidth -
-                parseFloat(getComputedStyle(container).paddingLeft || "0") -
-                parseFloat(getComputedStyle(container).paddingRight || "0");
-            if (width <= 0) width = 600; // fallback
-            var rendered = formatToHtml(fmtData.fmt, fmtData.annotations, width, measurer);
-            sigCode.innerHTML = '<span class="reflowed">' + rendered + "</span>";
-            measurer.cleanup();
-        } catch (e) {
-            // Fall back to plain text signature
+        var source = container.querySelector("code[data-rich-format]");
+        if (!source) return;
+        if (!formatterIsReady()) {
+            source.textContent = "";
+            showFormattingStatus(/** @type {HTMLElement} */ (source));
+        } else {
+            try {
+                renderRichFormat(container, source);
+            } catch (error) {
+                showFormattingFailure(/** @type {HTMLElement} */ (source), error);
+            }
         }
     }
 

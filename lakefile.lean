@@ -8,6 +8,8 @@ import Lake
 open System Lake DSL
 
 require verso from git "https://github.com/leanprover/verso.git"@"main"
+require lean_vir from git "https://github.com/ejgallego/lean-vir.git" @
+  "4.35"
 
 package «verso-slides» where
   version := v!"0.1.0"
@@ -16,8 +18,10 @@ package «verso-slides» where
 input_dir vendorAssets where
   path := "vendor"
 
+-- Prepare the formatter's resources before the asset module embeds them.
+-- The formatter cannot import this carrier library.
 lean_lib VersoSlidesVendored where
-  needs := #[vendorAssets]
+  needs := #[vendorAssets, `+VersoSlides.VirPrettyM:virResourcePack]
 
 input_dir webLibAssets where
   path := "web-lib"
@@ -56,3 +60,9 @@ lean_exe «test-comment-parsers» where
 
 lean_exe «test-config-validation» where
   root := `Tests.ConfigValidation
+
+lean_exe «test-pretty» where
+  root := `Tests.Pretty
+
+lean_exe «test-vir-publication» where
+  root := `Tests.VirPublication
