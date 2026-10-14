@@ -468,7 +468,7 @@ def leanLibCode : CodeBlockExpanderOf LibModuleConfig
       let lineHint? : Option String ←
         match cfg.startLine, cfg.endLine with
         | some sl, some el =>
-          match findBodyLineRange str.getString items with
+          match findBodyLineRange str.getVersoCodeBlock items with
           | some (newSl, newEl, newContents) =>
             if newSl != sl || newEl != el then
               let newArgs := [
@@ -500,6 +500,6 @@ def leanLibCode : CodeBlockExpanderOf LibModuleConfig
       let exported := scToExport sc
       ``(Verso.Doc.Block.other
            (VersoSlides.BlockExt.slideCode $(quote exported) $(quote cfg.panel) $(quote cfg.stretch))
-           #[Verso.Doc.Block.code $(quote str.getString)])
+           #[Verso.Doc.Block.code $(quote str.getVersoCodeBlock)])
     | .error msg =>
       throwErrorAt str.raw msg

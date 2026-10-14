@@ -15,6 +15,7 @@ import Illuminate.Animation.Render
 set_option doc.verso true
 
 open Verso Doc Output Html
+open Lean (Html)
 open Verso.Doc.Html (HtmlT GenreHtml ToHtml mkPartHeader)
 open SubVerso.Highlighting (Highlighted hlFromExport!)
 open Verso.Code (HighlightHtmlM highlightingStyle highlightingJs)
@@ -29,13 +30,13 @@ namespace VersoSlides
 
 /-- Pushes a CSS class onto all top-level HTML tags in a fragment. -/
 partial def addClassToHtml (cls : String) : Html → Html
-  | .tag name attrs children =>
+  | .element name attrs children =>
     let attrs :=
       if let some i := attrs.findFinIdx? (·.1 == "class") then
         attrs.set i ("class", attrs[i].2 ++ " " ++ cls)
       else
         attrs.push ("class", cls)
-    .tag name attrs children
+    .element name attrs children
   | .seq elts => .seq (elts.map (addClassToHtml cls))
   | other => other
 
@@ -53,9 +54,9 @@ private def pushOneAttr (attrs : Array (String × String)) (k v : String) : Arra
 
 /-- Pushes arbitrary attributes onto all top-level HTML tags in a fragment. -/
 partial def pushAttrsOntoHtml (newAttrs : Array (String × String)) : Html → Html
-  | .tag name attrs children =>
+  | .element name attrs children =>
     let attrs := newAttrs.foldl (fun acc (k, v) => pushOneAttr acc k v) attrs
-    .tag name attrs children
+    .element name attrs children
   | .seq elts => .seq (elts.map (pushAttrsOntoHtml newAttrs))
   | other => other
 
@@ -111,7 +112,7 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
       pure (pushAttrsOntoHtml attrs (.seq inner))
     | .wrap attrs =>
       let inner ← contents.mapM blockHtml
-      pure (.tag "div" attrs (.seq inner))
+      pure (.element "div" attrs (.seq inner))
     | .ofHtml html =>
       pure html
     | .slideCode scExport panel stretch =>
@@ -173,7 +174,7 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
           let cells := .seq (← row.mapIdxM (mkCell false ·))
           pure {{ <tr>{{cells}}</tr> }}
         pure {{ <tbody>{{.seq trs}}</tbody> }}
-      pure (.tag "table" tableAttrs (.seq #[theadHtml, tbodyHtml]))
+      pure (.element "table" tableAttrs (.seq #[theadHtml, tbodyHtml]))
     | .css _ =>
       pure .empty
     | .diagram svgStr cssWidth background =>
@@ -183,7 +184,7 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
       let style := s!"width: {cssWidth}{bgStyle}"
       pure {{
         <div class="diagram" style={{style}}>
-          {{Html.text false svgStr}}
+          {{Html.raw svgStr}}
         </div>
       }}
     | .animate containerId animDataJson cssWidth background fragmentIndices autoplay =>
@@ -202,7 +203,7 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
         let attrs := match idx with
           | some n => baseAttrs.push ("data-fragment-index", toString n)
           | none => baseAttrs
-        .tag "span" attrs .empty
+        .element "span" attrs .empty
       let autoplayAttr := if autoplay then "true" else "false"
       pure {{
         <div class="illuminate-anim" id={{containerId}} style={{style}}
@@ -210,7 +211,7 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
         </div>
         {{fragSpans}}
         <script type="application/json" data-illuminate-anim={{containerId}}>
-          {{Html.text false animDataJson}}
+          {{Html.raw animDataJson}}
         </script>
       }}
   inline inlineHtml container contents := do
@@ -221,10 +222,10 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
       let mut attrs : Array (String × String) := #[("class", cls)]
       if let some i := index then
         attrs := attrs.push ("data-fragment-index", toString i)
-      pure (.tag "span" attrs (.seq inner))
+      pure (.element "span" attrs (.seq inner))
     | .styled attrs =>
       let inner ← contents.mapM inlineHtml
-      pure (.tag "span" attrs (.seq inner))
+      pure (.element "span" attrs (.seq inner))
     | .image imgSrcVal alt width height cssClass =>
       let imgSrc ← match imgSrcVal with
         | .projectRelative resolved => do
@@ -247,7 +248,7 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
         | (false, some c) => some c
         | (false, none)   => none
       if let some c := classVal then attrs := attrs.push ("class", c)
-      pure (.tag "img" attrs .empty)
+      pure (.element "img" attrs .empty)
     | .ofHtml html =>
       pure html
     | .slideCode scExport =>
@@ -277,7 +278,7 @@ private def blkToHtml (b : Block Slides) : HtmlT Slides m Html :=
 /-- Renders an array of inlines as a heading at the given level. -/
 private def renderHeading (level : Nat) (title : Array (Inline Slides)) : HtmlT Slides m Html := do
   let titleHtml ← title.mapM inlToHtml
-  pure (.tag s!"h{level}" #[] (.seq titleHtml))
+  pure (.element s!"h{level}" #[] (.seq titleHtml))
 
 /-- Returns {name}`true` if a {name}`Part` has any non-empty direct content blocks. -/
 private def hasDirectContent (p : Part Slides) : Bool :=
@@ -301,19 +302,19 @@ partial def renderSlidePart (config : Config) (level : Nat) (parentVertical : Bo
       let mut slides := #[]
       -- If there's direct content, create implicit first vertical sub-slide
       if hasDirectContent p then
-        slides := slides.push (.tag "section" #[] (.seq (#[heading] ++ contentHtml)))
+        slides := slides.push (.element "section" #[] (.seq (#[heading] ++ contentHtml)))
       -- Render each ## sub-part as a vertical sub-slide
       for sub in p.subParts do
         slides := slides.push (← renderSlidePart config 1 true sub)
-      pure (.tag "section" attrs (.seq slides))
+      pure (.element "section" attrs (.seq slides))
     else
       -- Single horizontal slide (no vertical sub-slides)
       let subContent ← p.subParts.mapM (renderSlidePart config 1 false)
-      pure (.tag "section" attrs (.seq (#[heading] ++ contentHtml ++ subContent)))
+      pure (.element "section" attrs (.seq (#[heading] ++ contentHtml ++ subContent)))
   else if level == 1 && parentVertical then
     -- `##` section under vertical parent: emit as vertical sub-slide (<section>)
     let subContent ← p.subParts.mapM (renderSlidePart config 2 false)
-    pure (.tag "section" attrs (.seq (#[heading] ++ contentHtml ++ subContent)))
+    pure (.element "section" attrs (.seq (#[heading] ++ contentHtml ++ subContent)))
   else
     -- `##` under non-vertical parent, or `###` and deeper: flatten (no <section> wrapper)
     let subContent ← p.subParts.mapM (renderSlidePart config (level + 1) false)
@@ -445,7 +446,7 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
     if config.mathPrelude.isEmpty then #[]
     else
       let js := s!"window.__versoMathPrelude = {jsString config.mathPrelude};"
-      #[{{ <script>{{Html.text false js}}</script> }}]
+      #[{{ <script>{{Html.raw js}}</script> }}]
   let themeHref := match config.theme with
     | .builtin name => s!"{libPrefix}/reveal.js/dist/theme/{name}.css"
     | .custom theme => theme.stylesheet.filename
@@ -493,7 +494,7 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
       <link rel="stylesheet" href={{s!"{libPrefix}/illuminate-anim.css"}} />
       <link rel="stylesheet" href={{s!"{libPrefix}/table.css"}} />
       <link rel="stylesheet" href={{s!"{libPrefix}/katex/dist/katex.min.css"}} />
-      {{ customCss.map fun css => {{ <style>{{Html.text false css}}</style> }} }}
+      {{ customCss.map fun css => {{ <style>{{Html.raw css}}</style> }} }}
       {{config.extraHead}}
     </head>
     <body>
@@ -509,7 +510,7 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
       {{mathPreludeScripts}}
       <script src={{s!"{libPrefix}/math.js"}}></script>
       {{extraJsScripts}}
-      <script>{{Html.text false initScript}}</script>
+      <script>{{Html.raw initScript}}</script>
       <script src={{s!"{libPrefix}/marked.min.js"}}></script>
       <script src={{s!"{libPrefix}/popper.js"}}></script>
       <script src={{s!"{libPrefix}/tippy.js"}}></script>
@@ -698,7 +699,7 @@ def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := runWit
   if !(← dir.pathExists) then
     IO.FS.createDirAll dir
   let indexPath := dir / "index.html"
-  IO.FS.writeFile indexPath ("<!doctype html>\n" ++ fullHtml.asString)
+  IO.FS.writeFile indexPath ("<!doctype html>\n" ++ fullHtml.render)
 
   -- Write hover data JSON for highlighted code tooltips
   let docsJsonPath := dir / "-verso-docs.json"

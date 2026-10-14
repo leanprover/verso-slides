@@ -15,6 +15,7 @@ Renders SlideCode trees to HTML for `reveal.js`.
 
 
 open Verso Output Html
+open Lean (Html)
 open SubVerso.Highlighting (Highlighted)
 open Verso.Code (HighlightHtmlM)
 open Lean (Json toJson)
@@ -96,7 +97,7 @@ public def SlideCode.toHtml : SlideCode → HighlightHtmlM g Html
     pure {{
       <span class="tactic" "data-tactic-range"={{s!"{startPos}-{endPos}"}}>
         {{contentHtml}}
-        {{Html.tag "span" (#[("class", "tactic-state"), ("style", "display:none")] ++ fmtAttr) goalsHtml}}
+        {{Html.element "span" (#[("class", "tactic-state"), ("style", "display:none")] ++ fmtAttr) goalsHtml}}
       </span>
     }}
   | .span info content => do
@@ -118,17 +119,17 @@ public def SlideCode.toHtml : SlideCode → HighlightHtmlM g Html
     }}
   | .fragment w true content => do
     let contentHtml ← content.toHtml
-    pure (Html.tag "div" (#[("class", fragClass w)] ++ fragIndexAttr w) contentHtml)
+    pure (Html.element "div" (#[("class", fragClass w)] ++ fragIndexAttr w) contentHtml)
   | .fragment w false content => do
     let contentHtml ← content.toHtml
-    pure (Html.tag "span" (#[("class", fragClass w)] ++ fragIndexAttr w) contentHtml)
+    pure (Html.element "span" (#[("class", fragClass w)] ++ fragIndexAttr w) contentHtml)
   | .click target index => do
     let targetHtml ← target.toHtml
     let cls := "fragment slide-click-only"
     let attrs := match index with
       | some i => #[("class", cls), ("data-fragment-index", toString i)]
       | none => #[("class", cls)]
-    pure (Html.tag "span" attrs targetHtml)
+    pure (Html.element "span" attrs targetHtml)
   | .commandOutput info => do
     -- Use the highest severity for the wrapper class
     let severity := info.foldl (fun acc (s, _) => match acc, s with

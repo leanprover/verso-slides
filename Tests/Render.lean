@@ -20,6 +20,7 @@ open SubVerso.Highlighting Highlighted
 open Verso.Code (HighlightHtmlM)
 open Verso.Code.Hover (State)
 open Verso Output Html
+open Lean (Html)
 open VersoSlides
 
 
@@ -48,7 +49,7 @@ def runHighlightHtml (act : HighlightHtmlM Slides Html) : Html :=
 
 /-- Renders a `SlideCode` to an HTML string. -/
 def renderStr (sc : SlideCode) : String :=
-  (runHighlightHtml (sc.toHtml (g := Slides))).asString
+  (runHighlightHtml (sc.toHtml (g := Slides))).render
 
 
 structure TestState where
@@ -226,5 +227,5 @@ where
       { extraHead := #[{{ <script type="module" src={{blueprintRuntime}}></script> }}] }
       "Deck" (.seq #[])
     testHtmlHas "extraHead renders module script"
-      fullHtml.asString
+      fullHtml.render
       s!"<script type=\"module\" src=\"{blueprintRuntime}\"></script>"
