@@ -28,11 +28,18 @@ public def main (args : List String) : IO UInt32 := do
       IO.eprintln s!"[test] unknown argument: {arg}"
       return 1
 
-  -- Step 0: Lean-side unit tests that don't require browsers
+  -- Step 0: Unit tests that don't require browsers
+  let rc ← runCmd "node"
+    #["--test", "Tests/pretty-presentation.test.cjs", "Tests/vir-bootstrap.test.cjs"]
+    "Running formatter presentation and initialization tests"
+  if rc != 0 then return rc
+
   let leanTests := #[
     ("test-fragmentize", "Running fragmentize unit tests"),
     ("test-render", "Running rendering unit tests"),
-    ("test-comment-parsers", "Running comment-parser unit tests")
+    ("test-comment-parsers", "Running comment-parser unit tests"),
+    ("test-pretty", "Running prettyM segment tests"),
+    ("test-vir-publication", "Running VIR publication tests")
   ]
   for (exe, desc) in leanTests do
     let rc ← runCmd "lake" #["exe", exe] desc

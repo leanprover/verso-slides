@@ -1,0 +1,6 @@
+# Local build state and output from running this example.
+/.lake/
+/talk-build/
+/_slides/
+# Dependencies are selected by the parent repository's manifest.
+/lake-manifest.json

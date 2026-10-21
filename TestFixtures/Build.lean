@@ -13,6 +13,7 @@ import TestFixtures.PanelOption
 import TestFixtures.DiagramAnim
 import TestFixtures.Theme
 import TestFixtures.MinimalThemed
+import TestFixtures.Pretty
 
 open VersoSlides
 open Verso.BinFiles
@@ -42,6 +43,8 @@ def hlCustomCss : HighlightTheme where
   contents := ⟨".hljs { background: #abcdef; }\n"⟩
 
 public def main : IO UInt32 := do
+  IO.FS.createDirAll "_test"
+  TestFixtures.Pretty.writeNativeCorpus "_test/native-corpus.json"
   let rc ← slidesMain
     { theme := "black", outputDir := "_test/markup", extraCss := #[markupBannerCss]
       mathPrelude := "\\def\\RR{\\mathbb{R}}\n\\newcommand{\\Hom}[2]{\\mathrm{Hom}(#1, #2)}\n" }

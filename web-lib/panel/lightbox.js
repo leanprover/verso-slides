@@ -63,6 +63,9 @@
 
         // Rescale lightbox content when viewport changes
         Reveal.on("resize", applyScale);
+        window.addEventListener("verso-vir-statechange", function () {
+            if (currentInner) reflowLightboxFormat(currentInner);
+        });
 
         // Close on Escape — use capture phase to intercept before reveal.js
         document.addEventListener(
@@ -169,8 +172,8 @@
         // Scale content to match slide text size
         applyScale();
 
-        // Reflow any rich format signatures
-        reflowLightboxSignatures(inner);
+        // Lay out the hover's format data, if it has any
+        reflowLightboxFormat(inner);
 
         // Render docstrings with marked
         if (typeof marked !== "undefined") {
@@ -204,22 +207,27 @@
      * Reflow any rich format data in the lightbox content.
      * @param {HTMLElement} container
      */
-    function reflowLightboxSignatures(container) {
-        var sigCode = container.querySelector("code[data-rich-format]");
-        if (!sigCode || typeof formatToHtml !== "function") return;
-        try {
-            var fmtData = JSON.parse(sigCode.getAttribute("data-rich-format") || "{}");
-            var measurer = createDOMMeasurer(container);
-            var width =
-                container.clientWidth -
-                parseFloat(getComputedStyle(container).paddingLeft || "0") -
-                parseFloat(getComputedStyle(container).paddingRight || "0");
-            if (width <= 0) width = 600; // fallback
-            var rendered = formatToHtml(fmtData.fmt, fmtData.annotations, width, measurer);
-            sigCode.innerHTML = '<span class="reflowed">' + rendered + "</span>";
-            measurer.cleanup();
-        } catch (e) {
-            // Fall back to plain text signature
+    function reflowLightboxFormat(container) {
+        const codeEl = container.querySelector("code[data-rich-format]");
+        if (codeEl) {
+            if (!formatterIsReady()) {
+                codeEl.textContent = "";
+                showFormattingStatus(/** @type {HTMLElement} */ (codeEl));
+                return;
+            }
+            try {
+                // Not null: the selector above only matches elements that have this attribute
+                const json = /** @type {string} */ (codeEl.getAttribute("data-rich-format"));
+                /** @type {unknown} */
+                const parsed = JSON.parse(json);
+                if (!isFormatData(parsed))
+                    throw new Error("data-rich-format on hover code: expected FormatData");
+                let width = contentWidth(container);
+                if (width <= 0) width = 600; // fallback
+                renderFormat(container, codeEl, parsed, width);
+            } catch (error) {
+                showFormattingFailure(/** @type {HTMLElement} */ (codeEl), error);
+            }
         }
     }
 

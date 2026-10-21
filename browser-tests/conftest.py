@@ -220,9 +220,14 @@ def browser(request, playwright_instance):
 
 @pytest.fixture
 def page(browser):
+    """A fresh page that fails the test if the browser reports an error during it."""
     page = browser.new_page()
+    errors = []
+    page.on("console", lambda msg: errors.append(f"console.error: {msg.text}") if msg.type == "error" else None)
+    page.on("pageerror", lambda exc: errors.append(f"uncaught: {exc}"))
     yield page
     page.close()
+    assert not errors, "Browser errors during test:\n" + "\n".join(errors)
 
 
 _REVEAL_READY_EXPR = "() => !!(window.Reveal && window.Reveal.isReady && window.Reveal.isReady())"
