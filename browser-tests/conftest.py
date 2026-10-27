@@ -225,11 +225,30 @@ def browser_errors():
     return []
 
 
+def console_error_text(msg):
+    """The text of a console error message, with each logged ``Error`` object
+    shown as its name and message.
+
+    Browsers differ in how they stringify a logged ``Error`` object: Chromium
+    includes its message and stack, while Firefox reports only its name. The
+    message text is recovered from the logged objects themselves so that tests
+    can match on it in every browser.
+    """
+    try:
+        parts = [
+            arg.evaluate("v => v instanceof Error ? `${v.name}: ${v.message}` : String(v)")
+            for arg in msg.args
+        ]
+    except Exception:
+        return msg.text
+    return " ".join(parts) if parts else msg.text
+
+
 @pytest.fixture
 def page(browser, browser_errors):
     """A fresh page that records browser errors in ``browser_errors``."""
     page = browser.new_page()
-    page.on("console", lambda msg: browser_errors.append(f"console.error: {msg.text}") if msg.type == "error" else None)
+    page.on("console", lambda msg: browser_errors.append(f"console.error: {console_error_text(msg)}") if msg.type == "error" else None)
     page.on("pageerror", lambda exc: browser_errors.append(f"uncaught: {exc}"))
     yield page
     page.close()
