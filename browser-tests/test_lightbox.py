@@ -1,7 +1,7 @@
 """Browser tests for the inline Lean term lightbox overlay."""
 
 from playwright.sync_api import expect, Page
-from conftest import goto_slide_by_title
+from conftest import break_layout, goto_slide_by_title, take_forced_errors
 
 
 class TestLightboxOpen:
@@ -34,6 +34,24 @@ class TestLightboxOpen:
         inner = page.locator(".lean-hover-inner")
         expect(inner).to_be_visible()
         assert inner.inner_html().strip() != "", "Lightbox content should not be empty"
+
+    def test_layout_failure_keeps_plain_signature(self, code_url: str, page: Page, browser_errors: list):
+        """When laying out the signature's format data throws, the lightbox shows
+        the plain-text signature, with the measurer's probe removed."""
+        slide = goto_slide_by_title(page, code_url, "Inline Lean")
+        token = slide.locator("code.hl.lean.inline [data-verso-hover]").first
+
+        break_layout(page)
+        token.click()
+        page.wait_for_timeout(500)
+
+        inner = page.locator(".lean-hover-inner")
+        signature = inner.locator("code[data-rich-format]")
+        assert signature.count() == 1
+        assert signature.inner_text().strip() != ""
+        # The measurer's probe is a hidden `.reflowed` span appended to the lightbox
+        assert inner.locator(".reflowed").count() == 0
+        assert take_forced_errors(browser_errors) == 1
 
     def test_lightbox_monospace_font(self, code_url: str, page: Page):
         """Lightbox content should use a monospace font."""
