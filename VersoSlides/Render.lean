@@ -14,7 +14,7 @@ import Illuminate.Animation.Render
 
 set_option doc.verso true
 
-open Verso Doc Output Html
+open Verso Doc
 open Lean (Html)
 open Verso.Doc.Html (HtmlT GenreHtml ToHtml mkPartHeader)
 open SubVerso.Highlighting (Highlighted hlFromExport!)
@@ -82,13 +82,15 @@ def fragmentClass (style : Option String) : String :=
 /-- Conditionally wraps a code block in the interactive info panel layout. -/
 def wrapWithPanel (codeHtml : Html) (panel : Bool) : Html :=
   if panel then
-    {{ <div class="code-with-panel">
-         {{codeHtml}}
-         <div class="panel-divider"></div>
-         <div class="panel-cell">
-           <div class="info-panel"></div>
-         </div>
-       </div> }}
+    html%{
+      <div class="code-with-panel">
+        {codeHtml}
+        <div class="panel-divider"></div>
+        <div class="panel-cell">
+          <div class="info-panel"></div>
+        </div>
+      </div>
+    }
   else codeHtml
 
 instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
@@ -97,7 +99,7 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
     match container with
     | .notes =>
       let inner ← contents.mapM blockHtml
-      pure {{ <aside class="notes"> {{inner}} </aside> }}
+      pure html%{<aside class="notes">{inner}</aside>}
     | .fragment style index =>
       -- Push-down: push fragment class onto the single child block
       let inner ← contents.mapM blockHtml
@@ -117,7 +119,7 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
       pure html
     | .slideCode scExport panel stretch =>
       let sc := scFromExport! scExport
-      let codeHtml ← pure {{ <code class="hl lean block"> {{ ← sc.toHtml (g := Slides) }} </code> }}
+      let codeHtml ← pure html%{<code class="hl lean block">{← sc.toHtml (g := Slides)}</code>}
       let wrapped := wrapWithPanel codeHtml panel
       -- When stretched, add reveal.js's `r-stretch` class to the outermost element
       -- (the `.code-with-panel` div, or the bare `<code>`) so it fills the slide's
@@ -127,10 +129,10 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
       let hl := (hlFromExport! hlExport).trim
       let codeHtml ← match fragmentize hl with
         | .error _msg => hl.blockHtml (g := Slides) "lean"
-        | .ok sc => pure {{ <code class="hl lean block"> {{ ← sc.toHtml (g := Slides) }} </code> }}
+        | .ok sc => pure html%{<code class="hl lean block">{← sc.toHtml (g := Slides)}</code>}
       pure (wrapWithPanel codeHtml panel)
     | .otherLanguage language code =>
-      pure {{ <pre><code class=s!"language-{language}">{{code}}</code></pre> }}
+      pure html%{<pre><code class={s!"language-{language}"}>{code}</code></pre>}
     | .table columns style =>
       let #[.ul items] := contents | pure .empty
       -- Re-chunk the flat cell list back into rows
@@ -159,21 +161,21 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
           HtmlT Slides m Html := do
         let inner : Html := .seq (← cellBlocks.mapM blockHtml)
         if isColHdr then
-          pure {{ <th scope="col">{{inner}}</th> }}
+          pure html%{<th scope="col">{inner}</th>}
         else if style.rowHeaders && colIdx == 0 then
-          pure {{ <th scope="row">{{inner}}</th> }}
+          pure html%{<th scope="row">{inner}</th>}
         else
-          pure {{ <td>{{inner}}</td> }}
+          pure html%{<td>{inner}</td>}
       let theadHtml : Html ← match headerRow with
         | none     => pure .empty
         | some row =>
           let cells := .seq (← row.mapIdxM (mkCell true ·))
-          pure {{ <thead><tr>{{cells}}</tr></thead> }}
+          pure html%{<thead><tr>{cells}</tr></thead>}
       let tbodyHtml : Html ← do
         let trs ← bodyRows.mapM fun row => do
           let cells := .seq (← row.mapIdxM (mkCell false ·))
-          pure {{ <tr>{{cells}}</tr> }}
-        pure {{ <tbody>{{.seq trs}}</tbody> }}
+          pure html%{<tr>{cells}</tr>}
+        pure html%{<tbody>{.seq trs}</tbody>}
       pure (.element "table" tableAttrs (.seq #[theadHtml, tbodyHtml]))
     | .css _ =>
       pure .empty
@@ -182,11 +184,11 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
         | some bg => s!"; background: {bg}; padding: 1em; border-radius: 0.5em"
         | none => ""
       let style := s!"width: {cssWidth}{bgStyle}"
-      pure {{
-        <div class="diagram" style={{style}}>
-          {{Html.raw svgStr}}
+      pure html%{
+        <div class="diagram" style={style}>
+          {Html.raw svgStr}
         </div>
-      }}
+      }
     | .animate containerId animDataJson cssWidth background fragmentIndices autoplay =>
       let bgStyle := match background with
         | some bg => s!"; background: {bg}; padding: 1em; border-radius: 0.5em"
@@ -205,15 +207,15 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
           | none => baseAttrs
         .element "span" attrs .empty
       let autoplayAttr := if autoplay then "true" else "false"
-      pure {{
-        <div class="illuminate-anim" id={{containerId}} style={{style}}
-             data-illuminate-autoplay={{autoplayAttr}}>
+      pure html%{
+        <div class="illuminate-anim" id={containerId} style={style}
+             data-illuminate-autoplay={autoplayAttr}>
         </div>
-        {{fragSpans}}
-        <script type="application/json" data-illuminate-anim={{containerId}}>
-          {{Html.raw animDataJson}}
+        {fragSpans}
+        <script type="application/json" data-illuminate-anim={containerId}>
+          {Html.raw animDataJson}
         </script>
-      }}
+      }
   inline inlineHtml container contents := do
     match container with
     | .fragment style index =>
@@ -253,12 +255,12 @@ instance [Monad m] [MonadBuildLog (HtmlT Slides m)] : GenreHtml Slides m where
       pure html
     | .slideCode scExport =>
       let sc := scFromExport! scExport
-      pure {{ <code class="hl lean inline"> {{ ← sc.toHtml (g := Slides) }} </code> }}
+      pure html%{<code class="hl lean inline">{← sc.toHtml (g := Slides)}</code>}
     | .leanCode hlExport =>
       let hl := (hlFromExport! hlExport).trim
       match fragmentize hl with
       | .error _msg => hl.inlineHtml (g := Slides) (some "lean")
-      | .ok sc => pure {{ <code class="hl lean inline"> {{ ← sc.toHtml (g := Slides) }} </code> }}
+      | .ok sc => pure html%{<code class="hl lean inline">{← sc.toHtml (g := Slides)}</code>}
     | .name hlExport =>
       let hl := (hlFromExport! hlExport).trim
       hl.inlineHtml (g := Slides) (some "lean")
@@ -439,14 +441,14 @@ private def jsString (s : String) : String := Id.run do
 /-- Renders the full standalone HTML page. -/
 def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (customCss : Array String := #[]) : Html :=
   let extraCssLinks := config.extraCss.map fun css =>
-    {{ <link rel="stylesheet" href={{css.filename}} /> }}
+    html%{<link rel="stylesheet" href={css.filename} />}
   let extraJsScripts := config.extraJs.map fun url =>
-    {{ <script src={{url}}></script> }}
+    html%{<script src={url}></script>}
   let mathPreludeScripts : Array Html :=
     if config.mathPrelude.isEmpty then #[]
     else
       let js := s!"window.__versoMathPrelude = {jsString config.mathPrelude};"
-      #[{{ <script>{{Html.raw js}}</script> }}]
+      #[html%{<script>{Html.raw js}</script>}]
   let themeHref := match config.theme with
     | .builtin name => s!"{libPrefix}/reveal.js/dist/theme/{name}.css"
     | .custom theme => theme.stylesheet.filename
@@ -475,54 +477,54 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
         plugins: [ RevealNotes, RevealHighlight ]
       });
     "
-  {{ <html>
+  html%{<html>
     <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>{{title}}</title>
-      <link rel="stylesheet" href={{s!"{revealBase}/dist/reset.css"}} />
-      <link rel="stylesheet" href={{s!"{revealBase}/dist/reveal.css"}} />
-      <link rel="stylesheet" href={{themeHref}} />
-      <link rel="stylesheet" href={{config.highlightTheme.filename}} />
-      {{extraCssLinks}}
-      <link rel="stylesheet" href={{s!"{libPrefix}/highlighting.css"}} />
-      <link rel="stylesheet" href={{s!"{libPrefix}/tippy-border.css"}} />
-      <link rel="stylesheet" href={{s!"{libPrefix}/slides-highlight.css"}} />
-      <link rel="stylesheet" href={{s!"{libPrefix}/panel.css"}} />
-      <link rel="stylesheet" href={{s!"{libPrefix}/lightbox.css"}} />
-      <link rel="stylesheet" href={{s!"{libPrefix}/diagram.css"}} />
-      <link rel="stylesheet" href={{s!"{libPrefix}/illuminate-anim.css"}} />
-      <link rel="stylesheet" href={{s!"{libPrefix}/table.css"}} />
-      <link rel="stylesheet" href={{s!"{libPrefix}/katex/dist/katex.min.css"}} />
-      {{ customCss.map fun css => {{ <style>{{Html.raw css}}</style> }} }}
-      {{config.extraHead}}
+      <title>{title}</title>
+      <link rel="stylesheet" href={s!"{revealBase}/dist/reset.css"} />
+      <link rel="stylesheet" href={s!"{revealBase}/dist/reveal.css"} />
+      <link rel="stylesheet" href={themeHref} />
+      <link rel="stylesheet" href={config.highlightTheme.filename} />
+      {extraCssLinks}
+      <link rel="stylesheet" href={s!"{libPrefix}/highlighting.css"} />
+      <link rel="stylesheet" href={s!"{libPrefix}/tippy-border.css"} />
+      <link rel="stylesheet" href={s!"{libPrefix}/slides-highlight.css"} />
+      <link rel="stylesheet" href={s!"{libPrefix}/panel.css"} />
+      <link rel="stylesheet" href={s!"{libPrefix}/lightbox.css"} />
+      <link rel="stylesheet" href={s!"{libPrefix}/diagram.css"} />
+      <link rel="stylesheet" href={s!"{libPrefix}/illuminate-anim.css"} />
+      <link rel="stylesheet" href={s!"{libPrefix}/table.css"} />
+      <link rel="stylesheet" href={s!"{libPrefix}/katex/dist/katex.min.css"} />
+      {customCss.map fun css => html%{<style>{Html.raw css}</style>}}
+      {config.extraHead}
     </head>
     <body>
       <div class="reveal">
         <div class="slides">
-          {{slidesBody}}
+          {slidesBody}
         </div>
       </div>
-      <script src={{s!"{revealBase}/dist/reveal.js"}}></script>
-      <script src={{s!"{revealBase}/plugin/notes/notes.js"}}></script>
-      <script src={{s!"{revealBase}/plugin/highlight/highlight.js"}}></script>
-      <script src={{s!"{libPrefix}/katex/dist/katex.min.js"}}></script>
-      {{mathPreludeScripts}}
-      <script src={{s!"{libPrefix}/math.js"}}></script>
-      {{extraJsScripts}}
-      <script>{{Html.raw initScript}}</script>
-      <script src={{s!"{libPrefix}/marked.min.js"}}></script>
-      <script src={{s!"{libPrefix}/popper.js"}}></script>
-      <script src={{s!"{libPrefix}/tippy.js"}}></script>
-      <script src={{s!"{libPrefix}/tippy-panel-filter.js"}}></script>
-      <script src={{s!"{libPrefix}/highlighting.js"}}></script>
-      <script src={{s!"{libPrefix}/code-block-bg.js"}}></script>
-      <script src={{s!"{libPrefix}/pretty.js"}}></script>
-      <script src={{s!"{libPrefix}/panel.js"}}></script>
-      <script src={{s!"{libPrefix}/lightbox.js"}}></script>
-      <script src={{s!"{libPrefix}/illuminate-reveal.js"}}></script>
+      <script src={s!"{revealBase}/dist/reveal.js"}></script>
+      <script src={s!"{revealBase}/plugin/notes/notes.js"}></script>
+      <script src={s!"{revealBase}/plugin/highlight/highlight.js"}></script>
+      <script src={s!"{libPrefix}/katex/dist/katex.min.js"}></script>
+      {mathPreludeScripts}
+      <script src={s!"{libPrefix}/math.js"}></script>
+      {extraJsScripts}
+      <script>{Html.raw initScript}</script>
+      <script src={s!"{libPrefix}/marked.min.js"}></script>
+      <script src={s!"{libPrefix}/popper.js"}></script>
+      <script src={s!"{libPrefix}/tippy.js"}></script>
+      <script src={s!"{libPrefix}/tippy-panel-filter.js"}></script>
+      <script src={s!"{libPrefix}/highlighting.js"}></script>
+      <script src={s!"{libPrefix}/code-block-bg.js"}></script>
+      <script src={s!"{libPrefix}/pretty.js"}></script>
+      <script src={s!"{libPrefix}/panel.js"}></script>
+      <script src={s!"{libPrefix}/lightbox.js"}></script>
+      <script src={s!"{libPrefix}/illuminate-reveal.js"}></script>
     </body>
-  </html> }}
+  </html>}
 
 
 /-- Writes a file, creating parent directories as needed. -/
