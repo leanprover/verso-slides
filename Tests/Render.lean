@@ -14,12 +14,11 @@ import VersoSlides.SlideCode
 import VersoSlides.SlideCode.Render
 import VersoSlides.Basic
 import Verso.Code.Highlighted
-import Verso.Output.Html
+import Lean.Data.Html
 
 open SubVerso.Highlighting Highlighted
 open Verso.Code (HighlightHtmlM)
 open Verso.Code.Hover (State)
-open Verso Output Html
 open Lean (Html)
 open VersoSlides
 
@@ -224,7 +223,7 @@ where
     -- ---- Full page: Config.extraHead is emitted into <head> ----
     let blueprintRuntime := "-verso-data/blueprint-page-runtime.mjs"
     let fullHtml := renderFullHtml
-      { extraHead := #[{{ <script type="module" src={{blueprintRuntime}}></script> }}] }
+      { extraHead := #[html%{<script type="module" src={blueprintRuntime}></script>}] }
       "Deck" (.seq #[])
     testHtmlHas "extraHead renders module script"
       fullHtml.render

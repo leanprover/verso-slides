@@ -14,7 +14,6 @@ Renders SlideCode trees to HTML for `reveal.js`.
 -/
 
 
-open Verso Output Html
 open Lean (Html)
 open SubVerso.Highlighting (Highlighted)
 open Verso.Code (HighlightHtmlM)
@@ -88,35 +87,35 @@ public def SlideCode.toHtml : SlideCode → HighlightHtmlM g Html
     let contentHtml ← content.toHtml
     let goalsHtml ←
       if info.isEmpty then
-        pure {{ "All goals completed! 🐙" }}
+        pure html%{All goals completed! 🐙}
       else
         Html.seq <$> info.mapIdxM (fun i x => x.toHtml Highlighted.toHtml i)
     let fmtAttr := match goalsFormatJson info with
       | some json => #[("data-rich-format", json)]
       | none => #[]
-    pure {{
-      <span class="tactic" "data-tactic-range"={{s!"{startPos}-{endPos}"}}>
-        {{contentHtml}}
-        {{Html.element "span" (#[("class", "tactic-state"), ("style", "display:none")] ++ fmtAttr) goalsHtml}}
+    pure html%{
+      <span class="tactic" data-tactic-range={s!"{startPos}-{endPos}"}>
+        {contentHtml}
+        {Html.element "span" (#[("class", "tactic-state"), ("style", "display:none")] ++ fmtAttr) goalsHtml}
       </span>
-    }}
+    }
   | .span info content => do
     let cls := match spanInfoClass info with
       | some c => "has-info " ++ c
       | none => "has-info"
     let contentHtml ← content.toHtml
     let messagesHtml ← info.mapM fun (s, msg) => do
-      pure {{ <code class={{"verso-message " ++ s.«class»}}>
-        {{← msg.toHtml [] 10 Highlighted.toHtml}}
-      </code> }}
-    pure {{
-      <span class={{cls}}>
-        {{contentHtml}}
+      pure html%{<code class={"verso-message " ++ s.«class»}>
+        {← msg.toHtml [] 10 Highlighted.toHtml}
+      </code>}
+    pure html%{
+      <span class={cls}>
+        {contentHtml}
         <span class="hover-info messages" style="display:none">
-          {{messagesHtml}}
+          {messagesHtml}
         </span>
       </span>
-    }}
+    }
   | .fragment w true content => do
     let contentHtml ← content.toHtml
     pure (Html.element "div" (#[("class", fragClass w)] ++ fragIndexAttr w) contentHtml)
@@ -136,7 +135,7 @@ public def SlideCode.toHtml : SlideCode → HighlightHtmlM g Html
       | .error, _ => .error | .warning, .error => .error | .warning, _ => .warning
       | _, other => other) Highlighted.Span.Kind.info
     let messagesHtml ← info.mapM fun (s, msg) => do
-      pure {{ <code class={{"verso-message " ++ s.«class»}}>
-        {{← msg.toHtml [] 10 Highlighted.toHtml}}
-      </code> }}
-    pure {{ <div class={{"command-output " ++ severity.«class»}}> {{messagesHtml}} </div> }}
+      pure html%{<code class={"verso-message " ++ s.«class»}>
+        {← msg.toHtml [] 10 Highlighted.toHtml}
+      </code>}
+    pure html%{<div class={"command-output " ++ severity.«class»}>{messagesHtml}</div>}
