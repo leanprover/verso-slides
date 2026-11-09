@@ -19,3 +19,22 @@ declare var tippy: ((targets: unknown, props?: unknown) => unknown) & Record<str
 
 /** marked.js Markdown parser (global, may not be loaded). */
 declare var marked: { parse(text: string): string } | undefined;
+
+interface VersoVirProgram {
+    readonly status: "active" | "failed" | "disposed";
+    call(declaration: string, ...args: unknown[]): unknown;
+}
+
+interface PrettySegment {
+    text: string;
+    tags: bigint[];
+}
+
+interface Window {
+    versoVir?: VersoVirProgram;
+    versoVirReady?: Promise<VersoVirProgram>;
+    /** State of this document's one-shot formatter initialization. */
+    versoVirState?: "loading" | "ready" | "failed";
+    /** Slides facade: compact input converted to typed Lean segments. */
+    versoVirFormatSegments?: (format: unknown, width: number, indent: number) => PrettySegment[];
+}

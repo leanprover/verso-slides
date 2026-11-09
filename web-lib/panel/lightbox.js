@@ -63,6 +63,9 @@
 
         // Rescale lightbox content when viewport changes
         Reveal.on("resize", applyScale);
+        window.addEventListener("verso-vir-statechange", function () {
+            if (currentInner) reflowLightboxFormat(currentInner);
+        });
 
         // Close on Escape — use capture phase to intercept before reveal.js
         document.addEventListener(
@@ -207,6 +210,11 @@
     function reflowLightboxFormat(container) {
         const codeEl = container.querySelector("code[data-rich-format]");
         if (codeEl) {
+            if (!formatterIsReady()) {
+                codeEl.textContent = "";
+                showFormattingStatus(/** @type {HTMLElement} */ (codeEl));
+                return;
+            }
             try {
                 // Not null: the selector above only matches elements that have this attribute
                 const json = /** @type {string} */ (codeEl.getAttribute("data-rich-format"));
@@ -217,9 +225,8 @@
                 let width = contentWidth(container);
                 if (width <= 0) width = 600; // fallback
                 renderFormat(container, codeEl, parsed, width);
-            } catch (e) {
-                // Fall back to plain text signature
-                console.error(e);
+            } catch (error) {
+                showFormattingFailure(/** @type {HTMLElement} */ (codeEl), error);
             }
         }
     }

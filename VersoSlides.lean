@@ -16,6 +16,7 @@ public import VersoSlides.OtherLanguages
 public import VersoSlides.InlineLean
 public import VersoSlides.Diagram
 public import VersoSlides.Animate
+public import VersoSlides.Pretty
 public import VersoSlides.SlideCode
 public import VersoSlides.SlideCode.Export
 public import VersoSlides.SlideCode.Render

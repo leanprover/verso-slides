@@ -26,6 +26,15 @@
 
         document.querySelectorAll(".code-with-panel").forEach(setupBlock);
 
+        window.addEventListener("verso-vir-statechange", function () {
+            // Initial readiness renders the current selection, not a saved request.
+            document.querySelectorAll(".code-with-panel").forEach(function (el) {
+                var block = /** @type {PanelBlock} */ (el);
+                var panel = /** @type {InfoPanel | null} */ (block.querySelector(".info-panel"));
+                if (panel && block._activeSource) updatePanel(panel, block._activeSource, block);
+            });
+        });
+
         Reveal.on("fragmentshown", onFragmentShown);
         Reveal.on("fragmenthidden", onFragmentHidden);
         Reveal.on("slidechanged", onSlideChanged);
@@ -429,6 +438,11 @@
                 const staticHtml = '<span class="hl lean">' + ts.innerHTML + "</span>";
                 var richFmt = ts.getAttribute("data-rich-format");
                 if (richFmt) {
+                    if (!formatterIsReady()) {
+                        panel.innerHTML = "";
+                        showFormattingStatus(panel);
+                        return;
+                    }
                     try {
                         /** @type {unknown} */
                         const parsed = JSON.parse(richFmt);
@@ -436,23 +450,19 @@
                             throw new Error(
                                 "data-rich-format on tactic state: expected GoalData[]",
                             );
-                        // renderGoals replaces the panel contents before laying them out, so a
-                        // failure partway through is repaired with the static rendering
                         panel._reflow = () => {
                             try {
                                 renderGoals(panel, parsed);
-                            } catch (e) {
-                                panel.innerHTML = staticHtml;
-                                throw e;
+                            } catch (error) {
+                                showFormattingFailure(panel, error);
                             }
                         };
                         panel._reflow();
-                        html = null; // already set innerHTML
-                    } catch (e) {
-                        console.error(e);
-                        html = staticHtml;
+                    } catch (error) {
+                        showFormattingFailure(panel, error);
                         panel._reflow = null;
                     }
+                    html = null; // already set innerHTML
                 } else {
                     html = staticHtml;
                 }
@@ -471,19 +481,29 @@
         // Check for reflowable format data in hover content
         const sigCode = panel.querySelector("code[data-rich-format]");
         if (sigCode) {
-            try {
-                // Not null: the selector above only matches elements that have this attribute
-                const json = /** @type {string} */ (sigCode.getAttribute("data-rich-format"));
-                /** @type {unknown} */
-                const parsed = JSON.parse(json);
-                if (!isFormatData(parsed))
-                    throw new Error("data-rich-format on hover code: expected FormatData");
-                panel._reflow = () => renderFormat(panel, sigCode, parsed, contentWidth(panel));
-                panel._reflow();
-            } catch (e) {
-                // Fall back to plain text signature on error
-                console.error(e);
-                panel._reflow = null;
+            if (!formatterIsReady()) {
+                sigCode.textContent = "";
+                showFormattingStatus(/** @type {HTMLElement} */ (sigCode));
+            } else {
+                try {
+                    // Not null: the selector above only matches elements that have this attribute
+                    const json = /** @type {string} */ (sigCode.getAttribute("data-rich-format"));
+                    /** @type {unknown} */
+                    const parsed = JSON.parse(json);
+                    if (!isFormatData(parsed))
+                        throw new Error("data-rich-format on hover code: expected FormatData");
+                    panel._reflow = () => {
+                        try {
+                            renderFormat(panel, sigCode, parsed, contentWidth(panel));
+                        } catch (error) {
+                            showFormattingFailure(/** @type {HTMLElement} */ (sigCode), error);
+                        }
+                    };
+                    panel._reflow();
+                } catch (error) {
+                    showFormattingFailure(/** @type {HTMLElement} */ (sigCode), error);
+                    panel._reflow = null;
+                }
             }
         }
 
@@ -501,12 +521,11 @@
      * @param {InfoPanel} panel
      */
     function reflowPanel(panel) {
-        if (!panel._reflow) return;
+        if (!formatterIsReady() || !panel._reflow) return;
         try {
             panel._reflow();
-        } catch (e) {
-            // The closure leaves the panel in a displayable state when it fails
-            console.error(e);
+        } catch (error) {
+            showFormattingFailure(panel, error);
         }
     }
 
