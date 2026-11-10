@@ -192,6 +192,12 @@ def paneloption_url(server):
 
 
 @pytest.fixture(scope="session")
+def externalcode_url(server):
+    """Base URL for the external-code fixture."""
+    return f"{server}/externalcode"
+
+
+@pytest.fixture(scope="session")
 def diagramanim_url(server):
     """Base URL for the diagram/animation fixture."""
     return f"{server}/diagramanim"

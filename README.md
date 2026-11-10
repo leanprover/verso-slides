@@ -467,8 +467,9 @@ otherwise the heights are computed incorrectly. (The standalone
 `:::stretch` directive, documented above, applies the same mechanism
 to arbitrary content such as images.)
 
-The `stretch` flag is available on `lean`, `leanModule`, and
-`leanLibCode` code blocks.
+The `stretch` flag is available on `lean`, `leanModule`,
+`leanLibCode`, `module`, `anchor`, `moduleTerm`, and `anchorTerm` code
+blocks.
 
 ### Info Panel
 
@@ -496,7 +497,8 @@ set_option verso.slides.panel false
 ```
 
 The `panel` flag and the `verso.slides.panel` option apply to `lean`,
-`leanModule`, and `leanLibCode` code blocks.
+`leanModule`, `leanLibCode`, `module`, `anchor`, `moduleTerm`, and
+`anchorTerm` code blocks.
 
 ### Tips
 
@@ -698,6 +700,80 @@ elaborating the slides.
 
 Lean's own prelude and `Std` modules don't need the `needs`
 configuration.
+
+### External Example Projects
+
+Code from a separate Lake project, with its own dependencies and Lean
+toolchain, can be included using Verso's external code support. The
+slides build the project and read its highlighted code during
+elaboration. The project needs a `lakefile.toml` or `lakefile.lean`, a
+`lean-toolchain` file, and a dependency on SubVerso.
+
+Comments in the project's source mark the regions to show:
+
+```lean
+-- ANCHOR: double
+def double (n : Nat) : Nat :=
+  n + n
+-- ANCHOR_END: double
+```
+
+The block body contains the expected code, and it is an error if it
+does not match:
+
+````
+```anchor double (module := Example) (project := "examples")
+def double (n : Nat) : Nat :=
+  n + n
+```
+````
+
+The `verso.exampleProject` and `verso.exampleModule` options provide
+defaults for `project` and `module`:
+
+```lean
+set_option verso.exampleProject "examples"
+set_option verso.exampleModule "Example"
+```
+
+The following are available after `open VersoSlides`, and each is both
+a code block and a role unless noted:
+
+- `module`: the entire module.
+- `anchor`: an anchor.
+- `moduleTerm` / `anchorTerm`: the first term that matches the
+  provided text.
+- `moduleName` / `anchorName`: the first occurrence of a name (role
+  only).
+- `moduleOut`: a message with the given severity.
+- `moduleInfo` / `moduleError` / `moduleWarning` and `anchorInfo` /
+  `anchorError` / `anchorWarning`: a message with the indicated
+  severity.
+
+The `module`, `anchor`, `moduleTerm`, and `anchorTerm` code blocks
+accept these flags:
+
+- `panel`: a flag that determines whether to show the interactive info
+  panel (default is the value of the `verso.slides.panel` option).
+- `stretch`: a flag that determines whether the code box fills the
+  remaining vertical space on the slide (default `true`).
+- `showProofStates`: a flag that determines whether proof states are
+  included (default `true`).
+
+An example module must compile for its highlighted code to be built.
+To show an error with `moduleError` or `anchorError`, use a command
+such as `#check_msgs` from
+`demo-anchor-comments/Anchors/CheckMsgs.lean`, which checks the
+expected messages and logs errors as warnings that keep their original
+severity in the highlighted code.
+
+The "Anchor Comments" vertical slide stack in `Demo.lean` has an
+example of each form, and `demo-anchor-comments` is their example
+project.
+
+[Progressive code reveal](#progressive-code-reveal) comments in the
+selected code take effect in code boxes. Message blocks are sized to
+their content and don't have an info panel.
 
 ## Document-Level Configuration
 

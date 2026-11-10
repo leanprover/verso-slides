@@ -246,7 +246,7 @@ def elabCommandsWithFormat [Literal k] (config : LeanBlockConfig) (str : TSyntax
 
         saveOutputs name msgs
 
-      reportMessages (if config.error then some true else none) str cmdState.messages
+      reportMessages config.error str cmdState.messages
 where
   runCommand (act : Command.CommandElabM Unit) (stx : Syntax)
       (cctx : Command.Context) (cmdState : Command.State) :
@@ -347,7 +347,7 @@ def leanInline : RoleExpanderOf LeanInlineConfig
       Verso.Hover.addCustomHover (mkNullNode #[v.braceOpen, v.braceClose]) type
       Verso.Hover.addCustomHover v.name type
 
-    reportMessages (if config.error then some true else none) term newMsgs
+    reportMessages config.error term newMsgs
 
     let hls := (← highlight stx newMsgs.toArray (PersistentArray.empty.push tree) (collectFormat := true))
 

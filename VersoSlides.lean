@@ -21,3 +21,4 @@ public import VersoSlides.SlideCode.Export
 public import VersoSlides.SlideCode.Render
 public import VersoSlides.ModuleExample
 public import VersoSlides.LibModule
+public import VersoSlides.ExternalCode

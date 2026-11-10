@@ -25,10 +25,14 @@ input_dir webLibAssets where
 lean_lib VersoSlides where
   needs := #[webLibAssets, `@subverso/«subverso-extract-mod»]
 
+-- The demo is an ordinary source file so that hovers in its Lean code include docstrings.
 lean_lib Demo where
   needs := #[`@verso/+Verso.Code.External:highlighted]
+  allowNonModules := true
 
-@[default_target] lean_exe «demo-slides» where root := `Main
+@[default_target] lean_exe «demo-slides» where
+  root := `Main
+  allowNonModules := true
 
 lean_exe «extract-lakefile» where
   root := `ExtractLakefile

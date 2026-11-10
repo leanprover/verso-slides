@@ -1,0 +1,8 @@
+name = "demo-anchor-comments"
+
+[[require]]
+name = "subverso"
+path = "../.lake/packages/subverso"
+
+[[lean_lib]]
+name = "Anchors"
