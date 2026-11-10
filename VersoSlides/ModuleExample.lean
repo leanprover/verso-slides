@@ -12,6 +12,7 @@ meta import VersoSlides.Basic -- shake: keep
 public import VersoSlides.InlineLean
 import VersoSlides.SlideCode
 public meta import VersoSlides.InlineLean
+meta import VersoUtil.Elan
 
 open Verso.Doc.Elab
 open Verso.ArgParse
@@ -41,15 +42,6 @@ structure ModulesConfig where
   error : Bool
 
 meta section
-
-/-- Environment variables that should be cleared when running Lake/Lean subprocesses.
-Prevents the parent's build environment from leaking into child processes, which
-can cause spurious rebuilds (especially via `LEAN_GITHASH`). -/
-private def lakeEnvBlacklist : Array (String × Option String) :=
-  #["LAKE", "LAKE_HOME", "LAKE_PKG_URL_MAP",
-    "LEAN_SYSROOT", "LEAN_AR", "LEAN_PATH", "LEAN_SRC_PATH",
-    "LEAN_GITHASH",
-    "ELAN_TOOLCHAIN", "DYLD_LIBRARY_PATH", "LD_LIBRARY_PATH"].map (·, none)
 
 section
 
@@ -135,12 +127,9 @@ def leanModule : CodeBlockExpanderOf ModuleConfig
         IO.FS.writeFile lakefilePath leanCode
 
         let jsonFile := dirname / "lakefile.json"
-        let out ← IO.Process.output {
-          cmd := "elan",
-          args := #["run", "--install", toolchain, "lake", "exe", "extract-lakefile",
-                    "--pkg-dir", dirname.toString, lakefilePath.toString, jsonFile.toString]
-          env := lakeEnvBlacklist
-        }
+        let out ← IO.Process.output <| Verso.Elan.getSpawnArgsForToolchain (← IO.currentDir) toolchain
+          #["lake", "exe", "extract-lakefile",
+            "--pkg-dir", dirname.toString, lakefilePath.toString, jsonFile.toString]
         if out.exitCode != 0 then
           throwError
             m!"When running extract-lakefile in {dirname}, the exit code was {out.exitCode}\n" ++
@@ -170,14 +159,9 @@ def leanModule : CodeBlockExpanderOf ModuleConfig
         IO.FS.writeFile (dirname / leanFileName) leanCode
 
         let jsonFile := dirname / s!"{modName}.json"
-        let out ← IO.Process.output {
-          cmd := "elan",
-          args := #["run", "--install", toolchain, extractMod.toString,
-                    modName.toString, jsonFile.toString],
-          env := lakeEnvBlacklist ++
-            #[("LEAN_SRC_PATH", some dirname.toString),
-              ("LEAN_PATH", none)]
-        }
+        let out ← IO.Process.output <| Verso.Elan.getSpawnArgsForToolchain dirname toolchain
+          #[extractMod.toString, modName.toString, jsonFile.toString]
+          (env := #[("LEAN_SRC_PATH", some dirname.toString)])
         if out.exitCode != 0 then
           throwError
             m!"When running 'subverso-extract-mod {modName} {jsonFile}' in {dirname}, the exit code was {out.exitCode}\n" ++
@@ -376,10 +360,8 @@ def leanModules : DirectiveExpanderOf ModulesConfig
           IO.FS.writeFile (dirname / leanFileName) <|
             mkImports root <| mods.filter (fun (_, _, cfg, _, _) => !cfg.lakefile) |>.map fun (x, _, _, _, _) => x
 
-      let out ← IO.Process.output {
-        cmd := "elan", args := #["run", "--install", toolchain, "lake", "build"],
-        cwd := some dirname, env := lakeEnvBlacklist
-      }
+      let out ← IO.Process.output <|
+        Verso.Elan.getSpawnArgsForToolchain dirname toolchain #["lake", "build"] (restoreArtifacts := true)
       if !error && out.exitCode != 0 then
         throwError
           m!"When running 'lake build' in {dirname}, the exit code was {out.exitCode}\n" ++
@@ -396,22 +378,16 @@ def leanModules : DirectiveExpanderOf ModulesConfig
         let jsonFile := dirname / (modName.toString : System.FilePath).addExtension "json"
         let out ←
           if modConfig.lakefile then
-            IO.Process.output {
-              cmd := "elan",
-              args := #["run", "--install", toolchain, "lake", "exe", "extract-lakefile",
-                        "--pkg-dir", dirname.toString,
-                        (dirname / "lakefile.lean").toString, jsonFile.toString]
-              env := lakeEnvBlacklist
-            }
+            IO.Process.output <| Verso.Elan.getSpawnArgsForToolchain (← IO.currentDir) toolchain
+              #["lake", "exe", "extract-lakefile",
+                "--pkg-dir", dirname.toString,
+                (dirname / "lakefile.lean").toString, jsonFile.toString]
           else
-            IO.Process.output {
-              cmd := "elan",
-              args := #["run", "--install", toolchain, extractMod.toString] ++
-                (if server then #[] else #["--not-server"]) ++ #[modName.toString, jsonFile.toString],
-              env := lakeEnvBlacklist ++
-                #[("LEAN_SRC_PATH", some dirname.toString),
-                  ("LEAN_PATH", some (dirname / ".lake" / "build" / "lib" / "lean").toString)]
-            }
+            IO.Process.output <| Verso.Elan.getSpawnArgsForToolchain dirname toolchain
+              (#[extractMod.toString] ++
+                (if server then #[] else #["--not-server"]) ++ #[modName.toString, jsonFile.toString])
+              (env := #[("LEAN_SRC_PATH", some dirname.toString),
+                        ("LEAN_PATH", some (dirname / ".lake" / "build" / "lib" / "lean").toString)])
         if out.exitCode != 0 then
           throwError
             m!"When extracting module '{modName}' in {dirname}, the exit code was {out.exitCode}\n" ++

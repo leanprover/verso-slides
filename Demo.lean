@@ -27,6 +27,12 @@ open VersoSlides
 
 set_option verso.code.warnLineLength 500
 
+-- The default project directory and module for the `anchor` and `module` families of code blocks
+-- and roles that are demonstrated below under "Anchor Comments". An individual use site can
+-- override these with the `project` and `module` arguments.
+set_option verso.exampleProject "demo-anchor-comments"
+set_option verso.exampleModule "Anchors"
+
 #doc (Slides) "VersoSlides Demo" =>
 
 # Introduction
@@ -329,6 +335,124 @@ Or a specific line range:
 ```leanLibCode Verso.Code.External (package := verso) (startLine := 79) (endLine := 79) -stretch
 public meta def withNl (s : String) : String := if s.endsWith "\n" then s else s ++ "\n"
 ```
+
+# Anchor Comments
+%%%
+vertical := true
+%%%
+
+Show named regions of a separate Lean project, and fail the build when they go stale.
+In the project to be demonstrated:
+
+ 1. Depend on SubVerso (same revision as these slides)
+ 2. Mark regions: `-- ANCHOR: x`, `-- ANCHOR_END: x`.
+ 3. Set `verso.exampleProject` and `verso.exampleModule` in the slides.
+ 4. Write an `anchor x` code block.
+
+## Anchor Blocks
+
+The name {anchorName double}`double` has the body {anchorTerm double}`n + n`.
+
+```anchor double -panel -stretch
+def double (n : Nat) : Nat :=
+  n + n
+```
+
+```anchor proof -stretch
+theorem double_eq (n : Nat) : double n = 2 * n := by
+  simp only [double]
+  omega
+```
+
+## Reveals and Messages
+
+```anchor reveal -panel -stretch
+def one : Nat := 1
+-- !fragment
+def two : Nat := double one
+```
+
+```anchorInfo evalDouble
+42
+```
+
+```anchorWarning unfinished
+declaration uses `sorry`
+```
+
+## Proof States
+
+The `-showProofStates` flag removes proof states from a box:
+
+```anchor proof -stretch -showProofStates
+theorem double_eq (n : Nat) : double n = 2 * n := by
+  simp only [double]
+  omega
+```
+
+## Terms and Names
+
+The `anchorTerm` and `moduleTerm` code blocks:
+
+```anchorTerm double -panel -stretch
+n + n
+```
+
+```moduleTerm -panel -stretch
+double 21
+```
+
+The roles: {anchor body}`n + n`, {moduleTerm}`double 21`, and {moduleName}`double_eq`.
+
+## Message Blocks
+
+The `moduleOut`, `moduleInfo`, and `moduleWarning` code blocks:
+
+```moduleOut Lean.MessageSeverity.information
+42
+```
+
+```moduleInfo
+42
+```
+
+```moduleWarning
+declaration uses `sorry`
+```
+
+## Message Roles
+
+Anchors: {anchorInfo evalDouble}`42` and {anchorWarning unfinished}``declaration uses `sorry` ``
+
+Modules: {moduleOut Lean.MessageSeverity.information}`42`, {moduleInfo}`42`, and {moduleWarning}``declaration uses `sorry` ``
+
+## Whole Modules
+
+The `module` code block:
+
+```module (module := Anchors.Tiny) -panel -stretch
+def tiny : Nat := 5
+```
+
+The `module` role: {module (module := Anchors.Tiny)}`def tiny : Nat := 5`
+
+## Errors
+
+`#check_msgs` allows modules with expected errors to build:
+
+```anchor broken -panel -stretch
+def broken : Nat := missing
+```
+
+```anchorError broken
+Unknown identifier `missing`
+```
+
+```moduleError
+Unknown identifier `missing`
+```
+
+The roles: {anchorError broken}``Unknown identifier `missing` `` and {moduleError}``Unknown identifier `missing` ``
 
 # Fragment Styles
 

@@ -8,3 +8,4 @@ module
 
 import TestElab.ErrorReporting
 import TestElab.ImageWarning
+import TestElab.ExternalCode
