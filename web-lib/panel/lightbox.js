@@ -238,5 +238,7 @@
     }
 
     // ---- Entry point ----
-    Reveal.on("ready", init);
+    // This script loads after Reveal.initialize, so `ready` may already have fired.
+    if (Reveal.isReady()) init();
+    else Reveal.on("ready", init);
 })();
