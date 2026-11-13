@@ -1,7 +1,7 @@
 """Browser tests for the interactive info panel."""
 
 from playwright.sync_api import expect, Page
-from conftest import break_layout, goto_slide_by_title, take_forced_errors
+from conftest import break_layout, delay_script, goto_slide_by_title, take_forced_errors
 
 
 class TestPanelStructure:
@@ -251,6 +251,20 @@ class TestNestedTacticState:
 class TestPanelInteraction:
     def test_click_populates_panel(self, code_url: str, page: Page):
         """Clicking a [data-verso-hover] token should populate the panel."""
+        slide = goto_slide_by_title(page, code_url, "Dark Code")
+
+        block = slide.locator(".code-with-panel").first
+        panel = block.locator(".info-panel")
+        token = block.locator("[data-verso-hover]").first
+        expect(token).to_be_visible()
+
+        token.click()
+
+        expect(panel).not_to_be_empty(timeout=5000)
+
+    def test_click_populates_panel_when_script_loads_late(self, code_url: str, page: Page):
+        """panel.js should still set up the panels when it runs after Reveal is ready."""
+        delay_script(page, "panel.js")
         slide = goto_slide_by_title(page, code_url, "Dark Code")
 
         block = slide.locator(".code-with-panel").first

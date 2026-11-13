@@ -281,6 +281,17 @@ def take_forced_errors(browser_errors):
     return len(forced)
 
 
+def delay_script(page, name, seconds=0.5):
+    """Hold back the response for the script ``name`` so that it runs only
+    after reveal.js has fired its ``ready`` event."""
+
+    def handle(route):
+        time.sleep(seconds)
+        route.continue_()
+
+    page.route(f"**/{name}", handle)
+
+
 _REVEAL_READY_EXPR = "() => !!(window.Reveal && window.Reveal.isReady && window.Reveal.isReady())"
 
 
