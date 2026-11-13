@@ -1,7 +1,7 @@
 """Browser tests for JS-dependent features (info panel, adaptive backgrounds)."""
 
 from playwright.sync_api import expect, Page
-from conftest import goto_slide_by_title
+from conftest import delay_script, goto_slide_by_title
 
 
 class TestInfoPanel:
@@ -46,6 +46,15 @@ class TestInfoPanel:
 class TestAdaptiveBackground:
     def test_code_bg_dark_slide(self, code_url: str, page: Page):
         """On a dark-themed slide, code blocks should have a light semi-transparent bg."""
+        slide = goto_slide_by_title(page, code_url, "Dark Code")
+
+        code_block = slide.locator("code.hl.lean.block").first
+        bg = code_block.evaluate("el => el.style.background")
+        assert "255" in bg and "0.08" in bg, f"Expected light overlay, got: {bg}"
+
+    def test_code_bg_dark_slide_when_script_loads_late(self, code_url: str, page: Page):
+        """code-block-bg.js should still color the first slide when it runs after Reveal is ready."""
+        delay_script(page, "code-block-bg.js")
         slide = goto_slide_by_title(page, code_url, "Dark Code")
 
         code_block = slide.locator("code.hl.lean.block").first

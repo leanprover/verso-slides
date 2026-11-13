@@ -1,7 +1,7 @@
 """Browser tests for the inline Lean term lightbox overlay."""
 
 from playwright.sync_api import expect, Page
-from conftest import break_layout, goto_slide_by_title, take_forced_errors
+from conftest import break_layout, delay_script, goto_slide_by_title, take_forced_errors
 
 
 class TestLightboxOpen:
@@ -22,6 +22,17 @@ class TestLightboxOpen:
         # Lightbox overlay should appear
         overlay = page.locator(".r-overlay-lean-hover")
         expect(overlay).to_be_visible()
+
+    def test_click_opens_lightbox_when_script_loads_late(self, code_url: str, page: Page):
+        """lightbox.js should still set up the click handlers when it runs after Reveal is ready."""
+        delay_script(page, "lightbox.js")
+        slide = goto_slide_by_title(page, code_url, "Inline Lean")
+
+        token = slide.locator("code.hl.lean.inline [data-verso-hover]").first
+        expect(token).to_be_visible()
+        token.click()
+
+        expect(page.locator(".r-overlay-lean-hover")).to_be_visible()
 
     def test_lightbox_has_content(self, code_url: str, page: Page):
         """The lightbox should contain hover information."""

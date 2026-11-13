@@ -3,6 +3,7 @@
 /** Reveal.js presentation API (global). */
 declare var Reveal: {
     on(event: string, callback: (...args: any[]) => void): void;
+    isReady(): boolean;
     getCurrentSlide(): HTMLElement | null;
     getRevealElement(): HTMLElement | null;
     getScale(): number;
