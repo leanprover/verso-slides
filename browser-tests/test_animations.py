@@ -5,7 +5,7 @@ import re
 import time
 from bs4 import BeautifulSoup
 from playwright.sync_api import Page
-from conftest import goto_slide_by_title
+from conftest import delay_script, goto_slide_by_title
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +97,26 @@ class TestAnimationAutoplay:
         heading = page.locator(".present h2").first
         assert heading.count() > 0
         assert "Autoplay" in heading.text_content()
+
+    def test_autoplay_runs_when_script_loads_late(self, diagramanim_url: str, page: Page):
+        """illuminate-reveal.js should still auto-play the initial slide when it runs after Reveal is ready."""
+        slide = goto_slide_by_title(page, diagramanim_url, "Animation Autoplay")
+        index = page.evaluate("() => Reveal.getIndices().h")
+        page.wait_for_timeout(2000)  # Wait for autoplay to finish
+        played = slide.locator(".illuminate-anim").first.inner_html()
+
+        # Loading the slide directly keeps reveal.js from firing `slidechanged`,
+        # which would also start the animation.
+        page.goto("about:blank")
+        delay_script(page, "illuminate-reveal.js")
+        page.goto(f"{diagramanim_url}/index.html#/{index}")
+
+        container = page.locator(".slides > section.present .illuminate-anim").first
+        page.wait_for_function(
+            "([el, html]) => el.innerHTML === html",
+            arg=[container.element_handle(), played],
+            timeout=5000,
+        )
 
     def test_no_autoplay_waits_for_click(self, diagramanim_url: str, page: Page):
         """A non-autoplay animation with a non-pause first step does NOT auto-play."""

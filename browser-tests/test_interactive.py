@@ -55,7 +55,11 @@ class TestAdaptiveBackground:
     def test_code_bg_dark_slide_when_script_loads_late(self, code_url: str, page: Page):
         """code-block-bg.js should still color the first slide when it runs after Reveal is ready."""
         delay_script(page, "code-block-bg.js")
-        slide = goto_slide_by_title(page, code_url, "Dark Code")
+        # A single navigation keeps reveal.js from firing `slidechanged`, which
+        # would also color the code blocks.
+        page.goto(f"{code_url}/index.html")
+        slide = page.locator(".slides > section.present")
+        expect(slide.locator("h2")).to_have_text("Dark Code")
 
         code_block = slide.locator("code.hl.lean.block").first
         bg = code_block.evaluate("el => el.style.background")
