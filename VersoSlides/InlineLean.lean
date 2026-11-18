@@ -164,7 +164,7 @@ def elabCommandsWithFormat [Literal k] (config : LeanBlockConfig) (str : TSyntax
     let cctx : Command.Context := { fileName := ← getFileName, fileMap := text, snap? := none, cancelTk? := none}
 
     let mut cmdState : Command.State := {env := ← getEnv, maxRecDepth := ← MonadRecDepth.getMaxRecDepth, scopes := origScopes}
-    let mut pstate := {pos := startPos, recovering := false, hasLeading := false}
+    let mut pstate := {pos := startPos, recovering := false, leadingStartPos? := none}
     let mut cmds : Array Syntax := #[]
 
     -- Check whether whitespace (including comments) consumes the entire block content.
