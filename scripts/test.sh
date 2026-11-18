@@ -7,6 +7,10 @@ here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd -- "$here/.." && pwd)"
 
 cd "$root"
+
+# Every lean-toolchain file must specify the same toolchain as the root.
+"$here/check-toolchains.sh"
+
 lake test
 lake exe test-fixtures-build
 

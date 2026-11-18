@@ -690,7 +690,7 @@ def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := runWit
 
   -- Generate slide HTML
   let render : HtmlT Slides (BuildLogT IO) Html := renderDocument config doc
-  let (slidesHtml, hoverState) ← render.run ctx |>.run {}
+  let (slidesHtml, hoverState) ← render.run ctx {}
 
   -- Produce full HTML document
   let title := inlinesToPlainText doc.title
