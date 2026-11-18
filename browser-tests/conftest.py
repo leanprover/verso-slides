@@ -265,20 +265,31 @@ FORCED_LAYOUT_FAILURE = "forced layout failure"
 
 
 def break_layout(page):
-    """Make every layout of Lean format data on ``page`` throw, so that rendering
-    has to fall back to the static content."""
+    """Make layout fail after initialization, to exercise the formatting error UI."""
+    page.wait_for_function("window.versoVirState === 'ready'")
     page.evaluate(
         f"() => {{ window.formatToHtml = () => {{ throw new Error('{FORCED_LAYOUT_FAILURE}'); }}; }}"
     )
 
 
-def take_forced_errors(browser_errors):
-    """Remove the errors caused by ``break_layout`` from ``browser_errors`` and
-    return how many there were."""
-    forced = [e for e in browser_errors if FORCED_LAYOUT_FAILURE in e]
-    for e in forced:
+def expect_console_error(page, message):
+    """Wait until the expected diagnostic has been normalized by the page fixture."""
+    return page.expect_console_message(predicate=lambda msg:
+        msg.type == 'error' and console_error_text(msg) == message)
+
+
+def take_console_errors(browser_errors, message):
+    """Consume only the expected console message; uncaught exceptions stay fatal."""
+    expected = f"console.error: {message}"
+    matches = [e for e in browser_errors if e == expected]
+    for e in matches:
         browser_errors.remove(e)
-    return len(forced)
+    return len(matches)
+
+
+def take_forced_errors(browser_errors):
+    return take_console_errors(browser_errors,
+        f"Lean expression formatting failed Error: {FORCED_LAYOUT_FAILURE}")
 
 
 _REVEAL_READY_EXPR = "() => !!(window.Reveal && window.Reveal.isReady && window.Reveal.isReady())"

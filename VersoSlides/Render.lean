@@ -8,6 +8,8 @@ module
 public import VersoSlides.Attributes
 public import VersoSlides.SlideCode.Render
 public import VersoSlides.SlideCode.Export
+public import Vir.Resources
+public import VersoSlidesVendored
 public import Verso.Doc.Html
 import Verso.Code.Highlighted.WebAssets
 import Illuminate.Animation.Render
@@ -358,6 +360,7 @@ private def slideCodePanelCss : String := include_str "../web-lib/panel/panel.cs
 
 /-- JS for the pretty-printer (reflowable format rendering). -/
 private def prettyJs : String := include_str "../web-lib/panel/pretty.js"
+private def prettyInitJs : String := include_str "../web-lib/panel/pretty-init.js"
 
 /-- JS for the interactive info panel. -/
 private def slideCodePanelJs : String := include_str "../web-lib/panel/panel.js"
@@ -439,7 +442,8 @@ private def jsString (s : String) : String := Id.run do
   return out ++ "\""
 
 /-- Renders the full standalone HTML page. -/
-def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (customCss : Array String := #[]) : Html :=
+def renderFullHtml (config : Config) (title : String) (slidesBody : Html)
+    (customCss : Array String := #[]) (bootstrap : Html := .empty) : Html :=
   let extraCssLinks := config.extraCss.map fun css =>
     html%{<link rel="stylesheet" href={css.filename} />}
   let extraJsScripts := config.extraJs.map fun url =>
@@ -520,6 +524,7 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
       <script src={s!"{libPrefix}/highlighting.js"}></script>
       <script src={s!"{libPrefix}/code-block-bg.js"}></script>
       <script src={s!"{libPrefix}/pretty.js"}></script>
+      {bootstrap}
       <script src={s!"{libPrefix}/panel.js"}></script>
       <script src={s!"{libPrefix}/lightbox.js"}></script>
       <script src={s!"{libPrefix}/illuminate-reveal.js"}></script>
@@ -671,9 +676,14 @@ def Config.validateFilenames (config : Config) : IO Unit := do
 
 /-- Generates a {lit}`reveal.js` slide presentation from a Verso document. -/
 def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := runWithLogger do
-  -- Validate the config and build the deduplicated asset plan up-front so
-  -- any filename collision fails before we start writing files.
-  let assetPlan ← config.collectAssets
+  -- The asset module already embeds both the formatter and its runtime.
+  let resources := VersoSlides.VirPrettyMResources.resources
+  -- Prepare output files and relative loader URLs together, then feed the files
+  -- through the existing asset plan and its filename-collision checks.
+  let resourcePlan ← IO.ofExcept <| (resources.forSite "lib/vir").mapError reprStr
+  let mut assetPlan ← config.collectAssets
+  for file in resourcePlan.files do
+    assetPlan ← recordAsset assetPlan file.path "VIR resources" (.binary file.bytes)
 
   -- Run the traversal pass (collects CSS blocks, etc.)
   let (doc, traverseState) ← (Slides.traverse doc : TraverseM (Part Slides)) () {}
@@ -694,7 +704,14 @@ def slidesMain (config : Config := {}) (doc : Part Slides) : IO UInt32 := runWit
 
   -- Produce full HTML document
   let title := inlinesToPlainText doc.title
-  let fullHtml := renderFullHtml config title slidesHtml traverseState.cssBlocks
+  -- Use URLs from the same plan as the published bytes, relative to this deck.
+  let bootstrap := html%{<script
+    data-runtime-module={resourcePlan.runtimeModule}
+    data-runtime-manifest={resourcePlan.runtimeManifest}
+    data-program-manifest={resourcePlan.programManifests[0]!}>
+    {Html.raw prettyInitJs}
+  </script>}
+  let fullHtml := renderFullHtml config title slidesHtml traverseState.cssBlocks bootstrap
 
   -- Write output
   let dir := config.outputDir
