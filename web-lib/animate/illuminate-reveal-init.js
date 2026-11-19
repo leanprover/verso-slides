@@ -173,8 +173,8 @@
     }
 
     if (typeof Reveal !== "undefined") {
-        // Sync animations when entering a slide (handles both forward and backward navigation)
-        Reveal.on("slidechanged", function () {
+        /** Syncs the animations on the current slide to its fragment state. */
+        function syncCurrentSlide() {
             var slide = Reveal.getCurrentSlide();
             if (!slide) return;
             var containers = slide.querySelectorAll(".illuminate-anim");
@@ -182,18 +182,15 @@
                 var st = animations[containers[ci].id];
                 if (st) syncToFragmentState(st);
             }
-        });
+        }
 
-        // Also trigger on initial load for the first slide
-        Reveal.on("ready", function () {
-            var slide = Reveal.getCurrentSlide();
-            if (!slide) return;
-            var containers = slide.querySelectorAll(".illuminate-anim");
-            for (var ci = 0; ci < containers.length; ci++) {
-                var st = animations[containers[ci].id];
-                if (st) syncToFragmentState(st);
-            }
-        });
+        // Sync animations when entering a slide (handles both forward and backward navigation)
+        Reveal.on("slidechanged", syncCurrentSlide);
+
+        // Also sync the slide that is shown on initial load. This script loads after
+        // Reveal.initialize, so `ready` may already have fired.
+        if (Reveal.isReady()) syncCurrentSlide();
+        else Reveal.on("ready", syncCurrentSlide);
 
         /**
          * Finds the frame to animate to when pause step `idx` is triggered.

@@ -74,5 +74,7 @@ function updateSlides() {
         });
     });
 }
-Reveal.on("ready", updateSlides);
+// This script loads after Reveal.initialize, so `ready` may already have fired.
+if (Reveal.isReady()) updateSlides();
+else Reveal.on("ready", updateSlides);
 Reveal.on("slidechanged", updateSlides);
