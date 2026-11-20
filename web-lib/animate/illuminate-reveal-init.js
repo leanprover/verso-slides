@@ -5,11 +5,23 @@
 // are prepended by the Lean build via include_str concatenation.
 
 (function () {
-    /** @type {Object<string, {data: AnimData, container: HTMLElement, currentSeg: Segment | null, currentFrame: number, animId: number | null, pauseSteps: StepInfo[]}>} */
-    var animations = {};
+    /**
+     * @typedef {{
+     *   data: AnimData,
+     *   container: HTMLElement,
+     *   currentSeg: Segment | null,
+     *   currentFrame: number,
+     *   animId: number | null,
+     *   pauseSteps: StepInfo[],
+     *   autoPlay: boolean
+     * }} AnimState
+     */
+
+    /** @type {Record<string, AnimState>} */
+    const animations = {};
 
     /**
-     * @param {{data: AnimData, container: HTMLElement, currentSeg: Segment | null, currentFrame: number}} state
+     * @param {AnimState} state
      * @param {number} frame
      */
     function showFrame(state, frame) {
@@ -23,31 +35,33 @@
         state.currentFrame = frame;
     }
 
-    var scripts = document.querySelectorAll("script[data-illuminate-anim]");
-    for (var si = 0; si < scripts.length; si++) {
-        var scriptEl = scripts[si];
-        var containerId = scriptEl.getAttribute("data-illuminate-anim");
+    const scripts = document.querySelectorAll("script[data-illuminate-anim]");
+    for (const scriptEl of scripts) {
+        const containerId = scriptEl.getAttribute("data-illuminate-anim");
         if (!containerId) continue;
-        var container = document.getElementById(containerId);
+        const container = document.getElementById(containerId);
         if (!container) continue;
         /** @type {AnimData} */
-        var data;
+        let data;
         try {
             data = JSON.parse(/** @type {string} */ (scriptEl.textContent));
-        } catch (e) {
+        } catch {
             continue;
         }
         if (!data || !data.segments || data.segments.length === 0) continue;
 
-        var state = {
+        /** @type {AnimState} */
+        const state = {
             data: data,
             container: container,
-            currentSeg: /** @type {Segment | null} */ (null),
+            currentSeg: null,
             currentFrame: 0,
-            animId: /** @type {number | null} */ (null),
-            pauseSteps: data.steps.filter(function (s) {
+            animId: null,
+            pauseSteps: data.steps.filter((s) => {
                 return s.pause;
             }),
+            // Read autoplay setting from the container element
+            autoPlay: container.getAttribute("data-illuminate-autoplay") === "true",
         };
         animations[containerId] = state;
 
@@ -56,13 +70,10 @@
 
         // Fragment spans are emitted in the HTML at build time (not created dynamically),
         // so Reveal.js sees them during its initial scan. Nothing to create here.
-
-        // Read autoplay setting from the container element
-        state.autoPlay = container.getAttribute("data-illuminate-autoplay") === "true";
     }
 
     /**
-     * @param {{animId: number | null}} state
+     * @param {AnimState} state
      */
     function stopAnim(state) {
         if (state.animId !== null) {
@@ -72,20 +83,20 @@
     }
 
     /**
-     * @param {{data: AnimData, container: HTMLElement, currentSeg: Segment | null, currentFrame: number, animId: number | null}} state
+     * @param {AnimState} state
      * @param {number} loopStart
      * @param {number} loopEnd
      */
     function startLoop(state, loopStart, loopEnd) {
-        var loopLen = loopEnd - loopStart;
+        const loopLen = loopEnd - loopStart;
         if (loopLen <= 0) return;
         /** @type {number | null} */
-        var startTime = null;
+        let startTime = null;
         /** @param {number} timestamp */
         function tick(timestamp) {
             if (startTime === null) startTime = timestamp;
-            var frame = animComputeFrame(startTime, timestamp, state.data.fps, loopStart);
-            var loop = animWrapLoop(frame, loopStart, loopEnd);
+            const frame = animComputeFrame(startTime, timestamp, state.data.fps, loopStart);
+            const loop = animWrapLoop(frame, loopStart, loopEnd);
             showFrame(state, loop.wrapped);
             state.animId = requestAnimationFrame(tick);
         }
@@ -93,20 +104,20 @@
     }
 
     /**
-     * @param {{data: AnimData, container: HTMLElement, currentSeg: Segment | null, currentFrame: number, animId: number | null}} state
+     * @param {AnimState} state
      * @param {number} targetFrame
      * @param {(() => void)} [onComplete]
      */
     function animateTo(state, targetFrame, onComplete) {
         stopAnim(state);
-        var startFrame = state.currentFrame;
+        const startFrame = state.currentFrame;
         /** @type {number | null} */
-        var startTime = null;
-        var dir = targetFrame > startFrame ? 1 : -1;
+        let startTime = null;
+        const dir = targetFrame > startFrame ? 1 : -1;
         /** @param {number} timestamp */
         function tick(timestamp) {
             if (startTime === null) startTime = timestamp;
-            var frame = animComputeFrame(startTime, timestamp, state.data.fps, startFrame);
+            let frame = animComputeFrame(startTime, timestamp, state.data.fps, startFrame);
             if (dir < 0) {
                 frame = startFrame - (frame - startFrame);
             }
@@ -130,29 +141,29 @@
      * Syncs an animation to the current fragment state on the slide.
      * When navigating backward, fragments are already visible, so the
      * animation should jump to the corresponding frame.
-     * @param {{data: AnimData, container: HTMLElement, currentSeg: Segment | null, currentFrame: number, animId: number | null, pauseSteps: StepInfo[], autoPlay?: boolean}} st
+     * @param {AnimState} st
      */
     function syncToFragmentState(st) {
         stopAnim(st);
 
         // Count how many of this animation's fragments are currently visible
-        var parent = st.container.parentElement;
+        const parent = st.container.parentElement;
         if (!parent) return;
-        var visibleCount = 0;
-        var frags = parent.querySelectorAll(
-            'span.fragment[data-illuminate-container="' + st.container.id + '"]',
+        let visibleCount = 0;
+        const frags = parent.querySelectorAll(
+            `span.fragment[data-illuminate-container="${st.container.id}"]`,
         );
-        for (var i = 0; i < frags.length; i++) {
-            if (frags[i].classList.contains("visible")) visibleCount++;
+        for (const frag of frags) {
+            if (frag.classList.contains("visible")) visibleCount++;
         }
 
         if (visibleCount > 0) {
             // Backward navigation: fragments already shown — jump to end of that step sequence
-            var idx = Math.min(visibleCount - 1, st.pauseSteps.length - 1);
-            var ps = st.pauseSteps[idx];
-            if (ps.loop) {
-                var stepIdx = animFindCurrentStep(st.data.steps, ps.frame);
-                var stepEnd = animFindStepEnd(st.data.steps, stepIdx, st.data.totalFrames);
+            const idx = Math.min(visibleCount - 1, st.pauseSteps.length - 1);
+            const ps = st.pauseSteps[idx];
+            if (ps?.loop) {
+                const stepIdx = animFindCurrentStep(st.data.steps, ps.frame);
+                const stepEnd = animFindStepEnd(st.data.steps, stepIdx, st.data.totalFrames);
                 showFrame(st, ps.frame);
                 startLoop(st, ps.frame, stepEnd);
             } else {
@@ -161,8 +172,9 @@
         } else if (st.autoPlay) {
             // Forward navigation: auto-play up to (not through) the first pause step
             showFrame(st, 0);
-            if (st.pauseSteps.length > 0) {
-                animateTo(st, st.pauseSteps[0].frame);
+            const firstPause = st.pauseSteps[0];
+            if (firstPause) {
+                animateTo(st, firstPause.frame);
             } else {
                 animateTo(st, st.data.totalFrames - 1);
             }
@@ -172,73 +184,77 @@
         }
     }
 
+    /**
+     * Finds the frame to animate to when pause step `idx` is triggered.
+     * Plays through the pause step and any subsequent non-pause steps,
+     * stopping at the frame before the next pause step (or at the end).
+     * @param {AnimState} state
+     * @param {number} idx
+     * @returns {number}
+     */
+    function findTargetFrame(state, idx) {
+        const current = state.pauseSteps[idx];
+        const next = state.pauseSteps[idx + 1];
+        if (current && next) {
+            // Stop just before the next pause step starts
+            return Math.max(next.frame - 1, current.frame);
+        }
+        // Last pause step: play to the end
+        return state.data.totalFrames - 1;
+    }
+
     if (typeof Reveal !== "undefined") {
         // Sync animations when entering a slide (handles both forward and backward navigation)
-        Reveal.on("slidechanged", function () {
-            var slide = Reveal.getCurrentSlide();
+        Reveal.on("slidechanged", () => {
+            const slide = Reveal.getCurrentSlide();
             if (!slide) return;
-            var containers = slide.querySelectorAll(".illuminate-anim");
-            for (var ci = 0; ci < containers.length; ci++) {
-                var st = animations[containers[ci].id];
+            const containers = slide.querySelectorAll(".illuminate-anim");
+            for (const containerEl of containers) {
+                const st = animations[containerEl.id];
                 if (st) syncToFragmentState(st);
             }
         });
 
         // Also trigger on initial load for the first slide
-        Reveal.on("ready", function () {
-            var slide = Reveal.getCurrentSlide();
+        Reveal.on("ready", () => {
+            const slide = Reveal.getCurrentSlide();
             if (!slide) return;
-            var containers = slide.querySelectorAll(".illuminate-anim");
-            for (var ci = 0; ci < containers.length; ci++) {
-                var st = animations[containers[ci].id];
+            const containers = slide.querySelectorAll(".illuminate-anim");
+            for (const containerEl of containers) {
+                const st = animations[containerEl.id];
                 if (st) syncToFragmentState(st);
             }
         });
 
         /**
-         * Finds the frame to animate to when pause step `idx` is triggered.
-         * Plays through the pause step and any subsequent non-pause steps,
-         * stopping at the frame before the next pause step (or at the end).
+         * Processes a single animation fragment for fragmentshown.
+         * @param {HTMLElement} frag
          */
-        function findTargetFrame(state, idx) {
-            var nextPauseIdx = idx + 1;
-            if (nextPauseIdx < state.pauseSteps.length) {
-                // Stop just before the next pause step starts
-                return Math.max(
-                    state.pauseSteps[nextPauseIdx].frame - 1,
-                    state.pauseSteps[idx].frame,
-                );
-            }
-            // Last pause step: play to the end
-            return state.data.totalFrames - 1;
-        }
-
-        // Helper: process a single animation fragment for fragmentshown
         function handleFragShown(frag) {
-            var cid = frag.dataset.illuminateContainer;
+            const cid = frag.getAttribute("data-illuminate-container");
             if (!cid) return;
-            var state = animations[cid];
+            const state = animations[cid];
             if (!state) return;
-            var idx = parseInt(frag.dataset.illuminateStepIndex || "", 10);
+            const idx = parseInt(frag.getAttribute("data-illuminate-step-index") || "", 10);
             if (isNaN(idx) || idx >= state.pauseSteps.length) return;
             stopAnim(state);
-            var ps = state.pauseSteps[idx];
-            if (ps.loop) {
-                var stepIdx = animFindCurrentStep(state.data.steps, ps.frame);
-                var stepEnd = animFindStepEnd(state.data.steps, stepIdx, state.data.totalFrames);
+            const ps = state.pauseSteps[idx];
+            if (ps?.loop) {
+                const stepIdx = animFindCurrentStep(state.data.steps, ps.frame);
+                const stepEnd = animFindStepEnd(state.data.steps, stepIdx, state.data.totalFrames);
                 // Looping step: animate to start, then loop
-                animateTo(state, ps.frame, function () {
+                animateTo(state, ps.frame, () => {
                     startLoop(state, ps.frame, stepEnd);
                 });
             } else {
                 // Animate through this step and any following non-pause steps
-                var target = findTargetFrame(state, idx);
-                animateTo(state, target, function () {
+                const target = findTargetFrame(state, idx);
+                animateTo(state, target, () => {
                     // If we landed in a loop step, start looping
-                    var finalStepIdx = animFindCurrentStep(state.data.steps, target);
-                    var finalStep = state.data.steps[finalStepIdx];
+                    const finalStepIdx = animFindCurrentStep(state.data.steps, target);
+                    const finalStep = state.data.steps[finalStepIdx];
                     if (finalStep && finalStep.loop) {
-                        var loopEnd = animFindStepEnd(
+                        const loopEnd = animFindStepEnd(
                             state.data.steps,
                             finalStepIdx,
                             state.data.totalFrames,
@@ -249,28 +265,31 @@
             }
         }
 
-        // Helper: process a single animation fragment for fragmenthidden
+        /**
+         * Processes a single animation fragment for fragmenthidden.
+         * @param {HTMLElement} frag
+         */
         function handleFragHidden(frag) {
-            var cid = frag.dataset.illuminateContainer;
+            const cid = frag.getAttribute("data-illuminate-container");
             if (!cid) return;
-            var state = animations[cid];
+            const state = animations[cid];
             if (!state) return;
-            var idx = parseInt(frag.dataset.illuminateStepIndex || "", 10);
+            const idx = parseInt(frag.getAttribute("data-illuminate-step-index") || "", 10);
             if (isNaN(idx)) return;
             stopAnim(state);
-            var prevIdx = idx - 1;
-            if (prevIdx >= 0) {
-                var ps = state.pauseSteps[prevIdx];
+            const prevIdx = idx - 1;
+            const ps = state.pauseSteps[prevIdx];
+            if (ps) {
                 if (ps.loop) {
-                    var stepIdx = animFindCurrentStep(state.data.steps, ps.frame);
-                    var stepEnd = animFindStepEnd(
+                    const stepIdx = animFindCurrentStep(state.data.steps, ps.frame);
+                    const stepEnd = animFindStepEnd(
                         state.data.steps,
                         stepIdx,
                         state.data.totalFrames,
                     );
                     startLoop(state, ps.frame, stepEnd);
                 } else {
-                    var target = findTargetFrame(state, prevIdx);
+                    const target = findTargetFrame(state, prevIdx);
                     animateTo(state, target);
                 }
             } else {
@@ -282,16 +301,16 @@
         // Reveal.js may fire fragmentshown/hidden with e.fragment (one element)
         // or e.fragments (all elements at that index). Iterate all to find
         // animation fragments when multiple fragments share the same index.
-        Reveal.on("fragmentshown", function (e) {
-            var frags = e.fragments || [e.fragment];
-            for (var fi = 0; fi < frags.length; fi++) {
-                handleFragShown(frags[fi]);
+        Reveal.on("fragmentshown", (e) => {
+            const frags = e.fragments || [e.fragment];
+            for (const frag of frags) {
+                handleFragShown(frag);
             }
         });
-        Reveal.on("fragmenthidden", function (e) {
-            var frags = e.fragments || [e.fragment];
-            for (var fi = 0; fi < frags.length; fi++) {
-                handleFragHidden(frags[fi]);
+        Reveal.on("fragmenthidden", (e) => {
+            const frags = e.fragments || [e.fragment];
+            for (const frag of frags) {
+                handleFragHidden(frag);
             }
         });
     }

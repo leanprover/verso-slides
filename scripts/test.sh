@@ -17,13 +17,12 @@ lake exe test-fixtures-build
 # Every .js file under web-lib/ must be listed in some jsconfig.json.
 "$here/check-jsconfig-coverage.sh"
 
-# Type-check the JS bundles that have a full set of declarations available.
-# (animate/ references types from the illuminate package's anim_core.d.ts,
-# which isn't wired up here — its jsconfig.json exists only to register the
-# file for the coverage check above.)
-npx --no-install tsc --noEmit -p web-lib/panel/jsconfig.json
-npx --no-install tsc --noEmit -p web-lib/widget/jsconfig.json
-npx --no-install tsc --noEmit -p web-lib/math/jsconfig.json
+# Type-check every tracked jsconfig.json and tsconfig*.json, then lint the JS.
+# web-lib/animate/jsconfig.json includes Illuminate's anim_core.js and
+# anim_data.d.ts from .lake/packages, which the Lake commands above fetch.
+git ls-files -z -- ':(glob)**/jsconfig.json' ':(glob)**/tsconfig*.json' |
+  xargs -0 -n 1 npx --no-install tsc --noEmit -p
+npm run lint
 
 # Check prettier formatting for all git-tracked files (respects .prettierignore
 # and prettier's own "can this file be formatted?" heuristic).

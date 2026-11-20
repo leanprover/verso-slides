@@ -35,7 +35,9 @@ class TestLightboxOpen:
         expect(inner).to_be_visible()
         assert inner.inner_html().strip() != "", "Lightbox content should not be empty"
 
-    def test_layout_failure_keeps_plain_signature(self, code_url: str, page: Page, browser_errors: list):
+    def test_layout_failure_keeps_plain_signature(
+        self, code_url: str, page: Page, browser_errors: list
+    ):
         """When laying out the signature's format data throws, the lightbox shows
         the plain-text signature, with the measurer's probe removed."""
         slide = goto_slide_by_title(page, code_url, "Inline Lean")
@@ -90,7 +92,9 @@ class TestLightboxClose:
 
         # Overview mode adds .overview class to .reveal
         is_overview = page.locator(".reveal.overview").count()
-        assert is_overview == 0, "Overview should not be triggered by Escape closing lightbox"
+        assert is_overview == 0, (
+            "Overview should not be triggered by Escape closing lightbox"
+        )
 
     def test_backdrop_click_closes_lightbox(self, code_url: str, page: Page):
         """Clicking the backdrop (outside lightbox) should close it."""

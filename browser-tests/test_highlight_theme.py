@@ -12,7 +12,9 @@ from bs4 import BeautifulSoup
 
 def _doc(site_dir: Path, name: str) -> BeautifulSoup:
     html_path = site_dir / name / "index.html"
-    assert html_path.exists(), f"Fixture not found at {html_path}. Run 'lake exe test-fixtures-build' first."
+    assert html_path.exists(), (
+        f"Fixture not found at {html_path}. Run 'lake exe test-fixtures-build' first."
+    )
     with open(html_path) as f:
         return BeautifulSoup(f.read(), "html.parser")
 

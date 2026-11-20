@@ -1,5 +1,5 @@
 (function () {
-    var _origTippy = tippy;
+    const _origTippy = tippy;
 
     /**
      * @param {Element} el
@@ -21,10 +21,10 @@
             return shouldSuppress(targets) ? [] : [targets];
         }
         if (targets && typeof (/** @type {{ length?: unknown }} */ (targets).length) === "number") {
-            var arrayLike = /** @type {ArrayLike<Element>} */ (targets);
-            var filtered = [];
-            for (var i = 0; i < arrayLike.length; i++) {
-                if (!shouldSuppress(arrayLike[i])) filtered.push(arrayLike[i]);
+            const arrayLike = /** @type {ArrayLike<Element>} */ (targets);
+            const filtered = [];
+            for (const el of Array.from(arrayLike)) {
+                if (!shouldSuppress(el)) filtered.push(el);
             }
             return filtered;
         }
@@ -32,10 +32,10 @@
     }
 
     /** @type {any} */
-    var wrapped = function (/** @type {unknown} */ targets, /** @type {unknown} */ props) {
+    const wrapped = function (/** @type {unknown} */ targets, /** @type {unknown} */ props) {
         return _origTippy(filterTargets(targets), props);
     };
-    Object.keys(_origTippy).forEach(function (k) {
+    Object.keys(_origTippy).forEach((k) => {
         wrapped[k] = /** @type {Record<string, unknown>} */ (_origTippy)[k];
     });
     tippy = wrapped;

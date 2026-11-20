@@ -74,15 +74,21 @@ class TestTacticReflow:
 
         # Panel should now contain reflowed goal content
         reflowed = panel.locator(".reflowed")
-        assert reflowed.count() > 0, "Expected .reflowed spans in the panel after clicking a tactic"
+        assert reflowed.count() > 0, (
+            "Expected .reflowed spans in the panel after clicking a tactic"
+        )
         initial_html = reflowed.first.inner_html()
         assert len(initial_html.strip()) > 0, "Reflowed span should have content"
 
         # Inject a marker attribute into the panel's top-level element.
         # If reflowPanel actually re-renders, it replaces panel.innerHTML entirely,
         # which will remove this marker. If reflow is broken (no-op), the marker stays.
-        panel.evaluate("el => el.firstElementChild.setAttribute('data-reflow-marker', '1')")
-        assert panel.locator("[data-reflow-marker]").count() == 1, "Marker should be present before resize"
+        panel.evaluate(
+            "el => el.firstElementChild.setAttribute('data-reflow-marker', '1')"
+        )
+        assert panel.locator("[data-reflow-marker]").count() == 1, (
+            "Marker should be present before resize"
+        )
 
         # Shrink the panel significantly to trigger ResizeObserver → reflowPanel
         block.evaluate("""el => {
@@ -93,24 +99,31 @@ class TestTacticReflow:
         page.wait_for_timeout(500)
 
         # The marker should be gone — reflowPanel replaced innerHTML
-        assert panel.locator("[data-reflow-marker]").count() == 0, \
+        assert panel.locator("[data-reflow-marker]").count() == 0, (
             "Reflow marker should be gone after resize (reflowPanel should have re-rendered the panel)"
+        )
 
         # And the panel should still have reflowed content
         reflowed_after = panel.locator(".reflowed")
-        assert reflowed_after.count() > 0, "Reflowed spans should still exist after resize"
+        assert reflowed_after.count() > 0, (
+            "Reflowed spans should still exist after resize"
+        )
 
 
 class TestLayoutFailure:
     """When laying out goal format data throws, the panel shows the static
     rendering of the tactic state, with the measurer's probe removed."""
 
-    def test_click_falls_back_to_static_goals(self, code_url: str, page: Page, browser_errors: list):
+    def test_click_falls_back_to_static_goals(
+        self, code_url: str, page: Page, browser_errors: list
+    ):
         slide = goto_slide_by_title(page, code_url, "Proof")
         block = slide.locator(".code-with-panel").first
         panel = block.locator(".info-panel")
         tactic = block.locator(".tactic").first
-        static_html = tactic.locator(":scope > .tactic-state").evaluate("el => el.innerHTML")
+        static_html = tactic.locator(":scope > .tactic-state").evaluate(
+            "el => el.innerHTML"
+        )
 
         break_layout(page)
         tactic.click()
@@ -121,12 +134,16 @@ class TestLayoutFailure:
         assert panel.locator(".reflowed").count() == 0
         assert take_forced_errors(browser_errors) == 1
 
-    def test_resize_restores_static_goals(self, code_url: str, page: Page, browser_errors: list):
+    def test_resize_restores_static_goals(
+        self, code_url: str, page: Page, browser_errors: list
+    ):
         slide = goto_slide_by_title(page, code_url, "Proof")
         block = slide.locator(".code-with-panel").first
         panel = block.locator(".info-panel")
         tactic = block.locator(".tactic").first
-        static_html = tactic.locator(":scope > .tactic-state").evaluate("el => el.innerHTML")
+        static_html = tactic.locator(":scope > .tactic-state").evaluate(
+            "el => el.innerHTML"
+        )
 
         tactic.click()
         page.wait_for_timeout(500)

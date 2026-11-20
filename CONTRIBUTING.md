@@ -2,7 +2,7 @@
 
 ## Running the Test Suite
 
-The full test run (Lean tests, fixture build, JS type-checks,
+The full test run (Lean tests, fixture build, JS type-checks, ESLint,
 formatting, and Playwright browser tests) is:
 
 ```
@@ -13,6 +13,17 @@ Extra arguments are forwarded to pytest, so
 `scripts/test.sh test_tables.py -v` narrows down the browser tests. A
 passing `lake build` alone is _not_ enough: it only proves the code
 compiles, not that slides render correctly.
+
+### Type-Checking the JavaScript
+
+`web-lib/animate/jsconfig.json` includes Illuminate's
+`player_js/anim_core.js` and `player_js/anim_data.d.ts` from
+`.lake/packages/illuminate`, so the type check needs a Lake build
+first. To type-check a bundle on its own after `lake build`:
+
+```
+npx --no-install tsc --noEmit -p web-lib/animate/jsconfig.json
+```
 
 ### Parallel Browser Tests
 

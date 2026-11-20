@@ -4,7 +4,14 @@
         "target": "ES2024",
         "noEmit": true,
         "strict": true,
-        "checkJs": true
+        "checkJs": true,
+        "noUncheckedIndexedAccess": true,
+        "exactOptionalPropertyTypes": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "noPropertyAccessFromIndexSignature": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true
     },
     "include": ["math.js", "globals.d.ts"]
 }

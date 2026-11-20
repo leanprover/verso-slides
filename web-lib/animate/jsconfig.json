@@ -3,7 +3,20 @@
         "lib": ["ES2024", "DOM", "DOM.Iterable"],
         "target": "ES2024",
         "noEmit": true,
-        "strict": true
+        "strict": true,
+        "checkJs": true,
+        "noUncheckedIndexedAccess": true,
+        "exactOptionalPropertyTypes": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "noPropertyAccessFromIndexSignature": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true
     },
-    "include": ["illuminate-reveal-init.js"]
+    "include": [
+        "illuminate-reveal-init.js",
+        "globals.d.ts",
+        "../../.lake/packages/illuminate/player_js/anim_core.js",
+        "../../.lake/packages/illuminate/player_js/anim_data.d.ts"
+    ]
 }

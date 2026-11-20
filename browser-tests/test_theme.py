@@ -37,7 +37,9 @@ class TestCustomThemeStatic:
         """With theme := .custom, the vendored theme link must NOT be emitted."""
         links = theme_doc.select('head link[rel="stylesheet"]')
         hrefs = [link.get("href", "") for link in links]
-        vendored_theme_hrefs = [h for h in hrefs if h.startswith("lib/reveal.js/dist/theme/")]
+        vendored_theme_hrefs = [
+            h for h in hrefs if h.startswith("lib/reveal.js/dist/theme/")
+        ]
         assert vendored_theme_hrefs == [], (
             f"Expected no vendored theme link, got: {vendored_theme_hrefs}"
         )
@@ -97,4 +99,6 @@ class TestCustomThemeAssets:
         marker = slide.locator("p.asset-marker")
         assert marker.count() == 1
         bg = marker.evaluate("el => getComputedStyle(el).backgroundImage")
-        assert ASSET_PATH in bg, f"Expected {ASSET_PATH!r} in background-image, got {bg!r}"
+        assert ASSET_PATH in bg, (
+            f"Expected {ASSET_PATH!r} in background-image, got {bg!r}"
+        )
