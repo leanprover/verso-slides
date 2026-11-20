@@ -74,6 +74,9 @@
     --verso-code-const-color: #61afef;
     --verso-code-var-color: #56d4c0;
     --verso-code-comment-color: #9da0a8;
+    --verso-message-info-color: currentcolor;
+    --verso-message-warning-color: currentcolor;
+    --verso-message-error-color: #ff8080;
 }
 /* Light slides — set per-section by code-block-bg.js. The lean-hover overlay
    gets the same class copied onto it by lightbox.js so token colors stay
@@ -84,6 +87,9 @@
     --verso-code-const-color: #1a5fb4;
     --verso-code-var-color: #1a7a6a;
     --verso-code-comment-color: #7a7d85;
+    --verso-message-info-color: currentcolor;
+    --verso-message-warning-color: currentcolor;
+    --verso-message-error-color: #cc0000;
 }
 /* Adapt hover/binding highlight colors to the reveal.js theme */
 .reveal .hl.lean .token.binding-hl,
