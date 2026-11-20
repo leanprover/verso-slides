@@ -36,7 +36,9 @@ class TestAnimationHTML:
         assert len(frags) >= 1, "Expected at least one animation fragment span"
         frag = frags[0]
         assert frag.get("data-illuminate-step-index") is not None
-        assert "display:none" in frag.get("style", "") or "display: none" in frag.get("style", "")
+        assert "display:none" in frag.get("style", "") or "display: none" in frag.get(
+            "style", ""
+        )
 
     def test_animation_fragment_indices(self, diagramanim_doc: BeautifulSoup):
         """Fragment spans with explicit fragmentIndex have data-fragment-index."""
@@ -59,15 +61,17 @@ class TestAnimationHTML:
         """illuminate-reveal.js is loaded in the HTML body."""
         scripts = diagramanim_doc.select("script[src]")
         srcs = [s.get("src", "") for s in scripts]
-        assert any("illuminate-reveal.js" in s for s in srcs), \
+        assert any("illuminate-reveal.js" in s for s in srcs), (
             f"Expected illuminate-reveal.js script, found: {srcs}"
+        )
 
     def test_animation_css_loaded(self, diagramanim_doc: BeautifulSoup):
         """illuminate-anim.css is linked in the head."""
         links = diagramanim_doc.select('head link[rel="stylesheet"]')
         hrefs = [link.get("href", "") for link in links]
-        assert any("illuminate-anim.css" in h for h in hrefs), \
+        assert any("illuminate-anim.css" in h for h in hrefs), (
             f"Expected illuminate-anim.css link, found: {hrefs}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +112,9 @@ class TestAnimationAutoplay:
         page.wait_for_timeout(1000)
         svg_after = container.inner_html()
         # SVG content should not have changed (no auto-play)
-        assert svg_before == svg_after, "Non-autoplay animation should not change without clicks"
+        assert svg_before == svg_after, (
+            "Non-autoplay animation should not change without clicks"
+        )
 
 
 class TestAnimationClick:
@@ -188,10 +194,14 @@ class TestInterleavedFragments:
         page.keyboard.press("ArrowRight")
         page.wait_for_timeout(1500)
         svg_after = container.inner_html()
-        assert svg_after != svg_before, "Animation should have changed on same click as text"
+        assert svg_after != svg_before, (
+            "Animation should have changed on same click as text"
+        )
         # Text "A" should have faded out (has .visible class now for fade-out)
         cls = text_a.first.get_attribute("class") or ""
-        assert "visible" in cls, "Text fragment 'A' should be visible (fade-out triggered)"
+        assert "visible" in cls, (
+            "Text fragment 'A' should be visible (fade-out triggered)"
+        )
 
 
 class TestBackwardNavigation:
@@ -212,4 +222,6 @@ class TestBackwardNavigation:
         page.keyboard.press("ArrowLeft")
         page.wait_for_timeout(1000)
         svg_back = container.inner_html()
-        assert svg_back == svg_final, "Backward navigation should show the final animation state"
+        assert svg_back == svg_final, (
+            "Backward navigation should show the final animation state"
+        )

@@ -32,5 +32,6 @@ class TestDiagramHTML:
         """A <link> to diagram.css exists in <head>."""
         links = diagramanim_doc.select('head link[rel="stylesheet"]')
         hrefs = [link.get("href", "") for link in links]
-        assert any("diagram.css" in h for h in hrefs), \
+        assert any("diagram.css" in h for h in hrefs), (
             f"Expected diagram.css link in head, found: {hrefs}"
+        )

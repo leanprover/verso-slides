@@ -25,7 +25,9 @@ class TestFragmentTransform:
             return  # skip if no div fragments
 
         display = div_frag.evaluate("el => getComputedStyle(el).display")
-        assert display != "inline-block", f"div.fragment should not be inline-block, got: {display}"
+        assert display != "inline-block", (
+            f"div.fragment should not be inline-block, got: {display}"
+        )
 
     def test_grow_fragment_scales(self, code_url: str, page: Page):
         """A visible .fragment.grow should have a scale transform."""
@@ -48,8 +50,9 @@ class TestFragmentTransform:
 
         transform = grow.evaluate("el => getComputedStyle(el).transform")
         # scale(1.3) appears as a matrix: matrix(1.3, 0, 0, 1.3, 0, 0)
-        assert "matrix" in transform and "1.3" in transform, \
+        assert "matrix" in transform and "1.3" in transform, (
             f"Expected scale(1.3) transform, got: {transform}"
+        )
 
 
 class TestFragmentColor:
@@ -80,8 +83,9 @@ class TestFragmentColor:
 
         color = token.evaluate("el => getComputedStyle(el).color")
         # highlight-current-red sets color: #ff2c2d = rgb(255, 44, 45)
-        assert "255" in color and "44" in color, \
+        assert "255" in color and "44" in color, (
             f"Expected red color (rgb with 255, 44), got: {color}"
+        )
 
     def test_token_color_inherits_from_fragment(self, code_url: str, page: Page):
         """When a color fragment is active, descendant tokens should use color: inherit."""
@@ -109,5 +113,6 @@ class TestFragmentColor:
         tokens = red_frag.locator(".keyword, .const, .var, .token")
         for i in range(min(tokens.count(), 5)):
             tok_color = tokens.nth(i).evaluate("el => getComputedStyle(el).color")
-            assert tok_color == frag_color, \
+            assert tok_color == frag_color, (
                 f"Token {i} color {tok_color} should match fragment color {frag_color}"
+            )

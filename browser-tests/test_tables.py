@@ -39,16 +39,16 @@ class TestTableStructure:
         table = markup_doc.select("table.slide-table")[0]
         classes = table.get("class", [])
         assert "striped-rows" in classes
-        assert "col-seps"     in classes
-        assert "header-sep"   in classes
-        assert "with-border"  in classes
+        assert "col-seps" in classes
+        assert "header-sep" in classes
+        assert "with-border" in classes
 
     def test_second_table_classes(self, markup_doc):
         """Second table (stripedCols + rowSeps): should have correct CSS classes."""
         table = markup_doc.select("table.slide-table")[1]
         classes = table.get("class", [])
         assert "striped-cols" in classes
-        assert "row-seps"     in classes
+        assert "row-seps" in classes
         assert "striped-rows" not in classes
 
     def test_second_table_no_thead(self, markup_doc):
@@ -199,8 +199,12 @@ class TestTableComputedStyles:
         body_rows = [r for r in data["rows"] if r["row"] >= 1]
         row1_bg = next(r["bg"] for r in body_rows if r["row"] == 1)
         row2_bg = next(r["bg"] for r in body_rows if r["row"] == 2)
-        assert _is_visible_bg(row1_bg), f"odd body row should be visibly striped, got {row1_bg}"
-        assert row1_bg != row2_bg, f"striped rows should alternate, got {row1_bg} / {row2_bg}"
+        assert _is_visible_bg(row1_bg), (
+            f"odd body row should be visibly striped, got {row1_bg}"
+        )
+        assert row1_bg != row2_bg, (
+            f"striped rows should alternate, got {row1_bg} / {row2_bg}"
+        )
 
     def test_table1_has_col_seps_border(self, page, markup_url):
         """Table 0 (+colSeps): all but the first cell in each row have a left border."""
@@ -209,15 +213,17 @@ class TestTableComputedStyles:
         for c in data["cells"]:
             if c["col"] == 0:
                 continue
-            assert not _no_visible_border(c["bl"]), \
+            assert not _no_visible_border(c["bl"]), (
                 f"+colSeps should draw left border on col>0 cells, got {c['bl']} (row={c['row']}, col={c['col']})"
+            )
 
     def test_table1_has_outer_border(self, page, markup_url):
         """Table 0 (+border): the table element has a visible border."""
         goto_slide_by_title(page, markup_url, "Tables")
         data = _table_style_data(page, 0)
-        assert not _no_visible_border(data["table_border_top"]), \
+        assert not _no_visible_border(data["table_border_top"]), (
             f"+border should produce a visible top border, got {data['table_border_top']}"
+        )
 
     def test_table1_has_header_sep(self, page, markup_url):
         """Table 0 (+headerSep): data-column thead cells have 2px bottom border."""
@@ -229,7 +235,9 @@ class TestTableComputedStyles:
         assert data_thead, "table 0 should have data thead cells"
         for c in data_thead:
             width = c["bb"].split(" ")[0]
-            assert width == "2px", f"+headerSep thead bottom should be 2px, got {c['bb']}"
+            assert width == "2px", (
+                f"+headerSep thead bottom should be 2px, got {c['bb']}"
+            )
 
     def test_table1_header_sep_corner(self, page, markup_url):
         """Table 0 (+colHeaders +rowHeaders +headerSep): the top-left corner cell must
@@ -240,33 +248,45 @@ class TestTableComputedStyles:
         goto_slide_by_title(page, markup_url, "Tables")
         data = _table_style_data(page, 0)
         corner = next(c for c in data["cells"] if c["row"] == 0 and c["col"] == 0)
-        assert _no_visible_border(corner["bb"]), \
+        assert _no_visible_border(corner["bb"]), (
             f"corner thead cell should have no bottom border, got {corner['bb']}"
+        )
         # border-right of thead[0] should not carry the thick header-sep —
         # otherwise the vertical row-header line would protrude up into thead.
         br_width = corner["br"].split(" ")[0]
-        assert br_width != "2px", \
+        assert br_width != "2px", (
             f"corner thead cell should NOT have 2px right border (that protrudes into thead), got {corner['br']}"
+        )
 
     def test_table2_has_col_stripes(self, page, markup_url):
         """Table 1 (+stripedCols): adjacent columns should have different backgrounds."""
         goto_slide_by_title(page, markup_url, "Tables")
         data = _table_style_data(page, 1)
-        row0 = sorted((c for c in data["cells"] if c["row"] == 0), key=lambda c: c["col"])
+        row0 = sorted(
+            (c for c in data["cells"] if c["row"] == 0), key=lambda c: c["col"]
+        )
         assert len(row0) >= 2
         col0_bg, col1_bg = row0[0]["bg"], row0[1]["bg"]
-        assert _is_visible_bg(col0_bg), f"first column of +stripedCols should have a stripe, got {col0_bg}"
-        assert col0_bg != col1_bg, f"adjacent columns should differ, got {col0_bg} / {col1_bg}"
+        assert _is_visible_bg(col0_bg), (
+            f"first column of +stripedCols should have a stripe, got {col0_bg}"
+        )
+        assert col0_bg != col1_bg, (
+            f"adjacent columns should differ, got {col0_bg} / {col1_bg}"
+        )
 
     def test_table2_has_row_seps_not_outer_border(self, page, markup_url):
         """Table 1 (+rowSeps, no +border): subsequent body rows have a top border, table has none."""
         goto_slide_by_title(page, markup_url, "Tables")
         data = _table_style_data(page, 1)
-        assert _no_visible_border(data["table_border_top"]), \
+        assert _no_visible_border(data["table_border_top"]), (
             f"no +border flag ⇒ table should have no outer top border, got {data['table_border_top']}"
-        second_row_cell = next(c for c in data["cells"] if c["row"] == 1 and c["col"] == 0)
-        assert not _no_visible_border(second_row_cell["bt"]), \
+        )
+        second_row_cell = next(
+            c for c in data["cells"] if c["row"] == 1 and c["col"] == 0
+        )
+        assert not _no_visible_border(second_row_cell["bt"]), (
             f"+rowSeps should add top border to row 1 cells, got {second_row_cell['bt']}"
+        )
 
     def test_checkerboard_thead_striped(self, page, markup_url):
         """Table 5 (+colHeaders +stripedRows +stripedCols): the 2D checker must
@@ -288,22 +308,27 @@ class TestTableComputedStyles:
         data = _table_style_data(page, 5)
         cells = {(c["row"], c["col"]): c["bg"] for c in data["cells"]}
         # Row 0 is the thead: adjacent thead cells must alternate.
-        assert cells[(0, 0)] != cells[(0, 1)], \
-            f"thead cells should alternate under +stripedCols, got {cells[(0,0)]} == {cells[(0,1)]}"
+        assert cells[(0, 0)] != cells[(0, 1)], (
+            f"thead cells should alternate under +stripedCols, got {cells[(0, 0)]} == {cells[(0, 1)]}"
+        )
         # Parity shift: cell directly below a thead cell carries the OPPOSITE
         # checker colour (otherwise the header would be row-1 of the pattern
         # AND the first tbody row would also be row-1, breaking the checker).
-        assert cells[(0, 0)] != cells[(1, 0)], \
-            f"first tbody cell should differ from thead cell above it (parity shift), got {cells[(0,0)]} == {cells[(1,0)]}"
+        assert cells[(0, 0)] != cells[(1, 0)], (
+            f"first tbody cell should differ from thead cell above it (parity shift), got {cells[(0, 0)]} == {cells[(1, 0)]}"
+        )
         # Diagonals within the full 3×3 grid should match in a strict 2-colour checker.
-        assert cells[(0, 0)] == cells[(1, 1)], \
-            f"(0,0) and diagonal (1,1) should match, got {cells[(0,0)]} vs {cells[(1,1)]}"
-        assert cells[(1, 0)] == cells[(2, 1)], \
-            f"(1,0) and diagonal (2,1) should match, got {cells[(1,0)]} vs {cells[(2,1)]}"
+        assert cells[(0, 0)] == cells[(1, 1)], (
+            f"(0,0) and diagonal (1,1) should match, got {cells[(0, 0)]} vs {cells[(1, 1)]}"
+        )
+        assert cells[(1, 0)] == cells[(2, 1)], (
+            f"(1,0) and diagonal (2,1) should match, got {cells[(1, 0)]} vs {cells[(2, 1)]}"
+        )
         # Only two distinct colours across the whole table.
         unique = set(cells.values())
-        assert len(unique) == 2, \
+        assert len(unique) == 2, (
             f"checker with thead should use exactly 2 colours, got {len(unique)}: {unique}"
+        )
 
     def test_table3_checkerboard(self, page, markup_url):
         """Table 2 (+stripedRows +stripedCols): strict 2-colour checker.
@@ -312,19 +337,24 @@ class TestTableComputedStyles:
         data = _table_style_data(page, 2)
         cells = {(c["row"], c["col"]): c["bg"] for c in data["cells"]}
         # A 2×2 checker: each cell must differ from its row- and column-neighbour.
-        assert cells[(0, 0)] != cells[(0, 1)], \
-            f"(0,0) must differ from row-neighbour (0,1), got {cells[(0,0)]} == {cells[(0,1)]}"
-        assert cells[(0, 0)] != cells[(1, 0)], \
-            f"(0,0) must differ from col-neighbour (1,0), got {cells[(0,0)]} == {cells[(1,0)]}"
+        assert cells[(0, 0)] != cells[(0, 1)], (
+            f"(0,0) must differ from row-neighbour (0,1), got {cells[(0, 0)]} == {cells[(0, 1)]}"
+        )
+        assert cells[(0, 0)] != cells[(1, 0)], (
+            f"(0,0) must differ from col-neighbour (1,0), got {cells[(0, 0)]} == {cells[(1, 0)]}"
+        )
         # And — because it's a strict 2-colour pattern — diagonals match.
-        assert cells[(0, 0)] == cells[(1, 1)], \
-            f"(0,0) and diagonal (1,1) must match in a strict checker, got {cells[(0,0)]} vs {cells[(1,1)]}"
-        assert cells[(0, 1)] == cells[(1, 0)], \
-            f"(0,1) and diagonal (1,0) must match in a strict checker, got {cells[(0,1)]} vs {cells[(1,0)]}"
+        assert cells[(0, 0)] == cells[(1, 1)], (
+            f"(0,0) and diagonal (1,1) must match in a strict checker, got {cells[(0, 0)]} vs {cells[(1, 1)]}"
+        )
+        assert cells[(0, 1)] == cells[(1, 0)], (
+            f"(0,1) and diagonal (1,0) must match in a strict checker, got {cells[(0, 1)]} vs {cells[(1, 0)]}"
+        )
         # Only two distinct background values should appear.
         unique = set(cells.values())
-        assert len(unique) == 2, \
+        assert len(unique) == 2, (
             f"checker should use exactly 2 colours, got {len(unique)}: {unique}"
+        )
 
     def test_table4_cell_gap_padding(self, page, markup_url):
         """Table 3 ((cellGap := "0.6em 1.2em")): cells use the overridden padding."""
@@ -337,8 +367,12 @@ class TestTableComputedStyles:
         vals = [float(p.rstrip("px")) for p in parts if p.endswith("px")]
         assert len(vals) >= 2
         vert, horiz = vals[0], vals[1]
-        assert horiz > vert, f"cellGap '0.6em 1.2em' ⇒ horizontal padding > vertical, got {cell['padding']}"
-        assert abs(horiz / vert - 2.0) < 0.05, f"horizontal:vertical padding should be ~2:1, got {cell['padding']}"
+        assert horiz > vert, (
+            f"cellGap '0.6em 1.2em' ⇒ horizontal padding > vertical, got {cell['padding']}"
+        )
+        assert abs(horiz / vert - 2.0) < 0.05, (
+            f"horizontal:vertical padding should be ~2:1, got {cell['padding']}"
+        )
 
     def test_row_seps_spans_thead_boundary(self, page, markup_url):
         """Table 4 (+colHeaders +rowSeps, no +headerSep): the row separator should
@@ -348,12 +382,16 @@ class TestTableComputedStyles:
         data = _table_style_data(page, 4)
         # Row 1 is the first tbody row (row 0 is thead). Its top border
         # should be a visible (thin) separator even without +headerSep.
-        first_body_cell = next(c for c in data["cells"] if c["row"] == 1 and c["col"] == 0)
-        assert not _no_visible_border(first_body_cell["bt"]), \
+        first_body_cell = next(
+            c for c in data["cells"] if c["row"] == 1 and c["col"] == 0
+        )
+        assert not _no_visible_border(first_body_cell["bt"]), (
             f"+rowSeps should add a separator between thead and first body row, got {first_body_cell['bt']}"
+        )
         # And it must be the *thin* sep (1px), not thick — because +headerSep is off.
-        assert first_body_cell["bt"].split(" ")[0] == "1px", \
+        assert first_body_cell["bt"].split(" ")[0] == "1px", (
             f"without +headerSep the sep should be thin (1px), got {first_body_cell['bt']}"
+        )
 
     def test_col_seps_spans_row_header_boundary(self, page, markup_url):
         """Table 4 (+rowHeaders +colSeps, no +headerSep): the column separator
@@ -365,10 +403,12 @@ class TestTableComputedStyles:
         body_col1 = [c for c in data["cells"] if c["row"] >= 1 and c["col"] == 1]
         assert body_col1, "expected body cells at col=1"
         for c in body_col1:
-            assert not _no_visible_border(c["bl"]), \
+            assert not _no_visible_border(c["bl"]), (
                 f"+colSeps should add a left border to cell after row-header, got {c['bl']} at row={c['row']}"
-            assert c["bl"].split(" ")[0] == "1px", \
+            )
+            assert c["bl"].split(" ")[0] == "1px", (
                 f"without +headerSep the sep should be thin (1px), got {c['bl']}"
+            )
 
     def test_no_flags_means_no_cell_borders(self, page, markup_url):
         """Regression: cells without +rowSeps/+colSeps/+border must have no visible border.
@@ -380,8 +420,12 @@ class TestTableComputedStyles:
         for table_idx in (2, 3):
             data = _table_style_data(page, table_idx)
             for c in data["cells"]:
-                for side, val in (("top", c["bt"]), ("bottom", c["bb"]),
-                                  ("left", c["bl"]), ("right", c["br"])):
+                for side, val in (
+                    ("top", c["bt"]),
+                    ("bottom", c["bb"]),
+                    ("left", c["bl"]),
+                    ("right", c["br"]),
+                ):
                     assert _no_visible_border(val), (
                         f"table {table_idx} cell (row={c['row']},col={c['col']}) "
                         f"has unexpected {side} border: {val}"

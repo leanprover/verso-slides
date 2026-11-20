@@ -19,9 +19,9 @@ jobs:
         if: github.repository == 'leanprover/verso-slides'
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7.0.1
 
-            - uses: leanprover/lean-action@v1
+            - uses: leanprover/lean-action@v1.7.1
               with:
                   test: false
 
@@ -29,7 +29,7 @@ jobs:
               run: lake exe demo-slides --output _slides
 
             - name: Upload Pages artifact
-              uses: actions/upload-pages-artifact@v3
+              uses: actions/upload-pages-artifact@v3.0.1
               with:
                   path: _slides
 
@@ -42,4 +42,4 @@ jobs:
         steps:
             - name: Deploy to GitHub Pages
               id: deployment
-              uses: actions/deploy-pages@v4
+              uses: actions/deploy-pages@v5.0.1

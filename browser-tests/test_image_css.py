@@ -155,7 +155,7 @@ class TestCustomCss:
     def test_css_affects_image(self, page, markup_url):
         """CSS defined after the image should still style it (injected in head)."""
         slide = goto_slide_by_title(page, markup_url, "CSS Test")
-        img = slide.locator('img.css-target')
+        img = slide.locator("img.css-target")
         assert img.count() == 1
         # The CSS sets opacity: 0.5
         opacity = img.evaluate("el => getComputedStyle(el).opacity")

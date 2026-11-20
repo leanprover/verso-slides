@@ -33,7 +33,9 @@ class TestEvalMultiline:
     def test_eval_multiline_output_after_expression(self, code_doc: BeautifulSoup):
         """#eval output should appear after the full expression, even when it spans multiple lines."""
         items = _get_slide_code_children(code_doc, "Eval Multiline")
-        outputs = [(i, kind, text) for i, (kind, text) in enumerate(items) if kind == "output"]
+        outputs = [
+            (i, kind, text) for i, (kind, text) in enumerate(items) if kind == "output"
+        ]
         assert len(outputs) == 1, f"Expected 1 output, got {len(outputs)}"
 
         output_idx, _, output_text = outputs[0]
@@ -41,11 +43,13 @@ class TestEvalMultiline:
 
         # The expression tokens (1, +, 2, 3) should all come before the output
         expr_indices = [
-            i for i, (k, t) in enumerate(items)
+            i
+            for i, (k, t) in enumerate(items)
             if k == "code" and t in ("1", "2", "3", "+")
         ]
-        assert all(i < output_idx for i in expr_indices), \
+        assert all(i < output_idx for i in expr_indices), (
             "Expression tokens should appear before the output"
+        )
 
 
 class TestEvalOrdering:
@@ -62,20 +66,25 @@ class TestEvalOrdering:
             i for i, (k, t) in enumerate(items) if k == "code" and t == "evalMiddle"
         )
         output_second_idx = next(
-            i for i, (k, t) in enumerate(items) if k == "output" and "4" in t and "first" not in t
+            i
+            for i, (k, t) in enumerate(items)
+            if k == "output" and "4" in t and "first" not in t
         )
         output_third_idx = next(
             i for i, (k, t) in enumerate(items) if k == "output" and "8" in t
         )
 
         # First output before the def, second and third after it
-        assert output_first_idx < def_idx, \
+        assert output_first_idx < def_idx, (
             "First #eval output should appear before 'def evalMiddle'"
-        assert output_second_idx > def_idx, \
+        )
+        assert output_second_idx > def_idx, (
             "Second #eval output should appear after 'def evalMiddle'"
+        )
         # Each output appears exactly once, in order
-        assert output_first_idx < output_second_idx < output_third_idx, \
+        assert output_first_idx < output_second_idx < output_third_idx, (
             "Outputs should appear in command order"
+        )
 
     def test_check_outputs_interleaved(self, code_doc: BeautifulSoup):
         """#check outputs should appear after each command, not at the end."""
@@ -87,16 +96,20 @@ class TestEvalOrdering:
             i for i, (k, t) in enumerate(items) if k == "output" and "Nat" in t
         )
         def_middle_idx = next(
-            i for i, (k, t) in enumerate(items) if k == "code" and t == "checkMiddle" and i > output1_idx
+            i
+            for i, (k, t) in enumerate(items)
+            if k == "code" and t == "checkMiddle" and i > output1_idx
         )
         output2_idx = next(
             i for i, (k, t) in enumerate(items) if k == "output" and "String" in t
         )
 
-        assert output1_idx < def_middle_idx, \
+        assert output1_idx < def_middle_idx, (
             "First #check output should appear before 'def checkMiddle'"
-        assert output2_idx > def_middle_idx, \
+        )
+        assert output2_idx > def_middle_idx, (
             "Second #check output should appear after 'def checkMiddle'"
+        )
 
     def test_print_outputs_interleaved(self, code_doc: BeautifulSoup):
         """#print outputs should appear after each command, not at the end."""
@@ -108,16 +121,20 @@ class TestEvalOrdering:
             i for i, (k, t) in enumerate(items) if k == "output" and "100" in t
         )
         def_middle_idx = next(
-            i for i, (k, t) in enumerate(items) if k == "code" and t == "printMiddle" and i > output1_idx
+            i
+            for i, (k, t) in enumerate(items)
+            if k == "code" and t == "printMiddle" and i > output1_idx
         )
         output2_idx = next(
             i for i, (k, t) in enumerate(items) if k == "output" and "true" in t
         )
 
-        assert output1_idx < def_middle_idx, \
+        assert output1_idx < def_middle_idx, (
             "First #print output should appear before 'def printMiddle'"
-        assert output2_idx > def_middle_idx, \
+        )
+        assert output2_idx > def_middle_idx, (
             "Second #print output should appear after 'def printMiddle'"
+        )
 
     def test_reduce_outputs_interleaved(self, code_doc: BeautifulSoup):
         """#reduce outputs should appear after each command, not at the end."""
@@ -135,7 +152,9 @@ class TestEvalOrdering:
             i for i, (k, t) in enumerate(items) if k == "output" and t == "20"
         )
 
-        assert output1_idx < def_middle_idx, \
+        assert output1_idx < def_middle_idx, (
             "First #reduce output should appear before 'def reduceMiddle'"
-        assert output2_idx > def_middle_idx, \
+        )
+        assert output2_idx > def_middle_idx, (
             "Second #reduce output should appear after 'def reduceMiddle'"
+        )

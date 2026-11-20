@@ -4,14 +4,15 @@
  */
 function parseColor(str) {
     if (!str) return null;
-    var h = str.match(/^#([0-9a-f]{3,8})$/i);
+    const h = str.match(/^#([0-9a-f]{3,8})$/i);
     if (h) {
-        var hex = h[1];
+        // The pattern has one non-optional group, so a match has it
+        const hex = /** @type {string} */ (h[1]);
         if (hex.length === 3)
             return [
-                parseInt(hex[0] + hex[0], 16),
-                parseInt(hex[1] + hex[1], 16),
-                parseInt(hex[2] + hex[2], 16),
+                parseInt(hex.charAt(0).repeat(2), 16),
+                parseInt(hex.charAt(1).repeat(2), 16),
+                parseInt(hex.charAt(2).repeat(2), 16),
             ];
         if (hex.length >= 6)
             return [
@@ -20,8 +21,9 @@ function parseColor(str) {
                 parseInt(hex.slice(4, 6), 16),
             ];
     }
-    var m = str.match(/[\d.]+/g);
-    if (m && m.length >= 3) return [parseFloat(m[0]), parseFloat(m[1]), parseFloat(m[2])];
+    const [r, g, b] = str.match(/[\d.]+/g) ?? [];
+    if (r !== undefined && g !== undefined && b !== undefined)
+        return [parseFloat(r), parseFloat(g), parseFloat(b)];
     return null;
 }
 /**
@@ -29,46 +31,46 @@ function parseColor(str) {
  * @returns {[number, number, number] | null}
  */
 function slideBgColor(section) {
-    var attr = section && section.getAttribute("data-background-color");
+    const attr = section && section.getAttribute("data-background-color");
     if (attr) {
-        var c = parseColor(attr);
+        const c = parseColor(attr);
         if (c) return c;
     }
-    var bgEl = Reveal.getSlideBackground(section);
+    const bgEl = Reveal.getSlideBackground(section);
     if (bgEl) {
-        var bg = getComputedStyle(bgEl).backgroundColor;
-        var c = parseColor(bg);
+        const bg = getComputedStyle(bgEl).backgroundColor;
+        const c = parseColor(bg);
         if (c && (c[0] !== 0 || c[1] !== 0 || c[2] !== 0 || bg.indexOf("0)") === -1)) return c;
     }
-    var revealRoot = document.querySelector(".reveal");
+    const revealRoot = document.querySelector(".reveal");
     if (!revealRoot) return null;
-    var revealBg = getComputedStyle(revealRoot).backgroundColor;
+    const revealBg = getComputedStyle(revealRoot).backgroundColor;
     return parseColor(revealBg);
 }
 function updateSlides() {
-    document.querySelectorAll("section").forEach(function (section) {
-        var rgb = slideBgColor(section);
+    document.querySelectorAll("section").forEach((section) => {
+        const rgb = slideBgColor(section);
         if (!rgb) return;
-        var lum = (0.2126 * rgb[0]) / 255 + (0.7152 * rgb[1]) / 255 + (0.0722 * rgb[2]) / 255;
-        var isLight = lum > 0.5;
+        const lum = (0.2126 * rgb[0]) / 255 + (0.7152 * rgb[1]) / 255 + (0.0722 * rgb[2]) / 255;
+        const isLight = lum > 0.5;
         section.classList.toggle("slide-light-bg", isLight);
-        var codeBg = isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.08)";
-        section.querySelectorAll("code.hl.lean.block").forEach(function (el) {
-            var codeEl = /** @type {HTMLElement} */ (el);
+        const codeBg = isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.08)";
+        section.querySelectorAll("code.hl.lean.block").forEach((el) => {
+            const codeEl = /** @type {HTMLElement} */ (el);
             codeEl.style.background = codeBg;
             codeEl.style.setProperty(
                 "--verso-info-indicator-color",
                 isLight ? "#2255cc" : "#6a9fff",
             );
-            var panel = codeEl.closest(".code-with-panel");
+            const panel = codeEl.closest(".code-with-panel");
             if (panel) {
-                var panelCell = /** @type {HTMLElement | null} */ (
+                const panelCell = /** @type {HTMLElement | null} */ (
                     panel.querySelector(".panel-cell")
                 );
                 if (panelCell) panelCell.style.background = codeBg;
             }
         });
-        section.querySelectorAll("pre").forEach(function (el) {
+        section.querySelectorAll("pre").forEach((el) => {
             if (el.closest(".code-with-panel")) return;
             el.style.background = codeBg;
         });

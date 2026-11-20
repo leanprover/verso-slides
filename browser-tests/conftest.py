@@ -18,7 +18,7 @@ RANDOM_BROWSER_ENV = "VERSO_TESTS_RANDOM_BROWSER"
 def find_free_port():
     """Find an available port by binding to port 0."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('127.0.0.1', 0))
+        s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
 
 
@@ -27,19 +27,19 @@ def pytest_addoption(parser):
         "--port",
         action="store",
         default=None,
-        help="Port for the local test server (default: auto-select)"
+        help="Port for the local test server (default: auto-select)",
     )
     parser.addoption(
         "--site-dir",
         action="store",
         default=DEFAULT_SITE_DIR,
-        help="Path to the built site directory"
+        help="Path to the built site directory",
     )
     parser.addoption(
         "--server-url",
         action="store",
         default=None,
-        help="Use an existing server instead of starting one (e.g., http://localhost:3000)"
+        help="Use an existing server instead of starting one (e.g., http://localhost:3000)",
     )
     parser.addoption(
         "--browser",
@@ -90,7 +90,9 @@ def pytest_report_header(config):
 def pytest_generate_tests(metafunc):
     if "browser" in metafunc.fixturenames:
         browsers = _resolve_browsers(metafunc.config)
-        metafunc.parametrize("browser", browsers, indirect=True, ids=browsers, scope="session")
+        metafunc.parametrize(
+            "browser", browsers, indirect=True, ids=browsers, scope="session"
+        )
 
 
 @pytest.fixture(scope="session")
@@ -104,7 +106,9 @@ def site_dir(request):
 def markup_doc(site_dir):
     """Parse _test/markup/index.html with BeautifulSoup (markup fixture)."""
     html_path = site_dir / "markup" / "index.html"
-    assert html_path.exists(), f"Markup fixture not found at {html_path}. Run 'lake exe test-fixtures-build' first."
+    assert html_path.exists(), (
+        f"Markup fixture not found at {html_path}. Run 'lake exe test-fixtures-build' first."
+    )
     with open(html_path) as f:
         return BeautifulSoup(f.read(), "html.parser")
 
@@ -113,7 +117,9 @@ def markup_doc(site_dir):
 def code_doc(site_dir):
     """Parse _test/code/index.html with BeautifulSoup (code fixture)."""
     html_path = site_dir / "code" / "index.html"
-    assert html_path.exists(), f"Code fixture not found at {html_path}. Run 'lake exe test-fixtures-build' first."
+    assert html_path.exists(), (
+        f"Code fixture not found at {html_path}. Run 'lake exe test-fixtures-build' first."
+    )
     with open(html_path) as f:
         return BeautifulSoup(f.read(), "html.parser")
 
@@ -122,7 +128,9 @@ def code_doc(site_dir):
 def paneloption_doc(site_dir):
     """Parse _test/paneloption/index.html with BeautifulSoup (panel-option fixture)."""
     html_path = site_dir / "paneloption" / "index.html"
-    assert html_path.exists(), f"Panel-option fixture not found at {html_path}. Run 'lake exe test-fixtures-build' first."
+    assert html_path.exists(), (
+        f"Panel-option fixture not found at {html_path}. Run 'lake exe test-fixtures-build' first."
+    )
     with open(html_path) as f:
         return BeautifulSoup(f.read(), "html.parser")
 
@@ -131,7 +139,9 @@ def paneloption_doc(site_dir):
 def diagramanim_doc(site_dir):
     """Parse _test/diagramanim/index.html with BeautifulSoup (diagram/animation fixture)."""
     html_path = site_dir / "diagramanim" / "index.html"
-    assert html_path.exists(), f"DiagramAnim fixture not found at {html_path}. Run 'lake exe test-fixtures-build' first."
+    assert html_path.exists(), (
+        f"DiagramAnim fixture not found at {html_path}. Run 'lake exe test-fixtures-build' first."
+    )
     with open(html_path) as f:
         return BeautifulSoup(f.read(), "html.parser")
 
@@ -140,7 +150,9 @@ def diagramanim_doc(site_dir):
 def theme_doc(site_dir):
     """Parse _test/theme/index.html with BeautifulSoup (custom-theme fixture)."""
     html_path = site_dir / "theme" / "index.html"
-    assert html_path.exists(), f"Theme fixture not found at {html_path}. Run 'lake exe test-fixtures-build' first."
+    assert html_path.exists(), (
+        f"Theme fixture not found at {html_path}. Run 'lake exe test-fixtures-build' first."
+    )
     with open(html_path) as f:
         return BeautifulSoup(f.read(), "html.parser")
 
@@ -165,7 +177,7 @@ def server(request, site_dir):
         ["python", "-m", "http.server", str(port), "--bind", "127.0.0.1"],
         cwd=site_dir,
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
+        stderr=subprocess.DEVNULL,
     )
     time.sleep(1)
     yield f"http://127.0.0.1:{port}"
@@ -242,7 +254,9 @@ def console_error_text(msg):
     """
     try:
         parts = [
-            arg.evaluate("v => v instanceof Error ? `${v.name}: ${v.message}` : String(v)")
+            arg.evaluate(
+                "v => v instanceof Error ? `${v.name}: ${v.message}` : String(v)"
+            )
             for arg in msg.args
         ]
     except Exception:
@@ -254,11 +268,20 @@ def console_error_text(msg):
 def page(browser, browser_errors):
     """A fresh page that records browser errors in ``browser_errors``."""
     page = browser.new_page()
-    page.on("console", lambda msg: browser_errors.append(f"console.error: {console_error_text(msg)}") if msg.type == "error" else None)
+    page.on(
+        "console",
+        lambda msg: (
+            browser_errors.append(f"console.error: {console_error_text(msg)}")
+            if msg.type == "error"
+            else None
+        ),
+    )
     page.on("pageerror", lambda exc: browser_errors.append(f"uncaught: {exc}"))
     yield page
     page.close()
-    assert not browser_errors, "Browser errors during test:\n" + "\n".join(browser_errors)
+    assert not browser_errors, "Browser errors during test:\n" + "\n".join(
+        browser_errors
+    )
 
 
 FORCED_LAYOUT_FAILURE = "forced layout failure"
@@ -281,7 +304,9 @@ def take_forced_errors(browser_errors):
     return len(forced)
 
 
-_REVEAL_READY_EXPR = "() => !!(window.Reveal && window.Reveal.isReady && window.Reveal.isReady())"
+_REVEAL_READY_EXPR = (
+    "() => !!(window.Reveal && window.Reveal.isReady && window.Reveal.isReady())"
+)
 
 
 def wait_for_reveal_ready(page, timeout=10000):
@@ -303,14 +328,17 @@ def goto_slide_by_title(page, base_url, title):
     """
     page.goto(f"{base_url}/index.html")
     wait_for_reveal_ready(page)
-    index = page.evaluate("""(title) => {
+    index = page.evaluate(
+        """(title) => {
         const sections = document.querySelectorAll('.slides > section');
         for (let i = 0; i < sections.length; i++) {
             const h = sections[i].querySelector('h1, h2, h3');
             if (h && h.textContent.trim() === title) return i;
         }
         return -1;
-    }""", title)
+    }""",
+        title,
+    )
     assert index >= 0, f"Slide with title '{title}' not found"
     page.goto(f"{base_url}/index.html#/{index}")
     # Reveal is already ready from the first goto; wait briefly for the

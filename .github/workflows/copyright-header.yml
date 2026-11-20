@@ -2,12 +2,15 @@ name: Check for copyright header
 
 on: [pull_request, merge_group]
 
+permissions:
+    contents: read
+
 jobs:
     check-lean-files:
         name: "Check copyright header"
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7.0.1
 
             - name: Verify .lean files start with a copyright header.
               run: |

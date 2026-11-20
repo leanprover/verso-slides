@@ -14,7 +14,9 @@ def _code_box_in_section(doc: BeautifulSoup, title: str):
     for s in doc.select("section"):
         h = s.select_one("h1, h2, h3")
         if h and h.get_text().strip() == title:
-            return s.select_one(".code-with-panel") or s.select_one("code.hl.lean.block")
+            return s.select_one(".code-with-panel") or s.select_one(
+                "code.hl.lean.block"
+            )
     return None
 
 

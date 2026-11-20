@@ -8,8 +8,17 @@
 
 "use strict";
 
+/* exported contentWidth, isFormatData, isGoalData, renderFormat, renderGoals */
+
 /**
- * @typedef {{ type: string, [key: string]: * }} FormatNode
+ * @typedef {{ type: "nil" }
+ *   | { type: "line" }
+ *   | { type: "align", force: boolean }
+ *   | { type: "text", str: string }
+ *   | { type: "nest", indent: number, f: FormatNode }
+ *   | { type: "append", f1: FormatNode, f2: FormatNode }
+ *   | { type: "group", f: FormatNode, behavior: "allOrNone" | "fill" }
+ *   | { type: "tag", n: number, f: FormatNode }} FormatNode
  *
  * @typedef {{
  *   measure: (s: string) => number,
@@ -64,7 +73,7 @@
  *   [6, sub]        → group(sub, fill)
  *   [7, nat, sub]   → tag(nat, sub)
  * @param {*} json
- * @return {FormatNode}
+ * @returns {FormatNode}
  */
 function deserializeFormat(json) {
     if (json === null || json === undefined) return { type: "nil" };
@@ -97,14 +106,14 @@ function deserializeFormat(json) {
  * Create a DOM-based measurer for pixel-accurate text width measurement.
  * Accounts for reveal.js CSS transform scaling.
  * @param {HTMLElement} panel
- * @return {DOMMeasurer}
+ * @returns {DOMMeasurer}
  */
 function createDOMMeasurer(panel) {
-    var container = document.createElement("span");
+    const container = document.createElement("span");
     container.className = "hl lean reflowed";
     container.style.cssText =
         "position:absolute;visibility:hidden;white-space:pre;pointer-events:none";
-    var probe = document.createElement("span");
+    const probe = document.createElement("span");
     container.appendChild(probe);
     panel.appendChild(container);
 
@@ -112,23 +121,27 @@ function createDOMMeasurer(panel) {
     // reveal.js applies transform:scale() to slides, which makes
     // getBoundingClientRect() return viewport-scaled values while
     // clientWidth returns CSS layout pixels. We need CSS pixels.
-    var clientW = panel.clientWidth;
-    var scale = 1;
+    const clientW = panel.clientWidth;
+    let scale = 1;
     if (clientW > 0) {
         scale = panel.getBoundingClientRect().width / clientW;
     }
 
     /** @type {Record<string, number>} */
-    var cache = {};
-    /** @param {string} s @return {number} */
+    const cache = {};
+    /**
+     * @param {string} s
+     * @returns {number}
+     */
     function measure(s) {
-        if (s in cache) return cache[s];
+        const cached = cache[s];
+        if (cached !== undefined) return cached;
         probe.textContent = s;
-        var w = probe.getBoundingClientRect().width / scale;
+        const w = probe.getBoundingClientRect().width / scale;
         cache[s] = w;
         return w;
     }
-    var spaceWidth = measure(" ");
+    const spaceWidth = measure(" ");
     return {
         measure: measure,
         spaceWidth: spaceWidth,
@@ -146,7 +159,7 @@ function createDOMMeasurer(panel) {
  * @param {boolean} [foundLine]
  * @param {boolean} [foundFlattenedHardLine]
  * @param {number} [space]
- * @return {SpaceResult}
+ * @returns {SpaceResult}
  */
 function spaceResult(foundLine, foundFlattenedHardLine, space) {
     return {
@@ -160,11 +173,11 @@ function spaceResult(foundLine, foundFlattenedHardLine, space) {
  * @param {number} w
  * @param {SpaceResult} r1
  * @param {(w2: number) => SpaceResult} r2fn
- * @return {SpaceResult}
+ * @returns {SpaceResult}
  */
 function merge(w, r1, r2fn) {
     if (r1.space > w || r1.foundLine) return r1;
-    var r2 = r2fn(w - r1.space);
+    const r2 = r2fn(w - r1.space);
     return {
         foundLine: r2.foundLine,
         foundFlattenedHardLine: r2.foundFlattenedHardLine,
@@ -179,7 +192,7 @@ function merge(w, r1, r2fn) {
  * @param {number} m
  * @param {number} w
  * @param {DOMMeasurer} measurer
- * @return {SpaceResult}
+ * @returns {SpaceResult}
  */
 function spaceUptoLine(f, flatten, m, w, measurer) {
     switch (f.type) {
@@ -192,15 +205,14 @@ function spaceUptoLine(f, flatten, m, w, measurer) {
             if (w < m) return spaceResult(false, false, Math.max(0, m - w));
             return spaceResult(true);
         case "text": {
-            var idx = f.str.indexOf("\n");
+            const idx = f.str.indexOf("\n");
             if (idx === -1) {
                 return spaceResult(false, false, measurer.measure(f.str));
-            } else {
-                return spaceResult(true, flatten, measurer.measure(f.str.substring(0, idx)));
             }
+            return spaceResult(true, flatten, measurer.measure(f.str.substring(0, idx)));
         }
         case "append":
-            return merge(w, spaceUptoLine(f.f1, flatten, m, w, measurer), function (w2) {
+            return merge(w, spaceUptoLine(f.f1, flatten, m, w, measurer), (w2) => {
                 return spaceUptoLine(f.f2, flatten, m, w2, measurer);
             });
         case "nest":
@@ -216,7 +228,7 @@ function spaceUptoLine(f, flatten, m, w, measurer) {
 
 /**
  * @param {Fla} fla
- * @return {boolean}
+ * @returns {boolean}
  */
 function shouldFlatten(fla) {
     return fla.type === "allow" && !!fla.fits;
@@ -229,18 +241,18 @@ function shouldFlatten(fla) {
  * @param {number} col
  * @param {number} w
  * @param {DOMMeasurer} measurer
- * @return {SpaceResult}
+ * @returns {SpaceResult}
  */
 function spaceUptoLineGroups(groups, col, w, measurer) {
-    var result = spaceResult();
-    var remainingW = w;
+    let result = spaceResult();
+    let remainingW = w;
 
-    for (var gi = groups.length - 1; gi >= 0; gi--) {
-        var g = groups[gi];
-        var flatten = shouldFlatten(g.fla);
-        for (var ii = g.items.length - 1; ii >= 0; ii--) {
-            var item = g.items[ii];
-            var r = spaceUptoLine(
+    for (let gi = groups.length - 1; gi >= 0; gi--) {
+        const g = /** @type {WorkGroup} */ (groups[gi]);
+        const flatten = shouldFlatten(g.fla);
+        for (let ii = g.items.length - 1; ii >= 0; ii--) {
+            const item = /** @type {WorkItem} */ (g.items[ii]);
+            const r = spaceUptoLine(
                 item.f,
                 flatten,
                 remainingW + col - item.indent,
@@ -268,17 +280,17 @@ function spaceUptoLineGroups(groups, col, w, measurer) {
  * @param {number} w
  * @param {RenderContext} ctx
  * @param {DOMMeasurer} measurer
- * @return {WorkGroup[]}
+ * @returns {WorkGroup[]}
  */
 function pushGroup(flb, items, gs, w, ctx, measurer) {
-    var k = ctx.column;
-    var remaining = w - k;
-    var g = { fla: { type: "allow", fits: flb === "allOrNone" }, flb: flb, items: items };
-    var r = spaceUptoLineGroups([g], k, remaining, measurer);
-    var r2 = merge(remaining, r, function (w2) {
+    const k = ctx.column;
+    const remaining = w - k;
+    const g = { fla: { type: "allow", fits: flb === "allOrNone" }, flb: flb, items: items };
+    const r = spaceUptoLineGroups([g], k, remaining, measurer);
+    const r2 = merge(remaining, r, (w2) => {
         return spaceUptoLineGroups(gs, k, w2, measurer);
     });
-    var fits = !r.foundFlattenedHardLine && r2.space <= remaining;
+    const fits = !r.foundFlattenedHardLine && r2.space <= remaining;
     gs.push({ fla: { type: "allow", fits: fits }, flb: flb, items: items });
     return gs;
 }
@@ -297,15 +309,14 @@ function pushGroup(flb, items, gs, w, ctx, measurer) {
  * @param {DOMMeasurer} measurer
  */
 function be(w, groups, ctx, measurer) {
-    while (groups.length > 0) {
-        var g = groups[groups.length - 1];
+    for (let g = groups.at(-1); g !== undefined; g = groups.at(-1)) {
         if (g.items.length === 0) {
             groups.pop();
             continue;
         }
         // Pop current item — O(1). g.items retains the rest.
         // Length was checked above, so pop always returns a value.
-        var i = /** @type {WorkItem} */ (g.items.pop());
+        const i = /** @type {WorkItem} */ (g.items.pop());
 
         switch (i.f.type) {
             case "nil":
@@ -333,8 +344,8 @@ function be(w, groups, ctx, measurer) {
                 break;
 
             case "text": {
-                var s = i.f.str;
-                var nlIdx = s.indexOf("\n");
+                const s = i.f.str;
+                const nlIdx = s.indexOf("\n");
                 if (nlIdx === -1) {
                     ctx.pushOutput(s);
                     ctx.endTags(i.activeTags);
@@ -342,7 +353,7 @@ function be(w, groups, ctx, measurer) {
                     ctx.pushOutput(s.substring(0, nlIdx));
                     ctx.pushNewline(Math.max(0, i.indent));
                     /** @type {WorkItem} */
-                    var newTextItem = {
+                    const newTextItem = {
                         f: { type: "text", str: s.substring(nlIdx + 1) },
                         indent: i.indent,
                         activeTags: i.activeTags,
@@ -354,7 +365,7 @@ function be(w, groups, ctx, measurer) {
                         // Remaining items stay in g.items; add newTextItem
                         g.items.push(newTextItem);
                         // Steal items from current group, pop it, create new group
-                        var remainingItems = g.items;
+                        const remainingItems = g.items;
                         groups.pop();
                         groups = pushGroup(g.flb, remainingItems, groups, w, ctx, measurer);
                     }
@@ -374,9 +385,9 @@ function be(w, groups, ctx, measurer) {
                     // fill behavior
                     if (shouldFlatten(g.fla)) {
                         // Try to fit next item too — need a copy since pushGroup mutates
-                        var savedItems = g.items.slice();
-                        var savedGroups = groups.slice(0, groups.length - 1);
-                        var tryGs = pushGroup(
+                        const savedItems = g.items.slice();
+                        const savedGroups = groups.slice(0, groups.length - 1);
+                        const tryGs = pushGroup(
                             "fill",
                             savedItems,
                             savedGroups,
@@ -384,7 +395,8 @@ function be(w, groups, ctx, measurer) {
                             ctx,
                             measurer,
                         );
-                        var nextG = tryGs[tryGs.length - 1];
+                        // pushGroup always pushes a group, so tryGs is not empty
+                        const nextG = /** @type {WorkGroup} */ (tryGs.at(-1));
                         if (shouldFlatten(nextG.fla)) {
                             ctx.pushOutput(" ");
                             ctx.endTags(i.activeTags);
@@ -393,14 +405,14 @@ function be(w, groups, ctx, measurer) {
                             // Break: use original items
                             ctx.pushNewline(Math.max(0, i.indent));
                             ctx.endTags(i.activeTags);
-                            var breakItems = g.items;
+                            const breakItems = g.items;
                             groups.pop();
                             groups = pushGroup("fill", breakItems, groups, w, ctx, measurer);
                         }
                     } else {
                         ctx.pushNewline(Math.max(0, i.indent));
                         ctx.endTags(i.activeTags);
-                        var breakItems2 = g.items;
+                        const breakItems2 = g.items;
                         groups.pop();
                         groups = pushGroup("fill", breakItems2, groups, w, ctx, measurer);
                     }
@@ -411,9 +423,9 @@ function be(w, groups, ctx, measurer) {
                 if (shouldFlatten(g.fla) && !i.f.force) {
                     ctx.endTags(i.activeTags);
                 } else {
-                    var k = ctx.column;
+                    const k = ctx.column;
                     if (k < i.indent) {
-                        var pad = Math.max(0, i.indent - k);
+                        const pad = Math.max(0, i.indent - k);
                         ctx.pushOutput(" ".repeat(Math.round(pad / measurer.spaceWidth)));
                     } else {
                         ctx.pushNewline(Math.max(0, i.indent));
@@ -427,7 +439,7 @@ function be(w, groups, ctx, measurer) {
                     // flatten(group f) = flatten f
                     g.items.push({ f: i.f.f, indent: i.indent, activeTags: i.activeTags });
                 } else {
-                    var groupItem = { f: i.f.f, indent: i.indent, activeTags: i.activeTags };
+                    const groupItem = { f: i.f.f, indent: i.indent, activeTags: i.activeTags };
                     groups = pushGroup(i.f.behavior, [groupItem], groups, w, ctx, measurer);
                 }
                 break;
@@ -468,7 +480,7 @@ function prettyM(f, w, indent, ctx, measurer) {
  * Creates a rendering context that collects tagged output segments.
  * @param {Record<string, TokenAnnotation>} annotations
  * @param {DOMMeasurer} measurer
- * @return {RenderContext}
+ * @returns {RenderContext}
  */
 function makeRenderContext(annotations, measurer) {
     return {
@@ -486,7 +498,7 @@ function makeRenderContext(annotations, measurer) {
         pushNewline: function (indent) {
             this.segments.push({ text: "\n", tags: [] });
             if (indent > 0) {
-                var spaces = Math.round(indent / measurer.spaceWidth);
+                const spaces = Math.round(indent / measurer.spaceWidth);
                 if (spaces > 0) {
                     this.segments.push({ text: " ".repeat(spaces), tags: [] });
                 }
@@ -499,7 +511,7 @@ function makeRenderContext(annotations, measurer) {
         },
 
         endTags: function (count) {
-            for (var j = 0; j < count; j++) {
+            for (let j = 0; j < count; j++) {
                 this.tagStack.pop();
             }
         },
@@ -512,11 +524,11 @@ function makeRenderContext(annotations, measurer) {
  * @param {Record<string, TokenAnnotation>} annotations - tag index → { cssClass, binding }
  * @param {number} pixelWidth - target width in pixels
  * @param {DOMMeasurer} measurer
- * @return {string} HTML string
+ * @returns {string} HTML string
  */
 function formatToHtml(fmtJson, annotations, pixelWidth, measurer) {
-    var fmt = deserializeFormat(fmtJson);
-    var ctx = makeRenderContext(annotations, measurer);
+    const fmt = deserializeFormat(fmtJson);
+    const ctx = makeRenderContext(annotations, measurer);
     prettyM(fmt, pixelWidth, 0, ctx, measurer);
     return segmentsToHtml(ctx.segments, annotations);
 }
@@ -524,30 +536,29 @@ function formatToHtml(fmtJson, annotations, pixelWidth, measurer) {
 /**
  * @param {Segment[]} segments
  * @param {Record<string, TokenAnnotation>} annotations
- * @return {string}
+ * @returns {string}
  */
 function segmentsToHtml(segments, annotations) {
-    var parts = [];
-    for (var si = 0; si < segments.length; si++) {
-        var seg = segments[si];
-        var text = escapeHtml(seg.text);
+    const parts = [];
+    for (const seg of segments) {
+        const text = escapeHtml(seg.text);
 
         // Find the innermost tag with annotation
-        var annotation = null;
-        for (var ti = seg.tags.length - 1; ti >= 0; ti--) {
-            var tagKey = String(seg.tags[ti]);
-            if (annotations[tagKey]) {
-                annotation = annotations[tagKey];
+        let annotation = null;
+        for (const tag of seg.tags.toReversed()) {
+            const candidate = annotations[String(tag)];
+            if (candidate) {
+                annotation = candidate;
                 break;
             }
         }
 
         if (annotation) {
-            var cls = annotation.cssClass + " token";
-            var bindAttr = annotation.binding
-                ? ' data-binding="' + escapeHtml(annotation.binding) + '"'
+            const cls = `${annotation.cssClass} token`;
+            const bindAttr = annotation.binding
+                ? ` data-binding="${escapeHtml(annotation.binding)}"`
                 : "";
-            parts.push('<span class="' + cls + '"' + bindAttr + ">" + text + "</span>");
+            parts.push(`<span class="${cls}"${bindAttr}>${text}</span>`);
         } else {
             parts.push(text);
         }
@@ -557,7 +568,7 @@ function segmentsToHtml(segments, annotations) {
 
 /**
  * @param {string} s
- * @return {string}
+ * @returns {string}
  */
 function escapeHtml(s) {
     return s
@@ -574,63 +585,59 @@ function escapeHtml(s) {
  * Caller inserts html into the DOM, measures .type cell widths, then calls
  * fillReflowedSpans to format expressions at measured widths.
  * @param {GoalData[]} goalsJson
- * @return {GoalsResult}
+ * @returns {GoalsResult}
  */
 function goalsToHtml(goalsJson) {
     /** @type {FormatData[]} */
-    var formats = [];
-    var parts = [];
-    for (var gi = 0; gi < goalsJson.length; gi++) {
-        var goal = goalsJson[gi];
-        var goalParts = [];
+    const formats = [];
+    const parts = [];
+    for (const goal of goalsJson) {
+        const goalParts = [];
 
         if (goal.name) {
-            goalParts.push('<span class="goal-name">' + escapeHtml(goal.name) + "</span>");
+            goalParts.push(`<span class="goal-name">${escapeHtml(goal.name)}</span>`);
         }
 
         // Hypotheses
         if (goal.hypotheses.length > 0) {
-            var hypParts = [];
-            for (var hi = 0; hi < goal.hypotheses.length; hi++) {
-                var hyp = goal.hypotheses[hi];
-                var typeHtml;
+            const hypParts = [];
+            for (const hyp of goal.hypotheses) {
+                let typeHtml;
                 if (hyp.ppType) {
-                    var idx = formats.length;
+                    const idx = formats.length;
                     formats.push(goalFormatData(hyp.ppType));
-                    typeHtml = '<span class="reflowed" data-fmt-idx="' + idx + '"></span>';
+                    typeHtml = `<span class="reflowed" data-fmt-idx="${idx}"></span>`;
                 } else {
                     typeHtml = '<span class="no-format">(no format data)</span>';
                 }
                 hypParts.push(
-                    '<span class="hypothesis"><span class="name">' +
-                        hyp.names.map(escapeHtml).join(" ") +
-                        '</span><span class="colon">:</span><span class="type">' +
-                        typeHtml +
-                        "</span></span>",
+                    `<span class="hypothesis"><span class="name">${hyp.names
+                        .map(escapeHtml)
+                        .join(" ")}</span><span class="colon">:</span><span class="type">${
+                        typeHtml
+                    }</span></span>`,
                 );
             }
-            goalParts.push('<span class="hypotheses">' + hypParts.join("") + "</span>");
+            goalParts.push(`<span class="hypotheses">${hypParts.join("")}</span>`);
         }
 
         // Conclusion
-        var vdash = escapeHtml(goal.goalPrefix);
-        var conclHtml;
+        const vdash = escapeHtml(goal.goalPrefix);
+        let conclHtml;
         if (goal.ppConclusion) {
-            var idx = formats.length;
+            const idx = formats.length;
             formats.push(goalFormatData(goal.ppConclusion));
-            conclHtml = '<span class="reflowed" data-fmt-idx="' + idx + '"></span>';
+            conclHtml = `<span class="reflowed" data-fmt-idx="${idx}"></span>`;
         } else {
             conclHtml = '<span class="no-format">(no format data)</span>';
         }
         goalParts.push(
-            '<span class="conclusion"><span class="goal-vdash">' +
-                vdash +
-                '</span><span class="type">' +
-                conclHtml +
-                "</span></span>",
+            `<span class="conclusion"><span class="goal-vdash">${vdash}</span><span class="type">${
+                conclHtml
+            }</span></span>`,
         );
 
-        parts.push('<div class="goal">' + goalParts.join("") + "</div>");
+        parts.push(`<div class="goal">${goalParts.join("")}</div>`);
     }
     return { html: parts.join(""), formats: formats };
 }
@@ -642,15 +649,14 @@ function goalsToHtml(goalsJson) {
  * @param {DOMMeasurer} measurer
  */
 function fillReflowedSpans(container, formats, measurer) {
-    var spans = container.querySelectorAll(".reflowed[data-fmt-idx]");
-    for (var i = 0; i < spans.length; i++) {
-        var span = spans[i];
-        var idx = parseInt(span.getAttribute("data-fmt-idx") || "0");
-        var entry = formats[idx];
+    for (const span of container.querySelectorAll(".reflowed[data-fmt-idx]")) {
+        const idx = parseInt(span.getAttribute("data-fmt-idx") || "0");
+        const entry = formats[idx];
         if (!entry) continue;
-        var cell = span.closest(".type");
+        const cell = span.closest(".type");
         if (!cell) continue;
-        var width = measurer.measureElWidth(cell);
+        const width = measurer.measureElWidth(cell);
+        // eslint-disable-next-line no-unsanitized/property -- formatToHtml escapes all text
         span.innerHTML = formatToHtml(entry.fmt, entry.annotations, width, measurer);
     }
 }
@@ -658,7 +664,7 @@ function fillReflowedSpans(container, formats, measurer) {
 /**
  * Checks whether `v` is a `FormatData`.
  * @param {*} v
- * @return {v is FormatData}
+ * @returns {v is FormatData}
  */
 function isFormatData(v) {
     if (typeof v !== "object" || v === null || !("fmt" in v)) return false;
@@ -676,7 +682,7 @@ function isFormatData(v) {
 /**
  * Whether `v` is a `Hypothesis`.
  * @param {*} v
- * @return {v is Hypothesis}
+ * @returns {v is Hypothesis}
  */
 function isHypothesis(v) {
     return (
@@ -691,7 +697,7 @@ function isHypothesis(v) {
 /**
  * Whether `v` is a `GoalData`.
  * @param {*} v
- * @return {v is GoalData}
+ * @returns {v is GoalData}
  */
 function isGoalData(v) {
     return (
@@ -708,7 +714,7 @@ function isGoalData(v) {
 /**
  * The `FormatData` encoded by a goal's `ppType` or `ppConclusion` string.
  * @param {string} json
- * @return {FormatData}
+ * @returns {FormatData}
  */
 function goalFormatData(json) {
     /** @type {unknown} */
@@ -722,8 +728,8 @@ function goalFormatData(json) {
  * removed from the DOM once `layout` returns or throws.
  * @template T
  * @param {HTMLElement} container
- * @param {function(DOMMeasurer): T} layout
- * @return {T}
+ * @param {(measurer: DOMMeasurer) => T} layout
+ * @returns {T}
  */
 function withMeasurer(container, layout) {
     const measurer = createDOMMeasurer(container);
@@ -737,7 +743,7 @@ function withMeasurer(container, layout) {
 /**
  * Width of `el`'s content box in CSS pixels.
  * @param {HTMLElement} el
- * @return {number}
+ * @returns {number}
  */
 function contentWidth(el) {
     const style = getComputedStyle(el);
@@ -756,7 +762,8 @@ function contentWidth(el) {
  */
 function renderGoals(panel, goals) {
     const result = goalsToHtml(goals);
-    panel.innerHTML = '<span class="hl lean">' + result.html + "</span>";
+    // eslint-disable-next-line no-unsanitized/property -- goalsToHtml escapes all text
+    panel.innerHTML = `<span class="hl lean">${result.html}</span>`;
     withMeasurer(panel, (measurer) => fillReflowedSpans(panel, result.formats, measurer));
 }
 
@@ -769,11 +776,15 @@ function renderGoals(panel, goals) {
  * @param {number} width
  */
 function renderFormat(container, codeEl, format, width) {
+    // eslint-disable-next-line no-unsanitized/property -- formatToHtml escapes all text
     codeEl.innerHTML = withMeasurer(
         container,
         (measurer) =>
-            '<span class="reflowed">' +
-            formatToHtml(format.fmt, format.annotations, width, measurer) +
-            "</span>",
+            `<span class="reflowed">${formatToHtml(
+                format.fmt,
+                format.annotations,
+                width,
+                measurer,
+            )}</span>`,
     );
 }

@@ -26,7 +26,7 @@ covered=$(
 missing=$(comm -23 <(printf '%s\n' "$actual") <(printf '%s\n' "$covered") || true)
 if [ -n "$missing" ]; then
   echo "Error: the following .js files under web-lib/ are not listed in any jsconfig.json 'include' array:" >&2
-  printf '  %s\n' $missing >&2
+  printf '%s\n' "$missing" | sed 's/^/  /' >&2
   echo "Add them to the appropriate jsconfig.json so they are type-checked (or" >&2
   echo "create a new jsconfig.json if they belong in a new subdirectory)." >&2
   exit 1

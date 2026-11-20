@@ -24,8 +24,11 @@ from conftest import wait_for_reveal_ready
 # with whatever `TestFixtures/Build.lean` actually built. Each subdirectory
 # of `_test/themes/` corresponds to one built-in theme name.
 _THEMES_DIR = Path(__file__).parent.parent / "_test" / "themes"
-BUNDLED_THEMES = sorted(p.name for p in _THEMES_DIR.iterdir() if p.is_dir()) \
-    if _THEMES_DIR.exists() else []
+BUNDLED_THEMES = (
+    sorted(p.name for p in _THEMES_DIR.iterdir() if p.is_dir())
+    if _THEMES_DIR.exists()
+    else []
+)
 assert BUNDLED_THEMES, (
     f"No theme fixtures found under {_THEMES_DIR}. "
     f"Run 'lake exe test-fixtures-build' first."

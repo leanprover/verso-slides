@@ -1,0 +1,34 @@
+version: 2
+updates:
+    - package-ecosystem: "github-actions"
+      directory: "/"
+      schedule:
+          interval: "weekly"
+      cooldown:
+          default-days: 7
+      commit-message:
+          prefix: "chore"
+
+    - package-ecosystem: "npm"
+      directory: "/"
+      schedule:
+          interval: "weekly"
+      cooldown:
+          default-days: 7
+      commit-message:
+          prefix: "chore"
+      groups:
+          eslint:
+              patterns:
+                  - "eslint"
+                  - "eslint-*"
+                  - "@eslint/*"
+
+    - package-ecosystem: "uv"
+      directory: "/browser-tests"
+      schedule:
+          interval: "weekly"
+      cooldown:
+          default-days: 7
+      commit-message:
+          prefix: "chore"
