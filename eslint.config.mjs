@@ -55,7 +55,7 @@ export default [
         languageOptions: { globals: { tippy: "writable" } },
     },
     {
-        // pretty.js is loaded before these scripts and defines these functions.
+        // pretty.js and math.js define these functions.
         files: ["web-lib/panel/panel.js", "web-lib/panel/lightbox.js"],
         languageOptions: {
             globals: {
@@ -64,6 +64,7 @@ export default [
                 isGoalData: "readonly",
                 renderFormat: "readonly",
                 renderGoals: "readonly",
+                versoRenderMath: "readonly",
             },
         },
     },

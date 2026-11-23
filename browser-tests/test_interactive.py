@@ -1,7 +1,11 @@
 """Browser tests for JS-dependent features (info panel, adaptive backgrounds)."""
 
 from playwright.sync_api import expect, Page
-from conftest import goto_slide_by_title
+from conftest import (
+    assert_docstring_markup_is_text,
+    assert_docstring_structure,
+    goto_slide_by_title,
+)
 
 
 class TestInfoPanel:
@@ -53,10 +57,19 @@ class TestInfoPanel:
 
         docstring = panel.locator(".docstring")
         expect(docstring).to_be_visible()
-        assert docstring.locator("img").count() == 0
-        assert docstring.inner_text().count("<img src=x") == 3
-        assert docstring.locator("code").count() == 1
-        assert page.evaluate("window.docstringScriptRan") is None
+        assert_docstring_markup_is_text(docstring)
+
+    def test_docstring_structure(self, code_url: str, page: Page):
+        """A docstring's Markdown and math should show in the panel as HTML and KaTeX."""
+        slide = goto_slide_by_title(page, code_url, "Docstring Structure")
+
+        block = slide.locator(".code-with-panel").first
+        panel = block.locator(".info-panel")
+        block.locator(".const:has-text('bump')").last.click()
+
+        docstring = panel.locator(".docstring")
+        expect(docstring).to_be_visible()
+        assert_docstring_structure(docstring)
 
 
 class TestAdaptiveBackground:

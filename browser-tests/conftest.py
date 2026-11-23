@@ -348,3 +348,57 @@ def goto_slide_by_title(page, base_url, title):
         arg=index,
     )
     return page.locator(".slides > section").nth(index)
+
+
+def mathml_texts(math_elements):
+    """Return the typeset text of each math element, in document order.
+
+    *math_elements* is a locator for ``code.math`` elements. The text is that of
+    the MathML presentation tree, so ``x^2`` gives ``x2``. A math element
+    without MathML output gives ``None``.
+    """
+    return math_elements.evaluate_all(
+        """els => els.map(el => {
+            const row = el.querySelector('math > semantics > mrow');
+            return row ? row.textContent : null;
+        })"""
+    )
+
+
+def assert_docstring_markup_is_text(docstring):
+    """Check the ``imgTag`` docstring: its HTML tags show as text.
+
+    *docstring* is a locator for the rendered ``.docstring`` element.
+    """
+    assert docstring.locator("img").count() == 0
+    assert docstring.inner_text().count("<img src=x>") == 3
+    assert docstring.locator("code").count() == 1
+
+
+def assert_docstring_structure(docstring):
+    """Check the ``bump`` docstring: Markdown became HTML and math is typeset.
+
+    *docstring* is a locator for the rendered ``.docstring`` element.
+    """
+    # Markdown structure
+    assert docstring.locator("p").count() >= 1
+    assert docstring.locator("em").count() == 1
+    assert docstring.locator("strong").count() == 1
+    assert docstring.locator("a[href='https://example.com/map'] code").count() == 1
+    assert docstring.locator("ul > li").count() == 2
+    block = docstring.locator("pre > code")
+    assert block.count() == 1
+    assert "#eval bump [1, 2]\n  -- [2, 3]" in block.text_content()
+    white_space = block.evaluate("el => getComputedStyle(el).whiteSpace")
+    assert white_space.startswith("pre"), white_space
+
+    # Math: every math element is typeset. `\RR` is defined by the document's
+    # math prelude.
+    assert mathml_texts(docstring.locator("code.math")) == ["x2+y2", "R", "∑i=0ni"]
+    assert docstring.locator("code.math.display math[display='block']").count() == 1
+    assert docstring.locator("mi[mathvariant='double-struck']").count() == 1
+
+    # Markdown and math delimiters are consumed
+    text = docstring.inner_text()
+    for syntax in ("**", "`", "$", "~~~", "]("):
+        assert syntax not in text, f"literal {syntax!r} in docstring text: {text!r}"

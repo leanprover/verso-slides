@@ -215,10 +215,9 @@ backgroundColor := some "#f5f5f5"
 
 ```lean
 /--
-Renders `<img src=x onerror="window.docstringScriptRan = true">` as an image tag.
+Renders `<img src=x>` as an image tag.
 
-Raw <img src=x onerror="window.docstringScriptRan = true"> and escaped
-\<img src=x onerror="window.docstringScriptRan = true"\> tags are text.
+Raw <img src=x> and escaped \<img src=x\> tags are text.
 -/
 def imgTag : String := "<img>"
 
@@ -226,3 +225,27 @@ def imgTag : String := "<img>"
 ```
 
 {lean}`imgTag` is inline.
+
+# Docstring Structure
+
+```lean
+/--
+Adds *one* to **every** element, as
+[`List.map`](https://example.com/map) does.
+
+ * The sum $x^2 + y^2$ is inline math.
+ * The set $\RR$ uses a prelude macro.
+
+$$\sum_{i=0}^n i$$
+
+~~~
+#eval bump [1, 2]
+  -- [2, 3]
+~~~
+-/
+def bump (xs : List Nat) : List Nat := xs.map (· + 1)
+
+#check bump
+```
+
+{lean}`bump` is inline.

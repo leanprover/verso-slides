@@ -16,3 +16,6 @@ declare var Reveal: {
  * (`setDefaultProps`, `hideAll`, …) copied onto the function object.
  */
 declare var tippy: ((targets: unknown, props?: unknown) => unknown) & Record<string, unknown>;
+
+/** Typesets the math elements inside `root` with KaTeX (global, loaded from lib/math.js). */
+declare var versoRenderMath: (root: ParentNode) => void;

@@ -49,12 +49,16 @@
     font-size: inherit;
 }
 .hl.lean div.docstring,
-.hl.lean div.docstring * {
+.hl.lean div.docstring *:not(:where(.katex, .katex *)) {
     max-width: none;
     width: auto;
     white-space: normal;
     word-wrap: break-word;
     overflow-wrap: break-word;
+}
+.hl.lean div.docstring pre,
+.hl.lean div.docstring pre * {
+    white-space: pre-wrap;
 }
 /* Verso token colors — purple/blue/teal, colorblind-safe.
    Literals and unknown tokens inherit the slide text color. */

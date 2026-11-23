@@ -1,7 +1,13 @@
 """Browser tests for the inline Lean term lightbox overlay."""
 
 from playwright.sync_api import expect, Page
-from conftest import break_layout, goto_slide_by_title, take_forced_errors
+from conftest import (
+    assert_docstring_markup_is_text,
+    assert_docstring_structure,
+    break_layout,
+    goto_slide_by_title,
+    take_forced_errors,
+)
 
 
 class TestLightboxOpen:
@@ -44,10 +50,17 @@ class TestLightboxOpen:
 
         docstring = page.locator(".lean-hover-inner .docstring")
         expect(docstring).to_be_visible()
-        assert docstring.locator("img").count() == 0
-        assert docstring.inner_text().count("<img src=x") == 3
-        assert docstring.locator("code").count() == 1
-        assert page.evaluate("window.docstringScriptRan") is None
+        assert_docstring_markup_is_text(docstring)
+
+    def test_docstring_structure(self, code_url: str, page: Page):
+        """A docstring's Markdown and math should show in the lightbox as HTML and KaTeX."""
+        slide = goto_slide_by_title(page, code_url, "Docstring Structure")
+
+        slide.locator("code.hl.lean.inline [data-verso-hover]").first.click()
+
+        docstring = page.locator(".lean-hover-inner .docstring")
+        expect(docstring).to_be_visible()
+        assert_docstring_structure(docstring)
 
     def test_layout_failure_keeps_plain_signature(
         self, code_url: str, page: Page, browser_errors: list

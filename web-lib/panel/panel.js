@@ -467,7 +467,10 @@
         }
 
         // eslint-disable-next-line no-unsanitized/property -- the markup comes from this page or its generated hover data
-        if (html !== null) panel.innerHTML = html;
+        if (html !== null) {
+            panel.innerHTML = html;
+            versoRenderMath(panel);
+        }
 
         // Check for reflowable format data in hover content
         const sigCode = panel.querySelector("code[data-rich-format]");

@@ -156,6 +156,7 @@
         inner.className = "lean-hover-inner hl lean";
         // eslint-disable-next-line no-unsanitized/property -- the markup comes from this page or its generated hover data
         inner.innerHTML = html;
+        versoRenderMath(inner);
         content.appendChild(inner);
 
         viewport.appendChild(content);
