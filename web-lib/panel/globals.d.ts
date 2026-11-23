@@ -16,6 +16,3 @@ declare var Reveal: {
  * (`setDefaultProps`, `hideAll`, …) copied onto the function object.
  */
 declare var tippy: ((targets: unknown, props?: unknown) => unknown) & Record<string, unknown>;
-
-/** marked.js Markdown parser (global, may not be loaded). */
-declare var marked: { parse(text: string): string } | undefined;

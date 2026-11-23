@@ -42,6 +42,22 @@ class TestInfoPanel:
         inner_html = docstring.inner_html()
         assert "<code>" in inner_html or "<p>" in inner_html
 
+    def test_docstring_markup_is_text(self, code_url: str, page: Page):
+        """HTML tags written in a docstring should show in the panel as text."""
+        slide = goto_slide_by_title(page, code_url, "Docstring Markup")
+
+        block = slide.locator(".code-with-panel").first
+        panel = block.locator(".info-panel")
+        block.locator(".const:has-text('imgTag')").last.click()
+        page.wait_for_timeout(500)
+
+        docstring = panel.locator(".docstring")
+        expect(docstring).to_be_visible()
+        assert docstring.locator("img").count() == 0
+        assert docstring.inner_text().count("<img src=x") == 3
+        assert docstring.locator("code").count() == 1
+        assert page.evaluate("window.docstringScriptRan") is None
+
 
 class TestAdaptiveBackground:
     def test_code_bg_dark_slide(self, code_url: str, page: Page):

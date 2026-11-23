@@ -487,15 +487,6 @@
                 panel._reflow = null;
             }
         }
-
-        // Render docstrings with marked
-        if (typeof marked !== "undefined") {
-            const m = /** @type {typeof marked} */ (marked);
-            panel.querySelectorAll(".docstring").forEach((ds) => {
-                // eslint-disable-next-line no-unsanitized/property -- the docstrings come from this page, which the slide generator wrote
-                ds.innerHTML = /** @type {string} */ (m.parse(ds.textContent || ""));
-            });
-        }
     }
 
     /**

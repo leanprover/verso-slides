@@ -173,15 +173,6 @@
         // Lay out the hover's format data, if it has any
         reflowLightboxFormat(inner);
 
-        // Render docstrings with marked
-        if (typeof marked !== "undefined") {
-            const m = /** @type {typeof marked} */ (marked);
-            inner.querySelectorAll(".docstring").forEach((ds) => {
-                // eslint-disable-next-line no-unsanitized/property -- the docstrings come from this page, which the slide generator wrote
-                ds.innerHTML = /** @type {string} */ (m.parse(ds.textContent || ""));
-            });
-        }
-
         // Set up binding highlighting within the lightbox
         inner.addEventListener("mouseover", (e) => {
             const tok = /** @type {Element} */ (e.target).closest(".token[data-binding]");

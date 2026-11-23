@@ -210,3 +210,19 @@ backgroundColor := some "#f5f5f5"
 %%%
 
 {lean}`hello` on a light slide.
+
+# Docstring Markup
+
+```lean
+/--
+Renders `<img src=x onerror="window.docstringScriptRan = true">` as an image tag.
+
+Raw <img src=x onerror="window.docstringScriptRan = true"> and escaped
+\<img src=x onerror="window.docstringScriptRan = true"\> tags are text.
+-/
+def imgTag : String := "<img>"
+
+#check imgTag
+```
+
+{lean}`imgTag` is inline.

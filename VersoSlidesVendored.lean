@@ -159,8 +159,6 @@ public def notesJs := include_str "vendor/reveal.js/plugin/notes/notes.js"
 public def highlightJs := include_str "vendor/reveal.js/plugin/highlight/highlight.js"
 public def monokaiCss := include_str "vendor/reveal.js/plugin/highlight/monokai.css"
 
-public def markedJs := include_str "vendor/marked/marked.min.js"
-
 public def katexCss := Verso.Output.Html.katex.css
 public def katexJs := Verso.Output.Html.katex.js
 public def katexFonts := Verso.Output.Html.katexFonts

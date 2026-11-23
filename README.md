@@ -2,10 +2,10 @@
 
 VersoSlides is a Verso genre that generates `reveal.js` slide
 presentations from Lean 4 documents. All third-party dependencies
-(`reveal.js`, KaTeX, marked) are vendored and embedded at compile
-time, so the generated output works fully offline. The output includes
-full support for Verso's elaborated Lean code blocks, including syntax
-highlighting and hover-based documentation tooltips.
+(`reveal.js`, KaTeX) are vendored and embedded at compile time, so the
+generated output works fully offline. The output includes full support
+for Verso's elaborated Lean code blocks, including syntax highlighting
+and hover-based documentation tooltips.
 
 The [demo slides](./Demo.lean) can be seen at
 [this repository's GitHub pages](https://leanprover.github.io/verso-slides/).
@@ -26,9 +26,9 @@ lake exe demo-slides
 ```
 
 The output is written to `_slides/` by default, containing
-`index.html` and a `lib/` directory with the vendored `reveal.js`,
-KaTeX, and marked assets. To view the presentation, serve the output
-directory over HTTP:
+`index.html` and a `lib/` directory with the vendored `reveal.js` and
+KaTeX assets. To view the presentation, serve the output directory
+over HTTP:
 
 ```
 python3 -m http.server -d _slides

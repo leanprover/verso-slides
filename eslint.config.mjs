@@ -62,7 +62,6 @@ export default [
                 contentWidth: "readonly",
                 isFormatData: "readonly",
                 isGoalData: "readonly",
-                marked: "readonly",
                 renderFormat: "readonly",
                 renderGoals: "readonly",
             },

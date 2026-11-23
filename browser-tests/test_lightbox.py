@@ -35,6 +35,20 @@ class TestLightboxOpen:
         expect(inner).to_be_visible()
         assert inner.inner_html().strip() != "", "Lightbox content should not be empty"
 
+    def test_docstring_markup_is_text(self, code_url: str, page: Page):
+        """HTML tags written in a docstring should show in the lightbox as text."""
+        slide = goto_slide_by_title(page, code_url, "Docstring Markup")
+
+        slide.locator("code.hl.lean.inline [data-verso-hover]").first.click()
+        page.wait_for_timeout(500)
+
+        docstring = page.locator(".lean-hover-inner .docstring")
+        expect(docstring).to_be_visible()
+        assert docstring.locator("img").count() == 0
+        assert docstring.inner_text().count("<img src=x") == 3
+        assert docstring.locator("code").count() == 1
+        assert page.evaluate("window.docstringScriptRan") is None
+
     def test_layout_failure_keeps_plain_signature(
         self, code_url: str, page: Page, browser_errors: list
     ):
