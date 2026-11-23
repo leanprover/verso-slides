@@ -187,11 +187,6 @@
         // Sync animations when entering a slide (handles both forward and backward navigation)
         Reveal.on("slidechanged", syncCurrentSlide);
 
-        // Also sync the slide that is shown on initial load. This script loads after
-        // Reveal.initialize, so `ready` may already have fired.
-        if (Reveal.isReady()) syncCurrentSlide();
-        else Reveal.on("ready", syncCurrentSlide);
-
         /**
          * Finds the frame to animate to when pause step `idx` is triggered.
          * Plays through the pause step and any subsequent non-pause steps,
@@ -291,5 +286,11 @@
                 handleFragHidden(frags[fi]);
             }
         });
+
+        // Also sync the slide that is shown on initial load. This script loads after
+        // Reveal.initialize, so `ready` may already have fired. The call comes last
+        // because it uses the functions that this block declares.
+        if (Reveal.isReady()) syncCurrentSlide();
+        else Reveal.on("ready", syncCurrentSlide);
     }
 })();

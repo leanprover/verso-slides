@@ -27,6 +27,8 @@ class TestLightboxOpen:
         """lightbox.js should still set up the click handlers when it runs after Reveal is ready."""
         delay_script(page, "lightbox.js")
         slide = goto_slide_by_title(page, code_url, "Inline Lean")
+        # The lightbox opens only after its fetch of the hover docs has finished.
+        page.wait_for_load_state("networkidle")
 
         token = slide.locator("code.hl.lean.inline [data-verso-hover]").first
         expect(token).to_be_visible()

@@ -282,16 +282,19 @@ def take_forced_errors(browser_errors):
 
 
 def delay_script(page, name):
-    """Hold back the response for the script ``name`` until reveal.js has
+    """Hold back the request for the script ``name`` until reveal.js has
     fired its ``ready`` event.
 
     reveal.js adds the ``ready`` class to its wrapper element immediately
-    before it dispatches the event.
+    before it dispatches the event. The request continues even when the wait
+    fails, so that the test reports the failed wait.
     """
 
     def handle(route):
-        page.wait_for_selector(".reveal.ready", state="attached")
-        route.continue_()
+        try:
+            page.wait_for_selector(".reveal.ready", state="attached", timeout=10000)
+        finally:
+            route.continue_()
 
     page.route(f"**/{name}", handle)
 

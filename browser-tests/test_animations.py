@@ -5,7 +5,7 @@ import re
 import time
 from bs4 import BeautifulSoup
 from playwright.sync_api import Page
-from conftest import delay_script, goto_slide_by_title
+from conftest import delay_script, goto_slide_by_title, wait_for_reveal_ready
 
 
 # ---------------------------------------------------------------------------
@@ -75,6 +75,25 @@ class TestAnimationHTML:
 # ---------------------------------------------------------------------------
 
 
+# Records each distinct frame that the animation on the current slide renders.
+_RECORD_ANIM_FRAMES = """
+window.__animFrames = new Set();
+new MutationObserver(() => {
+    const container = document.querySelector(".slides > section.present .illuminate-anim");
+    if (container) window.__animFrames.add(container.innerHTML);
+}).observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
+"""
+
+
+def slide_index(doc: BeautifulSoup, title: str) -> int:
+    """The index of the top-level slide whose heading is ``title``."""
+    for i, section in enumerate(doc.select(".slides > section")):
+        heading = section.find(["h1", "h2", "h3"])
+        if heading and heading.get_text().strip() == title:
+            return i
+    raise AssertionError(f"Slide with title '{title}' not found")
+
+
 class TestAnimationAutoplay:
     def test_autoplay_runs_on_slide_entry(self, diagramanim_url: str, page: Page):
         """An +autoplay animation renders SVG content on slide entry."""
@@ -98,23 +117,37 @@ class TestAnimationAutoplay:
         assert heading.count() > 0
         assert "Autoplay" in heading.text_content()
 
-    def test_autoplay_runs_when_script_loads_late(self, diagramanim_url: str, page: Page):
+    def test_autoplay_runs_when_script_loads_late(
+        self, diagramanim_doc: BeautifulSoup, diagramanim_url: str, page: Page
+    ):
         """illuminate-reveal.js should still auto-play the initial slide when it runs after Reveal is ready."""
-        slide = goto_slide_by_title(page, diagramanim_url, "Animation Autoplay")
-        index = page.evaluate("() => Reveal.getIndices().h")
-        page.wait_for_timeout(2000)  # Wait for autoplay to finish
-        played = slide.locator(".illuminate-anim").first.inner_html()
-
-        # Loading the slide directly keeps reveal.js from firing `slidechanged`,
-        # which would also start the animation.
-        page.goto("about:blank")
+        index = slide_index(diagramanim_doc, "Animation Autoplay")
+        page.add_init_script(_RECORD_ANIM_FRAMES)
+        # The delayed script registers its listeners after reveal.js has fired
+        # `slidechanged` and `ready` for this load, so only the initial sync can
+        # start the animation.
         delay_script(page, "illuminate-reveal.js")
         page.goto(f"{diagramanim_url}/index.html#/{index}")
 
+        page.wait_for_function("() => window.__animFrames.size >= 5", timeout=5000)
+
+    def test_load_with_fragment_shown(
+        self, diagramanim_doc: BeautifulSoup, diagramanim_url: str, page: Page
+    ):
+        """Loading an animation slide with a fragment already shown syncs the animation to that fragment."""
+        index = slide_index(diagramanim_doc, "Animation Autoplay")
+        page.goto(f"{diagramanim_url}/index.html#/{index}/0/0")
+        wait_for_reveal_ready(page)
+
+        assert page.evaluate("() => Reveal.getIndices().f") == 0
         container = page.locator(".slides > section.present .illuminate-anim").first
+        shown = container.inner_html()
+
+        # The animation still follows fragment navigation.
+        page.keyboard.press("ArrowLeft")
         page.wait_for_function(
-            "([el, html]) => el.innerHTML === html",
-            arg=[container.element_handle(), played],
+            "([el, html]) => el.innerHTML !== html",
+            arg=[container.element_handle(), shown],
             timeout=5000,
         )
 
