@@ -513,7 +513,6 @@ def renderFullHtml (config : Config) (title : String) (slidesBody : Html) (custo
       <script src={s!"{libPrefix}/math.js"}></script>
       {extraJsScripts}
       <script>{Html.raw initScript}</script>
-      <script src={s!"{libPrefix}/marked.min.js"}></script>
       <script src={s!"{libPrefix}/popper.js"}></script>
       <script src={s!"{libPrefix}/tippy.js"}></script>
       <script src={s!"{libPrefix}/tippy-panel-filter.js"}></script>
@@ -559,8 +558,6 @@ def writeVendoredAssets (outputDir : System.FilePath) (theme : Theme) : IO Unit 
   -- Plugins
   writeFileWithDirs (revealDir / "plugin" / "notes" / "notes.js") Vendor.notesJs
   writeFileWithDirs (revealDir / "plugin" / "highlight" / "highlight.js") Vendor.highlightJs
-  -- Marked
-  writeFileWithDirs (libDir / "marked.min.js") Vendor.markedJs
   -- KaTeX
   let katexDist := libDir / "katex" / "dist"
   writeFileWithDirs (katexDist / "katex.min.css") Vendor.katexCss

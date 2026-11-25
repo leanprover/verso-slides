@@ -17,5 +17,5 @@ declare var Reveal: {
  */
 declare var tippy: ((targets: unknown, props?: unknown) => unknown) & Record<string, unknown>;
 
-/** marked.js Markdown parser (global, may not be loaded). */
-declare var marked: { parse(text: string): string } | undefined;
+/** Typesets the math elements inside `root` with KaTeX (global, loaded from lib/math.js). */
+declare var versoRenderMath: (root: ParentNode) => void;

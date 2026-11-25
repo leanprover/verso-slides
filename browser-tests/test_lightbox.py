@@ -1,7 +1,14 @@
 """Browser tests for the inline Lean term lightbox overlay."""
 
 from playwright.sync_api import expect, Page
-from conftest import break_layout, goto_slide_by_title, take_forced_errors
+from conftest import (
+    assert_docstring_markup_is_text,
+    assert_docstring_structure,
+    break_layout,
+    goto_slide_by_title,
+    hold_hover_docs,
+    take_forced_errors,
+)
 
 
 class TestLightboxOpen:
@@ -34,6 +41,39 @@ class TestLightboxOpen:
         inner = page.locator(".lean-hover-inner")
         expect(inner).to_be_visible()
         assert inner.inner_html().strip() != "", "Lightbox content should not be empty"
+
+    def test_click_before_hover_docs_load(self, code_url: str, page: Page):
+        """A token clicked while the hover data is loading should open its
+        lightbox once the data arrives."""
+        release = hold_hover_docs(page)
+        slide = goto_slide_by_title(page, code_url, "Inline Lean")
+
+        slide.locator("code.hl.lean.inline [data-verso-hover]").first.click()
+        overlay = page.locator(".r-overlay-lean-hover")
+        expect(overlay).to_have_count(0)
+
+        release()
+        expect(overlay).to_be_visible()
+
+    def test_docstring_markup_is_text(self, code_url: str, page: Page):
+        """HTML tags written in a docstring should show in the lightbox as text."""
+        slide = goto_slide_by_title(page, code_url, "Docstring Markup")
+
+        slide.locator("code.hl.lean.inline [data-verso-hover]").first.click()
+
+        docstring = page.locator(".lean-hover-inner .docstring")
+        expect(docstring).to_be_visible()
+        assert_docstring_markup_is_text(docstring)
+
+    def test_docstring_structure(self, code_url: str, page: Page):
+        """A docstring's Markdown and math should show in the lightbox as HTML and KaTeX."""
+        slide = goto_slide_by_title(page, code_url, "Docstring Structure")
+
+        slide.locator("code.hl.lean.inline [data-verso-hover]").first.click()
+
+        docstring = page.locator(".lean-hover-inner .docstring")
+        expect(docstring).to_be_visible()
+        assert_docstring_structure(docstring)
 
     def test_layout_failure_keeps_plain_signature(
         self, code_url: str, page: Page, browser_errors: list

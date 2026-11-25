@@ -1,7 +1,12 @@
 """Browser tests for JS-dependent features (info panel, adaptive backgrounds)."""
 
 from playwright.sync_api import expect, Page
-from conftest import goto_slide_by_title
+from conftest import (
+    assert_docstring_markup_is_text,
+    assert_docstring_structure,
+    hold_hover_docs,
+    goto_slide_by_title,
+)
 
 
 class TestInfoPanel:
@@ -41,6 +46,44 @@ class TestInfoPanel:
         expect(docstring).to_be_visible()
         inner_html = docstring.inner_html()
         assert "<code>" in inner_html or "<p>" in inner_html
+
+    def test_click_before_hover_docs_load(self, code_url: str, page: Page):
+        """A token clicked while the hover data is loading should show its hover
+        in the panel once the data arrives."""
+        release = hold_hover_docs(page)
+        slide = goto_slide_by_title(page, code_url, "Dark Code")
+
+        block = slide.locator(".code-with-panel").first
+        panel = block.locator(".info-panel")
+        block.locator(".const:has-text('IO.println')").first.click()
+        expect(panel).to_be_empty()
+
+        release()
+        expect(panel.locator(".docstring")).to_be_visible()
+
+    def test_docstring_markup_is_text(self, code_url: str, page: Page):
+        """HTML tags written in a docstring should show in the panel as text."""
+        slide = goto_slide_by_title(page, code_url, "Docstring Markup")
+
+        block = slide.locator(".code-with-panel").first
+        panel = block.locator(".info-panel")
+        block.locator(".const:has-text('imgTag')").last.click()
+
+        docstring = panel.locator(".docstring")
+        expect(docstring).to_be_visible()
+        assert_docstring_markup_is_text(docstring)
+
+    def test_docstring_structure(self, code_url: str, page: Page):
+        """A docstring's Markdown and math should show in the panel as HTML and KaTeX."""
+        slide = goto_slide_by_title(page, code_url, "Docstring Structure")
+
+        block = slide.locator(".code-with-panel").first
+        panel = block.locator(".info-panel")
+        block.locator(".const:has-text('bump')").last.click()
+
+        docstring = panel.locator(".docstring")
+        expect(docstring).to_be_visible()
+        assert_docstring_structure(docstring)
 
 
 class TestAdaptiveBackground:

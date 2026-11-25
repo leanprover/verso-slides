@@ -49,7 +49,7 @@ public def main : IO UInt32 := do
     (%doc TestFixtures.Markup)
   if rc != 0 then return rc
   let rc ← slidesMain
-    { theme := "black", outputDir := "_test/code" }
+    { theme := "black", outputDir := "_test/code", mathPrelude := "\\def\\RR{\\mathbb{R}}\n" }
     (%doc TestFixtures.Code)
   if rc != 0 then return rc
   let rc ← slidesMain

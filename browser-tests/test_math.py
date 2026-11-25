@@ -2,7 +2,7 @@
 
 from bs4 import BeautifulSoup
 
-from conftest import goto_slide_by_title
+from conftest import goto_slide_by_title, mathml_texts
 
 
 class TestMathMarkup:
@@ -121,22 +121,20 @@ class TestMathRendering:
     def test_math_prelude_macros_expand(self, page, markup_url):
         """Macros defined in Config.mathPrelude are available to all math on the page.
 
-        The markup fixture's Config sets `\\def\\RR{\\mathbb{R}}`. After render, the
-        math slide should contain a KaTeX `.mathbb` span, which only appears when
-        `\\RR` successfully expanded — an unexpanded control sequence would render
-        as error text.
+        The markup fixture's Config sets `\\def\\RR{\\mathbb{R}}` and
+        `\\newcommand{\\Hom}[2]{\\mathrm{Hom}(#1, #2)}`. The math slide uses
+        `\\RR` inline and `\\Hom{A}{B} \\subseteq \\RR` as display math. The
+        MathML that the page shows for them is that of their expansions.
         """
-        goto_slide_by_title(page, markup_url, "Math")
+        slide = goto_slide_by_title(page, markup_url, "Math")
         page.wait_for_function(
-            "() => document.querySelectorAll('code.math.inline .katex').length > 0",
+            "() => document.querySelectorAll('code.math.inline math').length > 0",
             timeout=5000,
         )
-        has_blackboard = page.evaluate(
-            "() => document.querySelector('code.math .mathbb') !== null"
-        )
-        assert has_blackboard, (
-            "no .mathbb span found — prelude macro \\RR did not expand"
-        )
+        texts = mathml_texts(slide.locator("code.math"))
+        assert texts[-2:] == ["R", "Hom(A,B)⊆R"], texts
+        # Both uses of `\\RR` are blackboard bold
+        assert slide.locator("code.math mi[mathvariant='double-struck']").count() == 2
 
     def test_math_tex_source_not_visible(self, page, markup_url):
         """Raw TeX source (backslashes) should not appear in the visible DOM text."""

@@ -6,6 +6,14 @@
     /** @type {Record<string, *> | null} */
     let docsJson = null;
 
+    /**
+     * A promise that resolves when the hover data has finished loading, at which point `docsJson`
+     * holds it. `init` starts the load, and this is `null` before then. A failed load also
+     * resolves, with `docsJson` empty.
+     * @type {Promise<void> | null}
+     */
+    let docsLoaded = null;
+
     /** @type {HTMLElement | null} */
     let currentOverlay = null;
 
@@ -15,18 +23,18 @@
     /** @type {HTMLElement | null} */
     let currentInner = null;
 
+    /** Fetches the hover data into `docsJson`. A failed fetch leaves it empty. */
+    async function loadDocs() {
+        try {
+            const r = await fetch("-verso-docs.json");
+            docsJson = (r.ok ? await r.json() : null) ?? {};
+        } catch {
+            docsJson = {};
+        }
+    }
+
     function init() {
-        // Fetch the hover-docs JSON (may already be cached by panel.js)
-        fetch("-verso-docs.json")
-            .then((r) => {
-                return r.ok ? r.json() : {};
-            })
-            .then((j) => {
-                docsJson = j;
-            })
-            .catch(() => {
-                docsJson = {};
-            });
+        docsLoaded = loadDocs();
 
         // Set up click handlers on inline Lean code tokens
         document.querySelectorAll("code.hl.lean.inline").forEach((codeEl) => {
@@ -111,6 +119,17 @@
      * @param {string} id
      */
     function openLightbox(id) {
+        if (!docsJson && docsLoaded) {
+            // The hover data is still loading. Open the lightbox when it arrives, if the
+            // presentation is still on the same slide.
+            const slide = Reveal.getCurrentSlide();
+            docsLoaded
+                .then(() => {
+                    if (Reveal.getCurrentSlide() === slide) openLightbox(id);
+                })
+                .catch((e) => console.error(e));
+            return;
+        }
         const html = lookupHoverDoc(id);
         if (!html) return;
         openLightboxWithHtml(html);
@@ -156,6 +175,7 @@
         inner.className = "lean-hover-inner hl lean";
         // eslint-disable-next-line no-unsanitized/property -- the markup comes from this page or its generated hover data
         inner.innerHTML = html;
+        versoRenderMath(inner);
         content.appendChild(inner);
 
         viewport.appendChild(content);
@@ -172,15 +192,6 @@
 
         // Lay out the hover's format data, if it has any
         reflowLightboxFormat(inner);
-
-        // Render docstrings with marked
-        if (typeof marked !== "undefined") {
-            const m = /** @type {typeof marked} */ (marked);
-            inner.querySelectorAll(".docstring").forEach((ds) => {
-                // eslint-disable-next-line no-unsanitized/property -- the docstrings come from this page, which the slide generator wrote
-                ds.innerHTML = /** @type {string} */ (m.parse(ds.textContent || ""));
-            });
-        }
 
         // Set up binding highlighting within the lightbox
         inner.addEventListener("mouseover", (e) => {
