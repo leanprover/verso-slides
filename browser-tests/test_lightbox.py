@@ -6,6 +6,7 @@ from conftest import (
     assert_docstring_structure,
     break_layout,
     goto_slide_by_title,
+    hold_hover_docs,
     take_forced_errors,
 )
 
@@ -41,12 +42,24 @@ class TestLightboxOpen:
         expect(inner).to_be_visible()
         assert inner.inner_html().strip() != "", "Lightbox content should not be empty"
 
+    def test_click_before_hover_docs_load(self, code_url: str, page: Page):
+        """A token clicked while the hover data is loading should open its
+        lightbox once the data arrives."""
+        release = hold_hover_docs(page)
+        slide = goto_slide_by_title(page, code_url, "Inline Lean")
+
+        slide.locator("code.hl.lean.inline [data-verso-hover]").first.click()
+        overlay = page.locator(".r-overlay-lean-hover")
+        expect(overlay).to_have_count(0)
+
+        release()
+        expect(overlay).to_be_visible()
+
     def test_docstring_markup_is_text(self, code_url: str, page: Page):
         """HTML tags written in a docstring should show in the lightbox as text."""
         slide = goto_slide_by_title(page, code_url, "Docstring Markup")
 
         slide.locator("code.hl.lean.inline [data-verso-hover]").first.click()
-        page.wait_for_timeout(500)
 
         docstring = page.locator(".lean-hover-inner .docstring")
         expect(docstring).to_be_visible()

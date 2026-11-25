@@ -12,18 +12,26 @@
     /** @type {Record<string, *> | null} */
     let docsJson = null; // fetched once on init
 
+    /**
+     * A promise that resolves when the hover data has finished loading, at which point `docsJson`
+     * holds it. `init` starts the load, and this is `null` before then. A failed load also
+     * resolves, with `docsJson` empty.
+     * @type {Promise<void> | null}
+     */
+    let docsLoaded = null;
+
+    /** Fetches the hover data into `docsJson`. A failed fetch leaves it empty. */
+    async function loadDocs() {
+        try {
+            const r = await fetch("-verso-docs.json");
+            docsJson = (r.ok ? await r.json() : null) ?? {};
+        } catch {
+            docsJson = {};
+        }
+    }
+
     function init() {
-        // Fetch the hover-docs JSON
-        fetch("-verso-docs.json")
-            .then((r) => {
-                return r.ok ? r.json() : {};
-            })
-            .then((j) => {
-                docsJson = j;
-            })
-            .catch(() => {
-                docsJson = {};
-            });
+        docsLoaded = loadDocs();
 
         document.querySelectorAll(".code-with-panel").forEach(setupBlock);
 
@@ -464,10 +472,19 @@
         } else if (el.hasAttribute("data-verso-hover")) {
             const id = el.getAttribute("data-verso-hover");
             html = lookupHoverDoc(id);
+            if (!docsJson && docsLoaded) {
+                // The hover data is still loading. Show this element's hover when it arrives,
+                // if the element is still the selected one.
+                docsLoaded
+                    .then(() => {
+                        if (block._activeSource === el) updatePanel(panel, el, block);
+                    })
+                    .catch((e) => console.error(e));
+            }
         }
 
-        // eslint-disable-next-line no-unsanitized/property -- the markup comes from this page or its generated hover data
         if (html !== null) {
+            // eslint-disable-next-line no-unsanitized/property -- the markup comes from this page or its generated hover data
             panel.innerHTML = html;
             versoRenderMath(panel);
         }

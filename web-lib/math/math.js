@@ -47,11 +47,15 @@ const versoRenderMath = (() => {
     /** @param {ParentNode} root */
     return (root) => {
         if (typeof katex === "undefined") return;
-        const macros = getMacros(katex);
+        const table = getMacros(katex);
         for (const m of root.querySelectorAll("code.math.inline, code.math.display")) {
             const el = /** @type {HTMLElement} */ (m);
             const displayMode = el.classList.contains("display");
-            katex.render(el.textContent ?? "", el, { throwOnError: false, displayMode, macros });
+            katex.render(el.textContent ?? "", el, {
+                throwOnError: false,
+                displayMode,
+                macros: table,
+            });
         }
     };
 })();

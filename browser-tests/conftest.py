@@ -402,3 +402,32 @@ def assert_docstring_structure(docstring):
     text = docstring.inner_text()
     for syntax in ("**", "`", "$", "~~~", "]("):
         assert syntax not in text, f"literal {syntax!r} in docstring text: {text!r}"
+
+
+def hold_hover_docs(page):
+    """Keep the page's hover data from loading until the test allows it.
+
+    The page's scripts fetch their hover data from ``-verso-docs.json``. After
+    this call, those requests stay pending, so the page behaves as if the data
+    is still on its way. Call this before navigating to the page.
+
+    The returned function takes no arguments. Calling it completes the pending
+    requests, and requests that the page makes afterwards complete normally.
+    """
+    held = []
+    released = False
+
+    def handle(route):
+        if released:
+            route.continue_()
+        else:
+            held.append(route)
+
+    def release():
+        nonlocal released
+        released = True
+        for route in held:
+            route.continue_()
+
+    page.route("**/-verso-docs.json", handle)
+    return release
